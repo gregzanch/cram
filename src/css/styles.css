@@ -1,0 +1,30 @@
+@import url(https://fonts.googleapis.com/css?family=Roboto:300,400,500&display=swap);
+
+.App {
+  font-family: "Roboto", sans-serif;
+  text-align: center;
+}
+body {
+  margin: 0;
+}
+.unselectable {
+  user-select: none;
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  -webkit-user-select: none;
+  -o-user-select: none;
+}
+
+* {
+  /* border: dotted 1px rgba(114, 112, 255, 0.315); */
+}
+.webgl-canvas{
+  width: calc(100% - 1em);
+  height: calc(100% - 1em);
+  margin: .5em .5em;
+}
+
+canvas{
+  width: 100% !important;
+  height: 100% !important;
+}

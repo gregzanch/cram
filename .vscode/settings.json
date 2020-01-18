@@ -1,0 +1,13 @@
+{
+    "editor.fontFamily": "Hack, Menlo, Monaco, 'Courier New', monospace",
+    "editor.fontSize": 11,
+    "editor.fontWeight": "100",
+    "editor.formatOnPaste": true,
+    "editor.minimap.enabled": false,
+    "zenMode.restore": true,
+    "typescript.format.insertSpaceBeforeFunctionParenthesis": false,
+    "typescript.format.insertSpaceAfterTypeAssertion": true,
+    "typescript.suggest.completeFunctionCalls": true,
+    "typescript.format.insertSpaceAfterCommaDelimiter": true,
+    "typescript.format.insertSpaceBeforeAndAfterBinaryOperators": true
+}

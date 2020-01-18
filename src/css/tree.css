@@ -1,0 +1,22 @@
+ul {
+  list-style-type: none;
+}
+.rstm-toggle-icon {
+  display: inline-block;
+}
+.rstm-toggle-icon-symbol {
+  margin-right: 0.125em;
+  width: 1em;
+  user-select: none;
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  -webkit-user-select: none;
+  -o-user-select: none;
+}
+
+.rstm-toggle-icon-symbol:hover {
+  cursor: pointer;
+}
+.tree > [tabindex="0"]:focus {
+  outline: none;
+}

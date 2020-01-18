@@ -1,0 +1,24 @@
+.play-button{
+    color: #929292c9;
+    transition: 85ms color;
+}
+.play-button:hover{
+    color: #aac2b2;
+}
+
+.play-button:active{
+    color: #afbeb4;
+}
+
+.play-button-on{
+    color: #8dc49f;
+    transition: 85ms color;
+
+}
+.play-button-on:hover{
+    color: #a0c4ac;
+}
+
+.play-button-on:active{
+    color: #799b84;
+}
