@@ -1,0 +1,7 @@
+.table-hover{
+  /* background-color: rgba(132, 163, 230, 0.466); */
+}
+
+.table-hover:hover{
+  background-color: rgba(132, 163, 230, 0.466);
+}

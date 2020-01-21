@@ -516,25 +516,25 @@ module.exports = function(THREE) {
 
 			switch (event.keyCode) {
 				
-				case scope.keys.UP: {
+				case scope.keys.UP: (()=>{
 					pan(0, scope.keyPanSpeed);
 					scope.update();
-				} break;
+				})(); break;
 
-				case scope.keys.BOTTOM: {
+				case scope.keys.BOTTOM: (()=>{
 					pan(0, -scope.keyPanSpeed);
 					scope.update();
-				} break;
+				})(); break;
 
-				case scope.keys.LEFT: {
+				case scope.keys.LEFT: (()=>{
 					pan(scope.keyPanSpeed, 0);
 					scope.update();
-				} break;
+				})(); break;
 
-				case scope.keys.RIGHT: {
+				case scope.keys.RIGHT: (()=>{
 					pan(-scope.keyPanSpeed, 0);
 					scope.update();
-				} break;
+				})(); break;
 				
 				default: break;
 			}

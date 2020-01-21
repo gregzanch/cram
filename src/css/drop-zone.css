@@ -1,0 +1,9 @@
+.drop-zone{
+  padding: 20px;
+  border: dashed 1px gray;
+  margin: 20px;
+  border-radius: 5px;
+}
+.drop-zone:hover{
+  cursor: pointer;
+}

@@ -1,118 +1,168 @@
 import * as THREE from "three";
 //@ts-ignore
-import fs from "!raw-loader!./shaders/beam/shader.frag";
+// import fs from "!raw-loader!./shaders/beam/shader.frag";
 //@ts-ignore
-import vs from "!raw-loader!./shaders/beam/shader.vert";
-import { AudioRenderer } from './audio';
-
-var OrbitControls = require('./orbit-controls.js')(THREE);
-
-import MeshBeam from './mesh-beam';
-import { BeamParams } from "../geometry/beam";
+// import vs from "!raw-loader!./shaders/beam/shader.vert";
+// import { AudioRenderer } from './audio';
+import { THREEGLTFLoader, THREEDracoLoader } from "three-loaders";
 import { CameraStore } from '../common/storage-schemas';
 
-import BeamSolver from '../compute/beam';
+const OrbitControls = require('./orbit-controls.js')(THREE);
+const STLLoader = require('three-stl-loader')(THREE);
+const PLYLoader = require("three-ply-loader")(THREE);
 
-// Object.assign(window, {
-//   THREE
-// })
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 
-export interface RendererConfig{
-  running?: boolean;
-  timestep?: number;
-}
+//@ts-ignore
+import speakerModel from "!raw-loader!../res/models/speaker.gltf";
+//@ts-ignore
+import micModel from "!raw-loader!../res/models/mic.gltf";
+
+import Source from '../objects/source';
+import Receiver from '../objects/receiver';
+
+
+import Container from '../objects/container';
+
+import Grid from './grid';
 
 export default class Renderer {
-  elt: HTMLCanvasElement;
-  scene: THREE.Scene;
-  camera: THREE.PerspectiveCamera;
-  renderer: THREE.Renderer;
-  time: number;
+  elt!: HTMLCanvasElement;
+  renderer!: THREE.Renderer;
+  camera!: THREE.PerspectiveCamera;
+  
+  scene!: THREE.Scene;
+  env!: Container;
+  workspace!: Container;
+  
+  lightGroup!: Container;
+  helperGroup!: Container;
+  
+  sourceGroup!: Container;
+  sourceTemplate!: Container;
+  
+  receiverGroup!: Container;
+  receiverTemplate!: Container;
+  
+  geometryGroup!: Container;
   controls;
-  beam: MeshBeam;
-  temppos;
-  _running: boolean;
-  _timestep: number;
-  audiorenderer: AudioRenderer;
-  constructor(elt: HTMLCanvasElement, params: BeamParams, config: RendererConfig) {
-    
-    this._running = config.running || false;
-    this._timestep = config.timestep || 1e-5;
-    const L = Number(params.length.value);
-    const pi = Math.PI;
-    const f = x => x/100;
-    const g = x => 0;
-    
-    this.beam = new MeshBeam({
-      params,
-      f,
-      g,
-      running: this._running,
-      timestep: this._timestep,
-      resolution: 50
-    });
-    
-    this.elt = elt; 
-    this.scene = new THREE.Scene();
-    const clientwidth = (elt.parentElement as HTMLDivElement).clientWidth;
-    const clientheight = (elt.parentElement as HTMLDivElement).clientHeight;
-    const aspect = clientwidth / clientheight;
-    const fov = 25;
-    const far = 1000;
-    const near = 0.0001;
-    this.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-    
-    this.renderer = new THREE.WebGLRenderer({
-      canvas: this.elt,
-      antialias: true
-    });
+  
+  workspaceCursor!: THREE.Object3D;
+  fog!: THREE.FogExp2 | THREE.Fog;
+  
+  grid!: Grid;
+  
+  constructor(elt?: HTMLCanvasElement) {
+    elt && this.init(elt);
+  }
+  init(elt: HTMLCanvasElement) {
+    this.elt = elt;
 
-    this.renderer.setSize(clientwidth,clientheight);
-    const pixelRatio = window.devicePixelRatio;
-    //@ts-ignore
-    this.renderer.setPixelRatio(pixelRatio);
+		this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color(0xf5f8fa);
+    
+    // this.fog = new THREE.FogExp2(0xf5f8fa, 0.001);
+    
+    
+    this.env = new Container("env");
+    this.lightGroup = new Container("lightGroup");
+    this.lightGroup.add(new THREE.AmbientLight(0xffffff, 10));
+    const light = new THREE.DirectionalLight(0xffffff, 5);
+    this.lightGroup.add(light);
+    this.env.add(this.lightGroup);
+    
+    this.helperGroup = new Container("helperGroup");
+    this.helperGroup.add(new THREE.GridHelper(1000, 1000, 0xd4d6d8, 0xe4e7e8));
+    this.env.add(this.helperGroup);
+    
+    // this.env.add(new Grid(100,100,2,2))
+    
+    this.workspace = new Container("workspace", {});
+    
+    this.scene.add(this.env, this.workspace);
+    
+    
+
+    this.workspaceCursor = this.workspace;
+    
+		this.sourceTemplate = new Container("sourceTemplate");
+		// this.sourceGroup = new Container("sourceGroup");
+		// this.scene.add(this.sourceGroup);
+
+		this.receiverTemplate = new Container("receiverTemplate");
+		// this.receiverGroup = new Container("receiverGroup");
+		// this.scene.add(this.receiverGroup);
+    
+
+		this.setupTemplates();
+
+		const fov = 25;
+		const far = 500;
+		const near = 0.0001;
+    this.camera = new THREE.PerspectiveCamera(fov, this.aspect, near, far);
+    const foglen = 100;
+    this.fog = new THREE.Fog(0xf5f8fa, far - foglen, far);
+    this.scene.fog = this.fog;
+    
+    
+    this.helperGroup
+    
+		this.renderer = new THREE.WebGLRenderer({
+			canvas: this.elt,
+			antialias: true
+		});
+
+		this.renderer.setSize(this.clientWidth, this.clientHeight);
+		const pixelRatio = window.devicePixelRatio;
+		//@ts-ignore
+		this.renderer.setPixelRatio(pixelRatio);
     this.render = this.render.bind(this);
-
-    this.time = 0;
-    // this.scene.add(new THREE.GridHelper(1000, 1000));
-    this.scene.background = new THREE.Color("#f6f6f6");
     
-    const storedState = JSON.parse(localStorage.getItem("camera")||"{}") as CameraStore;
-    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.target.set(0, 0, 0);
-    if (storedState) {
-      if (storedState.object) {
-        this.camera.position.set(
-          storedState.object.matrix[12],
-          storedState.object.matrix[13],
-          storedState.object.matrix[14]
-        );
-      }
-    }
-    this.controls.update();
 
+		const storedState = JSON.parse(
+			localStorage.getItem("camera") || "{}"
+		) as CameraStore;
+		this.controls = new OrbitControls(
+			this.camera,
+			this.renderer.domElement
+		);
+		this.controls.target.set(0, 0, 0);
+		if (storedState) {
+			if (storedState.object) {
+				this.camera.position.set(
+					storedState.object.matrix[12],
+					storedState.object.matrix[13],
+					storedState.object.matrix[14]
+				);
+			}
+		}
+		this.controls.update();
 
-    this.scene.add(this.beam.mesh);
-    // this.scene.add(new THREE.GridHelper(100, 100));
-    this.setupEventListeners();
-    this.render();
-    
-    this.audiorenderer = new AudioRenderer();
+		this.setupEventListeners();
+		this.render();
     
   }
-  get running() {
-    return this._running;
+  setupTemplates() {
+    const loader = new GLTFLoader();
+		loader.parse(speakerModel, "", res =>
+				res.scene.children.forEach(child => {
+					this.sourceTemplate.add(child);
+				})
+    );
+    loader.parse(micModel, "", res =>
+      res.scene.children.forEach(child => {
+        this.receiverTemplate.add(child);
+      })
+	  );
   }
-  set running(__running: boolean) {
-    this._running = __running;
-    this.beam.running = this._running;
+  private get clientWidth() {
+    return (this.elt.parentElement as HTMLDivElement).clientWidth;
   }
-  get timestep() {
-    return this._timestep;
+  private get clientHeight() {
+    return (this.elt.parentElement as HTMLDivElement).clientHeight;
   }
-  set timestep(ts: number) {
-    this._timestep = ts;
-    this.beam.timestep = this._timestep;
+  private get aspect() {
+    return this.clientWidth / this.clientHeight;
   }
   setupEventListeners () {
     window.addEventListener("mouseup", (e) => {
@@ -152,32 +202,13 @@ export default class Renderer {
       this.resize();
     }
   }
-  updateParameter(id: string, value: string, submit: boolean = false) {
-    this.beam.uniforms[id].next_value = Number(value);
-    submit && this.submitUniforms();
+  
+  add(obj: THREE.Object3D) {
+    this.workspaceCursor.add(obj);
   }
-  setUniform(uniforms: BeamParams) {
-    for (const key in uniforms) {
-      this.beam.uniforms[key].next_value = Number(uniforms[key]);
-    }
-  }
-  updateFG(id: string, fn: (x: number) => number) {
-    this.beam.solver[id] = fn;
-    this.submitUniforms();
-  }
-  submitUniforms() {
-    console.log("submitting");
-    for (const key in this.beam.uniforms) {
-      if (key !== "f" && key !== "g") {
-        this.beam.uniforms[key].value = this.beam.uniforms[key].next_value;
-      }
-    }
-    this.beam.submitUniforms();
-    console.log(this.beam.uniforms)
-  }
+   
   render() {
     this.resizeCanvasToDisplaySize();
-    this.beam.step();
     requestAnimationFrame(this.render);
     this.renderer.render(this.scene, this.camera);
   }
