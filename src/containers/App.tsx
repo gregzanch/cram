@@ -31,10 +31,6 @@ import "../css/split-container.css";
 import "../css/styles.css";
 import "../css/panel.css";
 import "../css/tree.css";
-import "../css/track-slider.css";
-import "../css/flair.css";
-import "../css/float-controls.css";
-import "../css/play-button.css";
 import "../css/table.css";
 
 import "../res/file-type-icons/styles.css";
