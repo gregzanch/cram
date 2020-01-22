@@ -1,4 +1,4 @@
-import Obj from "./obj";
+
 import * as THREE from "three";
 import Container, { ContainerProps } from "./container";
 

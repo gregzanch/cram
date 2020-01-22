@@ -3,7 +3,7 @@ import React, {useState} from "react";
 import { uuid } from 'uuidv4';
 
 import { mmm_dd_yyyy } from "../common/dayt"; 
-import { FileTypes } from '../common/file-type-icons';
+import FileTypes from '../common/file-type';
 
 import {
 	AnchorButton,
@@ -15,10 +15,11 @@ import {
 	Intent,
 	Switch,
 	Tooltip,
-    Card,
-    Elevation,
-    Colors,
-	HTMLTable
+	Card,
+	Elevation,
+	Colors,
+	HTMLTable,
+	Checkbox
 } from "@blueprintjs/core";
 
 import { makeStyles } from "@material-ui/core/styles";
@@ -45,6 +46,7 @@ export interface ImportDialogProps {
 	data?: {
 		themeName?: string;
 	};
+	onImport: (...args) => void;
 	onClose: (event?: React.SyntheticEvent<HTMLElement, Event> | undefined) => void;
 	onDrop: (...args) => void;
 }
@@ -73,11 +75,15 @@ const backgroundColors = [
 	"rgba(0,255,0,.2)"
 ];
 
+export interface FileWithCheckbox{
+	file: File;
+	checked: boolean;
+}
+
 export default function ImportDialog(props: ImportDialogProps) {
     const classes = useStyles();
 	const [dropAllowed, setDropAllowed] = useState(DROP_ALLOWED.IDK);
 	const [filelist, setFilelist] = useState([] as File[]);
-
 	return (
 		<Dialog
 			icon="import"
@@ -130,8 +136,8 @@ export default function ImportDialog(props: ImportDialogProps) {
 				}}
 				onDrop={(e: React.DragEvent<HTMLDivElement>) => {
 					const { types, files, items } = e.dataTransfer;
-					setFilelist(Array.from(files));
-					props.onDrop(files);
+					let filearray = Array.from(files);
+					setFilelist(filearray);
 					setDropAllowed(DROP_ALLOWED.IDK);
 					e.preventDefault();
 					e.stopPropagation();
@@ -185,7 +191,7 @@ export default function ImportDialog(props: ImportDialogProps) {
 							</tr>
 						</thead>
 						<tbody style={{}}>
-							{filelist.map(file => {
+							{filelist.map((file,i,a) => {
 								return (
 									<tr key={uuid()} className={"table-hover"}>
 										<td>
@@ -210,6 +216,16 @@ export default function ImportDialog(props: ImportDialogProps) {
 										<td id={file.name + "lastModified"}>
 											{mmm_dd_yyyy(file.lastModified)}
 										</td>
+										<td>
+											{
+												FileTypes.allowed[
+															file.name
+																.split(".")
+														.slice(-1)[0]]
+													? "✓"
+													: "x"
+											}	
+										</td>
 									</tr>
 								);
 							})}
@@ -225,6 +241,7 @@ export default function ImportDialog(props: ImportDialogProps) {
 					intent={Intent.PRIMARY}
 					disabled={filelist.length == 0}
 					text="Import"
+					onClick={()=>props.onImport(filelist)}
 				></Button>
 			</DialogActions>
 		</Dialog>

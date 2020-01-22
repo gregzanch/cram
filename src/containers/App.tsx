@@ -21,6 +21,8 @@ import ObjectView from "../components/ObjectView";
 
 import resolve_svg from "../svg/resolve.svg";
 
+import { set } from '../common/set-at';
+
 import "normalize.css";
 import "@blueprintjs/core/lib/css/blueprint.css";
 import "@blueprintjs/icons/lib/css/blueprint-icons.css";
@@ -38,27 +40,34 @@ import "../css/table.css";
 import "../res/file-type-icons/styles.css";
 import "../css/drop-zone.css";
 
+import Container from '../objects/container';
+
 import PanelContainer from "./PanelContainer";
+import ObjectProperties from '../components/ObjectProperties';
 
 import Messenger from "../messenger";
 import Renderer from "../render/renderer";
 import Receiver from "../objects/receiver";
 import Source from "../objects/source";
 
+import { KeyValuePair } from "../common/key-value-pair";
+
 FocusStyleManager.onlyShowFocusOnTabs();
+
+
+
 
 export interface AppProps {
 	messenger: Messenger;
 	renderer: Renderer;
-	receivers: Receiver[];
-	sources: Source[];
+	containers: KeyValuePair<Container>;
 	geometry;
 }
 
 interface AppState {
 	importDialogVisible: boolean;
-	receivers: Receiver[];
-	sources: Source[];
+	containers: KeyValuePair<Container>
+	selectedObject: Container | undefined;
 }
 
 export default class App extends React.Component<AppProps,AppState> {
@@ -70,8 +79,8 @@ export default class App extends React.Component<AppProps,AppState> {
 		super(props);
 		this.state = {
 			importDialogVisible: false,
-			receivers: [],
-			sources: []
+			containers: {} as KeyValuePair<Container>,
+			selectedObject: undefined
 		};
 		this.renderer = props.renderer
 		this.setupMessageHandlers = this.setupMessageHandlers.bind(this);
@@ -80,36 +89,36 @@ export default class App extends React.Component<AppProps,AppState> {
 		this.canvas = React.createRef<HTMLCanvasElement>();
 		this.showImportDialog = this.showImportDialog.bind(this);
 		this.handleImportDialogClose = this.handleImportDialogClose.bind(this);
+		this.handleObjectViewClick = this.handleObjectViewClick.bind(this);
+		this.handleObjectPropertyChange = this.handleObjectPropertyChange.bind(this);
 	}
 	
 	setupMessageHandlers() {
 		
-		this.props.messenger.addMessageHandler("SHOW_IMPORT_DIALOG", (res, ...args) => {
+		this.props.messenger.addMessageHandler("SHOW_IMPORT_DIALOG",
+			(res, ...args) => {
 			this.setState({
 				importDialogVisible: !this.state.importDialogVisible
 			});
 		})
 		
-		this.props.messenger.addMessageHandler(
-			"ADD_SOURCE_BUTTON_PRESSED",
+		this.props.messenger.addMessageHandler("ADD_SOURCE_BUTTON_PRESSED",
 			(res, ...args) => {
-				return this.setState({
-					sources: this.state.sources.concat(res[0])
-				});
+				const containers = { ...this.state.containers };
+				containers[res[0].uuid] = res[0];
+				return this.setState({containers});
 			}
 		);
 		
-		this.props.messenger.addMessageHandler(
-			"ADD_RECEIVER_BUTTON_PRESSED",
+		this.props.messenger.addMessageHandler("ADD_RECEIVER_BUTTON_PRESSED",
 			(res, ...args) => {
-				return this.setState({
-					receivers: this.state.receivers.concat(res[0])
-				});
+				const containers = { ...this.state.containers };
+				containers[res[0].uuid] = res[0];
+				return this.setState({ containers });
 			}
 		);
 		
-		this.props.messenger.addMessageHandler(
-			"IMPORT_FILE",
+		this.props.messenger.addMessageHandler("IMPORT_FILE",
 			(res, ...args) => {
 				console.log(res);
 			}
@@ -127,7 +136,7 @@ export default class App extends React.Component<AppProps,AppState> {
 			importDialogVisible: !this.state.importDialogVisible
 		});
 	}
-	handleImportDialogClose(e) {
+	handleImportDialogClose(e?) {
 		this.setState({
 			importDialogVisible: !this.state.importDialogVisible
 		});
@@ -135,8 +144,27 @@ export default class App extends React.Component<AppProps,AppState> {
 	
 	handleObjectViewClick(object, e: React.MouseEvent) {
 		console.log(object);
+		this.setState({
+			selectedObject: object
+		})
 	}
-
+	
+	handleObjectPropertyChange(e: React.ChangeEvent<HTMLInputElement>) {
+		const containers = { ...this.state.containers };
+		const splits = e.currentTarget.id.split(".");
+		const id = splits[0];
+		const prop = splits.slice(1)
+		
+		set(
+			containers[id],
+			prop,
+			e.currentTarget.value
+		);
+			this.setState({
+				containers
+			})
+	}
+	
 	render() {
 		return (
 			<div>
@@ -222,6 +250,10 @@ export default class App extends React.Component<AppProps,AppState> {
 					</Navbar>
 				</div>
 				<ImportDialog
+					onImport={file => {
+						this.props.messenger.postMessage("IMPORT_FILE", file);
+						this.handleImportDialogClose();
+					}}
 					isOpen={this.state.importDialogVisible}
 					autoFocus={true}
 					canEscapeKeyClose={true}
@@ -247,12 +279,16 @@ export default class App extends React.Component<AppProps,AppState> {
 						percentage={true}>
 						<PanelContainer>
 							<ObjectView
-								sources={this.state.sources}
-								receivers={this.state.receivers}
+								containers={this.state.containers}
 								onClick={this.handleObjectViewClick}
 							/>
 						</PanelContainer>
-						<PanelContainer className="panel full-bottom"></PanelContainer>
+						<PanelContainer className="panel full-bottom">
+							{this.state.selectedObject && 	<ObjectProperties
+								object={this.state.selectedObject}
+								onPropertyChange={this.handleObjectPropertyChange}
+							/>}
+						</PanelContainer>
 					</SplitterLayout>
 					<div className="webgl-canvas">
 						<div className="float-controls"></div>

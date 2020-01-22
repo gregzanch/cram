@@ -19,4 +19,22 @@ export default class Container extends THREE.Group{
       }
     })();
   }
+  get x() {
+    return this.position.x;
+  }
+  set x(val) {
+    this.position.setX(val);
+  }
+  get y() {
+    return this.position.y;
+  }
+  set y(val) {
+    this.position.setY(val);
+  }
+  get z() {
+    return this.position.z;
+  }
+  set z(val) {
+    this.position.setZ(val);
+  }
 }

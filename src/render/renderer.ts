@@ -31,6 +31,10 @@ export default class Renderer {
   renderer!: THREE.Renderer;
   camera!: THREE.PerspectiveCamera;
   
+  STLLoader;
+  PLYLoader;
+  GLTFLoader;
+  
   scene!: THREE.Scene;
   env!: Container;
   workspace!: Container;
@@ -205,6 +209,11 @@ export default class Renderer {
   
   add(obj: THREE.Object3D) {
     this.workspaceCursor.add(obj);
+  }
+  addGeometry(geom: THREE.Geometry | THREE.BufferGeometry) {
+    this.workspaceCursor.add(new THREE.Mesh(geom, new THREE.MeshBasicMaterial({
+      color: Math.random() * 0xffffff
+    })))
   }
    
   render() {

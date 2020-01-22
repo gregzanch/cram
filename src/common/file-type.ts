@@ -1,4 +1,4 @@
-const ICONS = {
+export const ICONS = {
 	FILE_FILLED: "icon-file",
 	TEXT_FILLED: "icon-file-text",
 	FILES: "icon-files-o",
@@ -14,8 +14,12 @@ const ICONS = {
 	VIDEO: "icon-file-video-o",
 	WORD: "file-word-o"
 };
-
-const assoc = {
+export const allowed = {
+	stl: true,
+	obj: true,
+	gltf: true
+}
+export const assoc = {
 	html: ICONS.CODE,
 	js: ICONS.CODE,
 	png: ICONS.IMAGE,
@@ -401,7 +405,13 @@ const assoc = {
 	rs: ICONS.CODE
 };
 
-export const FileTypes = {
+export function fileType(name: string) {
+  return name.split('.').slice(-1)[0];
+}
+
+export default {
 	ICONS,
-	assoc
+	assoc,
+  allowed,
+  fileType
 };
