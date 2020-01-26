@@ -1,0 +1,25 @@
+.tree-item-label-container {
+	display: flex;
+	justify-content: space-between;
+}
+
+.tree-item-label-label {
+	text-transform: none;
+	line-height: 1.28581;
+	letter-spacing: 0;
+	font-size: 10pt;
+	font-weight: 300;
+	color: #182026;
+	font-family: "Lato";
+}
+.tree-item-label-meta {
+	text-transform: capitalize;
+	font-style: italic;
+	line-height: 1.28581;
+	letter-spacing: 0;
+	font-size: 9pt;
+	font-weight: 300;
+	color: #18202657;
+	margin-left: 1em;
+	font-family: "Lato";
+}

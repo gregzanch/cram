@@ -18,6 +18,7 @@
   position: relative;
   flex: 0 0 auto;
   overflow: hidden;
+  background: #F5F8FA;
 }
 
 .splitter-layout .layout-pane.layout-pane-primary {

@@ -21,6 +21,7 @@
     "sourceMap": true,
     "typeRoots": [
       "./node_modules/@types",
+      "./types"
     ],
     "lib": [
       "dom",

@@ -9,6 +9,7 @@ export interface ReceiverProps extends ContainerProps{
 export default class Receiver extends Container{
     constructor(name: string, props?: ReceiverProps) {
         super(name);
+        this.kind = "Receiver";
         this.add(new THREE.Mesh(
             new THREE.SphereGeometry(0.1, 8, 8),
             new THREE.MeshBasicMaterial({

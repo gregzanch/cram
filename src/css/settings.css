@@ -1,0 +1,11 @@
+.settings-grid-row > .settings-grid-row-1 {
+  display: grid;
+  grid-column-start: 1;
+  grid-column-end: 2;
+}
+
+.settings-grid-row > .settings-grid-row-2{
+  display: grid;
+  grid-column-start: 2;
+  grid-column-end: 3;
+}

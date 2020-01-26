@@ -1,12 +1,12 @@
-@import url(https://fonts.googleapis.com/css?family=Roboto:300,400,500&display=swap);
-
+/* @import url(https://fonts.googleapis.com/css?family=Roboto:300,400,500&display=swap); */
+@import url(https://fonts.googleapis.com/css?family=Lato:300,400,700,300italic,400italic);
 .App {
-  font-family: "Roboto", sans-serif;
+  font-family: "Lato", sans-serif;
   text-align: center;
 }
 body {
   margin: 0;
-  background: #F5F8FA;
+  background: #f5f8fa;
 }
 .unselectable {
   user-select: none;
@@ -17,7 +17,7 @@ body {
 }
 
 * {
-  /* border: dotted 1px rgba(114, 112, 255, 0.315); */
+  font-family: "Lato";
 }
 .webgl-canvas{
   width: calc(100% - 1em);

@@ -12,7 +12,7 @@ export const set = (obj, path, val) => {
 	const prepath = splitpath.slice(0, -1);
 	const prop = splitpath[splitpath.length - 1];
 	const ob = splitpath.length > 1 ? at(obj, prepath) : obj;
-	ob[prop] = val;
+	ob[prop] && (ob[prop] = val);
 	return obj;
 };
 
