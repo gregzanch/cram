@@ -236,7 +236,7 @@ export default class App extends React.Component<AppProps, AppState> {
 									margin: "0 0 .25em"
 								}}>
 								{/* <img src={resolve_svg} alt="resolve" /> */}
-								cram
+								cram.ui
 							</Navbar.Group>
 							<Navbar.Divider />
 
@@ -384,7 +384,8 @@ export default class App extends React.Component<AppProps, AppState> {
 							/>
 						</PanelContainer>
 						<PanelContainer className="panel full-bottom">
-							{(Object.keys(this.state.selectedObject).length > 0) && (
+							{Object.keys(this.state.selectedObject).length >
+								0 && (
 								<ObjectProperties
 									object={this.state.selectedObject}
 									onPropertyChange={
