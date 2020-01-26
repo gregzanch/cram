@@ -1,8 +1,11 @@
 {
   "name": "cram.ui",
-  "version": "1.0.0",
-  "description": "",
-  "keywords": [],
+  "version": "1.0.2",
+  "repository": {
+    "url": "https://github.com/gregzanch/cram.git"
+  },
+  "description": "interface for computational room acoustics",
+  "keywords": ["acoustics", "computation", "ray-tracing", "image-source", "fdtd"],
   "main": "src/index.tsx",
   "dependencies": {
     "@babel/core": "7.1.6",
