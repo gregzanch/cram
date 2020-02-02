@@ -17,6 +17,7 @@ import { STLLoader, OBJLoader } from './render/loaders';
 
 import OBJParser from './render/loaders/OBJLoader';
 
+import EasingFunctions from './common/easing';
 
 import * as THREE from 'three';
 
@@ -34,33 +35,43 @@ import { chunk } from './common/chunk';
 //@ts-ignore
 import triangleroom from '!raw-loader!./res/triangle.stl';
 //@ts-ignore
-import testroom from '!raw-loader!./res/models/room.obj';
+import testroom from '!raw-loader!./res/models/elli.obj';
 
 import Solver from './compute/solver';
+import { FDTD } from './compute/fdtd';
+import GLFDTD from './compute/gl-fdtd';
 
 import Room from "./objects/room";
 import Surface from "./objects/surface";
 
-import test from './compute/kernel';
+import RayTracer from "./compute/raytracer";
+import { uuid } from "uuidv4";
 
-console.log(test());
 
-expose({ chunk, THREE }, window);
+
+expose({ chunk, THREE, EasingFunctions }, window);
 
 
 const state = {
     browser: browserReport(navigator.userAgent),
+    sources: [] as string[],
+    receivers: [] as string[],
+    room: "" as string,
     containers: {} as KeyValuePair<Container>,
-    solutions: {} as KeyValuePair<Solver>,
-	renderer: new Renderer(),
+    solvers: {} as KeyValuePair<Solver>,
+    simulation: "",
+    glfdtd: {} as GLFDTD,
+    renderer: {} as Renderer,
     messenger: new Messenger(),
     settings: {
-        lightHelpersVisible: new Setting(true, "checkbox")
+        lightHelpersVisible: new Setting(true, "checkbox"),
     } as KeyValuePair<Setting<any>>
 };
 
+state.renderer = new Renderer({
+    messenger: state.messenger
+})
 
-expose({ state }, window);
 
 
 const importHandlers = {
@@ -107,16 +118,68 @@ const importHandlers = {
     }
 }
 
-state.messenger.addMessageHandler("ADD_SOURCE_BUTTON_PRESSED", (acc, ...args) => {
+
+state.messenger.addMessageHandler("SHOULD_ADD_RAYTRACER", (acc, ...args) => {
+    const raytracer = new RayTracer({
+        name: "new ray-tracer",
+        containers: state.containers,
+        reflectionOrder: 20,
+        updateInterval: 20
+    });
+    state.solvers[raytracer.uuid] = raytracer;
+    return raytracer;
+})
+
+state.messenger.addMessageHandler("SHOULD_ADD_FDTD", (acc, ...args) => {
+    const sources = [] as Source[];
+    const rooms = [] as Room[];
+    const receivers = [] as Receiver[];
+    for (const key in state.containers) {
+        switch (state.containers[key].kind) {
+            case "source":
+                sources.push(state.containers[key] as Source)
+                break;
+            case "receiver":
+                receivers.push(state.containers[key] as Receiver)
+                break;
+            case "room":
+                rooms.push(state.containers[key] as Room)
+                break;
+            default:
+                break;
+        }
+    }
+
+    state.simulation = uuid();
+    state.solvers[state.simulation] = new FDTD({
+        room: rooms[0],
+        dt: 0.0005,
+        dx: 1,
+        gain: 1,
+        threshold: 0.0001,
+        q: 0.43,
+        r: 1.33,
+        sources,
+        receivers,
+    });
+    state.solvers[state.simulation].uuid = state.simulation;
+    
+  return state.solvers[state.simulation];
+});
+
+
+state.messenger.addMessageHandler("SHOULD_ADD_SOURCE", (acc, ...args) => {
     const source = new Source("new source");
     state.containers[source.uuid] = source;
+    state.sources.push(source.uuid);
     state.renderer.add(source);
     return source;
 });
 
-state.messenger.addMessageHandler("ADD_RECEIVER_BUTTON_PRESSED", (acc, ...args) => {
+state.messenger.addMessageHandler("SHOULD_ADD_RECEIVER", (acc, ...args) => {
     const rec = new Receiver("new receiver");
     state.containers[rec.uuid] = rec;
+    state.sources.push(rec.uuid);
     state.renderer.add(rec);
     return rec;
 });
@@ -138,6 +201,7 @@ state.messenger.addMessageHandler("IMPORT_FILE", (acc, ...args) => {
                 surfaces
             });
             state.containers[room.uuid] = room;
+            state.room = room.uuid;
             state.renderer.addRoom(room);
             state.messenger.postMessage("ADDED_ROOM", room);
         }
@@ -148,9 +212,32 @@ state.messenger.addMessageHandler("APP_MOUNTED", (acc, ...args) => {
     state.renderer.init(args[0]);
 });
 
+state.messenger.addMessageHandler("RENDERER_UPDATED", (acc, ...args) => {
+    if (state.simulation.length > 0) {
+        state.solvers[state.simulation].update();
+    }
+})
+
+state.messenger.addMessageHandler("SIMULATION_SHOULD_PLAY", (acc, ...args) => {
+    state.solvers[state.simulation].running = true;
+    state.messenger.postMessage("SIMULATION_DID_PLAY");
+});
+state.messenger.addMessageHandler("SIMULATION_SHOULD_PAUSE", (acc, ...args) => {
+    state.solvers[state.simulation].running = false;
+    state.messenger.postMessage("SIMULATION_DID_PAUSE");
+});
+state.messenger.addMessageHandler("SIMULATION_SHOULD_CLEAR", (acc, ...args) => {
+    (state.solvers[state.simulation] as FDTD).reset();
+});
+
+
 setTimeout(() => {
     // const parser = new OBJParser();
     // const geometry = parser.parse(testroom)
+    const {uuid: sourceid} = state.messenger.postMessage("SHOULD_ADD_SOURCE")[0];
+    const a = 1;
+    const w = 2;
+    (state.containers[sourceid] as Source).f = t => Math.sin(t*w) * a;
     const models = importHandlers.obj(testroom);
     
     const surfaces = models.map(model => new Surface(model.name, { geometry: model.geometry }));
@@ -160,6 +247,27 @@ setTimeout(() => {
     state.containers[room.uuid] = room;
     state.renderer.addRoom(room);
     state.messenger.postMessage("ADDED_ROOM", room);
+    // const { x, y, z } = room.boundingBox.getSize(new THREE.Vector3());
+    // state.containers[sourceid].x = x / 2;
+    // state.containers[sourceid].y = y / 2;
+    // state.containers[sourceid].z = z / 2;
+    room.boundingBox.getCenter(state.containers[sourceid].position);
+    // (state.containers[room.uuid] as Room).surfaces.visible = false;
+    // state.messenger.postMessage("SHOULD_ADD_FDTD")[0];
+    
+    // state.solvers[state.simulation].running = true;
+    // state.messenger.postMessage("SIMULATION_SHOULD_PLAY");
+    // setInterval(() => {
+    //     state.solvers[state.simulation].update();
+    // }, 500);
+    
+    expose(
+        {
+			state,
+            THREE,
+		},
+		window
+    );
 }, 200);
 
 

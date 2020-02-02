@@ -1,0 +1,43 @@
+body {
+	margin: 0;
+	overflow: hidden;
+	font-family: monospace;
+	color: white;
+}
+canvas {
+	width: 100vw;
+	height: 100vh;
+}
+a {
+	color: lightblue;
+}
+#b {
+	position: absolute;
+	top: 10px;
+	right: 10px;
+	width: 20%;
+	padding: 1em;
+	text-align: center;
+	z-index: 2;
+	background: rgba(0, 0, 0, 0.8);
+}
+.controls {
+	text-align: right;
+}
+.controls div {
+	display: flex;
+	width: 100%;
+	justify-content: space-between;
+}
+.controls input {
+	flex: 1 1 auto;
+}
+.controls label {
+	width: 10em;
+	flex: 0 0 auto;
+	padding-right: 0.5em;
+}
+:root #content > #right > .dose > .dosesingle,
+:root #content > #center > .dose > .dosesingle {
+	display: none !important;
+}

@@ -58,7 +58,7 @@ export default class Surface extends Container {
 	// for acoustics
 	absorption!: number[];
 	reflection!: number[];
-	
+	_triangles: THREE.Triangle[];
 	
 	constructor(name: string, props: SurfaceProps) {
 		super(name);
@@ -72,7 +72,13 @@ export default class Surface extends Container {
 		this.mesh.geometry.computeBoundingSphere();
 				
 		this.triangles = chunk(chunk(Array.from((props.geometry.getAttribute('position') as THREE.BufferAttribute).array), 3), 3);
+		this._triangles = this.triangles.map(x => new THREE.Triangle(
+			new THREE.Vector3(...x[0]),
+			new THREE.Vector3(...x[1]),
+			new THREE.Vector3(...x[2]),
+		));
 		
+
 		// console.log(this.triangles);
 		const dict = {} as KeyValuePair<KeepLine>;
 		this.triangles.forEach(tri => {
@@ -110,6 +116,7 @@ export default class Surface extends Container {
 		this.add(this.edges);
 		this.edges.visible = this.displayEdges;
 		
+	
 		
 	}
 	

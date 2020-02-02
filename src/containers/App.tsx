@@ -13,16 +13,17 @@ import {
 	MenuDivider,
 	Drawer,
 	Classes,
-	Colors
+	Colors,
+	AnchorButton
 } from "@blueprintjs/core";
-import { Characters } from "../constants";
+import { Characters, EditorModes, ToolNames } from "../constants";
 import ImportDialog from "../components/ImportDialog";
 import ObjectView from "../components/ObjectView";
 import resolve_svg from "../svg/resolve.svg";
 import { set } from "../common/set-at";
 import Container from "../objects/container";
 import PanelContainer from "./PanelContainer";
-import ObjectProperties from "../components/ObjectProperties";
+import ObjectProperties from "../components/ObjectProperties/index";
 import Messenger from "../messenger";
 import Renderer from "../render/renderer";
 import Receiver from "../objects/receiver";
@@ -33,22 +34,34 @@ import { Setting } from "../common/setting";
 import { Report } from "../common/browser-report";
 
 import "../css";
+import { ToolName } from "../constants/tool-names";
+import { EditorMode } from "../constants/editor-modes";
+// import { Process, Task } from "../common/process";
+import SettingsDrawerCheckBox from "../components/setting-components/SettingsDrawerCheckbox";
+import Solver from "../compute/solver";
 
 FocusStyleManager.onlyShowFocusOnTabs();
 
 export interface AppProps {
 	messenger: Messenger;
 	containers: KeyValuePair<Container>;
-	settings: KeyValuePair<Setting<any>>;
+	settings: KeyValuePair<any>;
 	browser: Report;
 }
+
+
 
 interface AppState {
 	importDialogVisible: boolean;
 	containers: KeyValuePair<Container>;
 	selectedObject: Container;
 	settingsDrawerVisible: boolean;
-	settings: KeyValuePair<Setting<any>>;
+	settings: KeyValuePair<any>;
+	mode: EditorMode;
+	// process: Process;
+	solvers: KeyValuePair<Solver>;
+	tool: ToolName;
+	simulationRunning: boolean;
 }
 
 export default class App extends React.Component<AppProps, AppState> {
@@ -58,11 +71,17 @@ export default class App extends React.Component<AppProps, AppState> {
 	constructor(props: AppProps) {
 		super(props);
 		this.state = {
+			solvers: {} as KeyValuePair<Solver>,
+			simulationRunning: false,
 			importDialogVisible: false,
 			containers: {} as KeyValuePair<Container>,
 			selectedObject: {} as Container,
 			settingsDrawerVisible: false,
-			settings: props.settings
+			settings: props.settings,
+			mode: "EDIT",
+			tool: "SELECT",
+			// process: new Process({name: "base", steps: [] as Task[]})
+			
 		};
 		this.setupMessageHandlers = this.setupMessageHandlers.bind(this);
 		this.setupMessageHandlers();
@@ -97,7 +116,7 @@ export default class App extends React.Component<AppProps, AppState> {
 		);
 
 		this.props.messenger.addMessageHandler(
-			"ADD_SOURCE_BUTTON_PRESSED",
+			"SHOULD_ADD_SOURCE",
 			(acc, ...args) => {
 				const containers = { ...this.state.containers };
 				containers[acc[0].uuid] = acc[0];
@@ -106,14 +125,32 @@ export default class App extends React.Component<AppProps, AppState> {
 		);
 
 		this.props.messenger.addMessageHandler(
-			"ADD_RECEIVER_BUTTON_PRESSED",
+			"SHOULD_ADD_RECEIVER",
 			(acc, ...args) => {
 				const containers = { ...this.state.containers };
 				containers[acc[0].uuid] = acc[0];
 				return this.setState({ containers });
 			}
 		);
+		this.props.messenger.addMessageHandler(
+			"SHOULD_ADD_RAYTRACER",
+			(acc, ...args) => {
+				const solvers = { ...this.state.solvers };
+				solvers[acc[0].uuid] = acc[0];
+				return this.setState({ solvers });
+			}
+		);
 
+		this.props.messenger.addMessageHandler(
+			"SHOULD_ADD_FDTD",
+			(acc, ...args) => {
+				const solvers = { ...this.state.solvers };
+				solvers[acc[0].uuid] = acc[0];
+				return this.setState({ solvers });
+			}
+		);
+
+		
 		this.props.messenger.addMessageHandler("ADDED_ROOM", (acc, ...args) => {
 			const containers = { ...this.state.containers };
 			containers[args[0].uuid] = args[0];
@@ -126,6 +163,16 @@ export default class App extends React.Component<AppProps, AppState> {
 				console.log(acc);
 			}
 		);
+		this.props.messenger.addMessageHandler("SIMULATION_DID_PLAY", (acc, ...args) => {
+			this.setState({
+				simulationRunning: true
+			},()=>console.log("SIMULATION_DID_PLAY"));
+		})
+			this.props.messenger.addMessageHandler("SIMULATION_DID_PAUSE", (acc, ...args) => {
+			this.setState({
+				simulationRunning: false
+			},()=>console.log("SIMULATION_DID_PAUSE"));
+		})
 	}
 
 	componentDidMount() {
@@ -300,36 +347,50 @@ export default class App extends React.Component<AppProps, AppState> {
 										<Menu>
 											<MenuItem
 												text={
-													<div
-														style={{
-															display: "flex",
-															justifyContent:
-																"space-between"
-														}}>
+													<div style={{display: "flex", justifyContent: "space-between" }}>
 														<div>Source</div>
-														<div
-															style={{
-																color:
-																	Colors.LIGHT_GRAY1
-															}}>
-															{Characters.COMMAND}
-														</div>
+														<div style={{color:Colors.LIGHT_GRAY1}}>{Characters.COMMAND}</div>
 													</div>
 												}
 												onClick={() =>
 													this.props.messenger.postMessage(
-														"ADD_SOURCE_BUTTON_PRESSED"
+														"SHOULD_ADD_SOURCE"
 													)
-												}></MenuItem>
+												}/>
 											<MenuItem
 												text="Receiver"
 												onClick={() =>
 													this.props.messenger.postMessage(
-														"ADD_RECEIVER_BUTTON_PRESSED"
+														"SHOULD_ADD_RECEIVER"
 													)
 												}></MenuItem>
+											<MenuDivider />
+											<MenuItem
+												text={
+													<div style={{display: "flex", justifyContent: "space-between" }}>
+														<div>Ray Tracer</div>
+														<div style={{color:Colors.LIGHT_GRAY1}}>{Characters.COMMAND}</div>
+													</div>
+												}
+												onClick={() =>
+													this.props.messenger.postMessage(
+														"SHOULD_ADD_RAYTRACER"
+													)
+												}/>
 										</Menu>
 									</Popover>
+									<Button
+										icon={this.state.simulationRunning ? "pause" : "play"} 
+										onClick={e => {
+											this.props.messenger.postMessage(this.state.simulationRunning ? "SIMULATION_SHOULD_PAUSE" : "SIMULATION_SHOULD_PLAY");
+										}} />
+									
+									<Button
+										icon={"refresh"} 
+										onClick={e => {
+											this.props.messenger.postMessage("SIMULATION_SHOULD_CLEAR");
+										}} />
+									
 								</ButtonGroup>
 							</Menu>
 						</Navbar.Group>
@@ -344,11 +405,13 @@ export default class App extends React.Component<AppProps, AppState> {
 					</Navbar>
 				</div>
 				<SettingsDrawer
+					size={"35%"}
 					onClose={this.handleSettingsButtonClick}
-					settings={this.state.settings}
-					onSettingChange={this.handleSettingChange}
 					isOpen={this.state.settingsDrawerVisible}
-				/>
+				>
+					<input name="background" type="color" onChange={e => this.props.messenger.postMessage("renderer-should-change-background", e.currentTarget.value)} />
+					<input name="fogColor" type="color" onChange={e => this.props.messenger.postMessage("renderer-should-change-fogColor", e.currentTarget.value)} />
+				</SettingsDrawer>
 				<ImportDialog
 					onImport={file => {
 						this.props.messenger.postMessage("IMPORT_FILE", file);
@@ -380,35 +443,72 @@ export default class App extends React.Component<AppProps, AppState> {
 						<PanelContainer>
 							<ObjectView
 								containers={this.state.containers}
+								solvers={this.state.solvers}
 								onClick={this.handleObjectViewClick}
 							/>
 						</PanelContainer>
 						<PanelContainer className="panel full-bottom">
-							{Object.keys(this.state.selectedObject).length >
-								0 && (
+							{(Object.keys(this.state.selectedObject).length > 0) && (
 								<ObjectProperties
 									object={this.state.selectedObject}
-									onPropertyChange={
-										this.handleObjectPropertyChange
-									}
-									onPropertyValueChangeAsNumber={
-										this
-											.handleObjectPropertyValueChangeAsNumber
-									}
-									onPropertyValueChangeAsString={
-										this
-											.handleObjectPropertyValueChangeAsString
-									}
+									onPropertyChange={this.handleObjectPropertyChange}
+									onPropertyValueChangeAsNumber={this.handleObjectPropertyValueChangeAsNumber}
+									onPropertyValueChangeAsString={this.handleObjectPropertyValueChangeAsString}
 								/>
 							)}
 						</PanelContainer>
 					</SplitterLayout>
 					<div className="webgl-canvas">
-						<div className="float-controls"></div>
+						<FloatControls />
 						<canvas ref={this.canvas} />
 					</div>
 				</SplitterLayout>
 			</div>
 		);
 	}
+}
+
+export function FloatButton(props) {
+	return (
+		<div className="float-button">{props.children}</div>
+	)
+}
+
+export function FloatControls(props) {
+	return (
+		<div className="float-controls">
+			<ButtonGroup vertical>
+				<Button small active={true} icon="select" />
+				<Button small active={false} icon="move" />
+				<Button small active={false} icon="refresh" />
+				<Button small active={false} icon="maximize" />
+			</ButtonGroup>
+		</div>
+	);
+}
+
+
+function SelectIcon(props) {
+	return (
+		<svg
+			width="42"
+			height="42"
+			viewBox="-4 -4 45 45"
+			fill="none"
+			xmlns="http://www.w3.org/2000/svg">
+			<path
+				d="M1 1H36V36H1V1Z"
+				stroke="#999A9C"
+				stroke-width="2"
+				stroke-linejoin="round"
+				stroke-dasharray="6 2"
+			/>
+			<path
+				d="M13.3036 28.1857L12.84 9.14134L26.9837 21.9031L18.2498 21.0481L13.3036 28.1857Z"
+				fill="#ECECEC"
+				stroke="#7C7C7C"
+			/>
+		</svg>
+	);
+
 }

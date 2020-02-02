@@ -11,6 +11,8 @@ const OrbitControls = require("./orbit-controls.js")(THREE);
 const STLLoader = require("three-stl-loader")(THREE);
 const PLYLoader = require("three-ply-loader")(THREE);
 
+import { lerp, lerp3 } from "../common/lerp";
+import EasingFunctions from '../common/easing';
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 
 //@ts-ignore
@@ -23,6 +25,8 @@ import whitematcap from './textures/matcap-porcelain-white.jpg';
 import Source from "../objects/source";
 import Receiver from "../objects/receiver";
 
+import cubicBezier from '../common/cubic-bezier';
+
 import Container from "../objects/container";
 
 import Grid from "./env/grid";
@@ -32,6 +36,13 @@ import defaults from './defaults';
 import Axes from './env/axes';
 import Lights from './env/lights';
 import Room from '../objects/room';
+import { FRAME_RATE } from "../constants";
+import Messenger from "../messenger";
+
+export interface RendererParams{
+	elt?: HTMLCanvasElement;
+	messenger: Messenger;
+}
 
 export default class Renderer {
 	elt!: HTMLCanvasElement;
@@ -46,6 +57,7 @@ export default class Renderer {
 	axes!: Axes;
 	grid!: Grid;
 
+	stack!: Array<(...args)=>void>
 
 
 	settingHandlers!: KeyValuePair<((val: any)=>void)>;
@@ -64,8 +76,10 @@ export default class Renderer {
 
 
   textures!: KeyValuePair<THREE.Texture>
-  
-	constructor(elt?: HTMLCanvasElement) {
+	smoothingCameraFunction!: any;
+	smoothingCamera!: boolean;
+	messenger: Messenger;
+	constructor(params: RendererParams) {
 		[
 			"init",
 			"render",
@@ -75,16 +89,24 @@ export default class Renderer {
 			"setupTextures",
 			"setupRenderer",
 			"setupSettingHandlers",
-			"setupScene"
+			"setupScene",
+			"smoothCameraTo"
 		].forEach(method => {
 			this[method] = this[method].bind(this);
 		});
-
-		elt && this.init(elt);
+		
+		
+		
+		params.elt && this.init(params.elt);
+		this.messenger = params.messenger;
 	}
 	init(elt: HTMLCanvasElement) {
-		this.elt = elt;
 
+		this.smoothingCamera = false;
+		this.smoothingCameraFunction = undefined;
+		
+		this.elt = elt;
+		this.stack = [] as Array<(...args) => void>;
 		this.env = new Container("env");
 		this.workspace = new Container("workspace");
 		this.workspaceCursor = this.workspace;
@@ -124,14 +146,18 @@ export default class Renderer {
 	
 
 		this.setupSettingHandlers();
-		
+		this.setupMessageHandlers();
 
 		
     this.setupTextures();
 		this.setupEventListeners();
 		this.render();
+		// setInterval(this.render, 1000 / 20);
 	}
-	
+	setupMessageHandlers() {
+		this.messenger.addMessageHandler("renderer-should-change-background", (acc, ...args) => this.background = args[0])
+		this.messenger.addMessageHandler("renderer-should-change-fogColor", (acc, ...args) => this.fogColor = args[0])
+	}
 	setupScene({background}) {
 		this.scene = new THREE.Scene();
 		this.scene.background = new THREE.Color(background);
@@ -150,7 +176,7 @@ export default class Renderer {
 				context: this.elt.getContext("webgl2", { alpha: false })!,
 				antialias: true,
 				depth: true,
-				precision: "highp"
+				precision: "mediump"
 			});
 			//@ts-ignore
 			this.renderer.shadowMap.enabled = true;
@@ -213,6 +239,10 @@ export default class Renderer {
 			})
     );
 	}
+	
+	
+	
+	
 	private get clientWidth() {
 		return (this.elt.parentElement as HTMLDivElement).clientWidth;
 	}
@@ -222,6 +252,10 @@ export default class Renderer {
 	private get aspect() {
 		return this.clientWidth / this.clientHeight;
 	}
+	
+	
+	
+	
 	setupEventListeners() {
 		window.addEventListener("mouseup", e => {
 			localStorage.setItem(
@@ -230,6 +264,7 @@ export default class Renderer {
 			);
 		});
 	}
+
 	resize() {
 		this.renderer.setSize(
 			this.renderer.domElement.parentElement?.clientWidth || 0,
@@ -275,10 +310,80 @@ export default class Renderer {
 		this.workspaceCursor.add(room);
 	}
 	
-	
+	smoothCameraTo(params: SmoothCameraParams) {
+		const origin = this.camera.getWorldPosition(new THREE.Vector3());
+		const timer = new Ticker("inc");
+		const curve = params.curve || EasingFunctions.linear;
+		this.smoothingCamera = true;
+		this.smoothingCameraFunction = () => {
+			timer.tick();
+			if (timer.ticks > params.duration) {
+				this.smoothingCamera = false;
+				return;
+			}
+			const pos = lerp3(
+				origin,
+				params.position,
+				curve(timer.ticks / params.duration)
+			);
+			this.camera.position.set(pos.x, pos.y, pos.z);
+			params.target && this.camera.lookAt(params.target);
+		};
+	}
+	update() {
+		this.smoothingCamera && this.smoothingCameraFunction();
+		this.messenger.postMessage("RENDERER_UPDATED");
+	}
 	render() {
+		
+		this.update();
 		this.resizeCanvasToDisplaySize();
 		requestAnimationFrame(this.render);
+		
 		this.renderer.render(this.scene, this.camera);
 	}
+	
+	
+	get background() {
+		return (this.scene.background as THREE.Color).getHexString();
+	}
+	set background(color: string) {
+		(this.scene.background as THREE.Color).setStyle(color);
+	}
+	get fogColor() {
+		return (this.scene.fog && this.scene.fog.color && this.scene.fog.color.getHexString()) || "#000000";
+	}
+	set fogColor(color: string) {
+		this.scene.fog?.color.setStyle(color);
+	}
+	
+	
 }
+
+
+export interface SmoothCameraParams {
+	position: THREE.Vector3;
+	target?: THREE.Vector3;
+	duration: number;
+	curve?: (t: number) => number;
+}
+
+export class Ticker{
+	ticks: number;
+	kind: "inc" | "dec";
+	inc: boolean;
+	tick: (() => number);
+	constructor(kind: "inc" | "dec", ticks?: number) {
+		this.kind = kind;
+		this.inc = this.kind === "inc";
+		this.ticks = ticks || 0;	
+		this.tick = this.inc
+			? function () {
+				return this.ticks++;
+			}
+			: function () {
+				return this.ticks--;
+			}
+	}
+}
+

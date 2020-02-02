@@ -1,5 +1,6 @@
 import hotkeys from "hotkeys-js";
 import Messenger from "./messenger";
+import fullscreen from './common/fullscreen';
 
 export function registerHotKeys(messenger: Messenger) {
   
@@ -7,5 +8,9 @@ export function registerHotKeys(messenger: Messenger) {
     messenger.postMessage("SHOW_IMPORT_DIALOG");
   });
   
+  hotkeys("ctrl+shift+f, command+shift+f", fullscreen)
+  
 }
+
+
 

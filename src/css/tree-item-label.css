@@ -11,6 +11,8 @@
 	font-weight: 300;
 	color: #182026;
 	font-family: "Lato";
+		display: flex;
+	justify-content: left;
 }
 .tree-item-label-meta {
 	text-transform: capitalize;
@@ -22,4 +24,8 @@
 	color: #18202657;
 	margin-left: 1em;
 	font-family: "Lato";
+}
+.tree-item-label-icon{
+	margin-right: .25em;
+	margin-left: -.25em;
 }

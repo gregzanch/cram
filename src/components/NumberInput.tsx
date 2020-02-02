@@ -5,6 +5,7 @@ export interface NumberInputProps {
 	className?: string;
 	value: number;
 	style?: React.CSSProperties;
+	disabled?: boolean;
 	onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 

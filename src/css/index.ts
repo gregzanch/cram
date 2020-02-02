@@ -16,3 +16,5 @@ import "./number-input.css";
 import "./text-input.css";
 import "./tree-item-label.css";
 import "./checkbox-input.css";
+import "./float-button.css";
+import "../css/settings.css";

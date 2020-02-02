@@ -148,14 +148,21 @@ export default function ImportDialog(props: ImportDialogProps) {
 					}}
 					className={"drop-zone"}
 					onClick={() => {
-						const input = document.createElement("input");
+						const input = (document.querySelector("#temp-file-import") as HTMLInputElement) || document.createElement("input");
 						input.type = "file";
 						input.setAttribute("style", "display: none;");
+						input.setAttribute("id", "temp-file-import");
 						document.body.appendChild(input);
-						input.addEventListener("change", e => {
-							//@ts-ignore
-							console.log(e.target.files);
-							input.remove();
+						input.addEventListener("change", (e: Event) => {
+							const target: HTMLInputElement = e.target as HTMLInputElement;
+							const filearray = [] as File[];
+							if (target && target.files) {
+								for (let i = 0; i < target.files.length; i++) {
+									filearray.push(target.files[i]);
+								}
+								setFilelist(filearray);
+								setDropAllowed(DROP_ALLOWED.IDK);
+							}
 						});
 						input.addEventListener("blur", () => {
 							input.remove();
@@ -241,7 +248,10 @@ export default function ImportDialog(props: ImportDialogProps) {
 					intent={Intent.PRIMARY}
 					disabled={filelist.length == 0}
 					text="Import"
-					onClick={()=>props.onImport(filelist)}
+					onClick={() => {
+						props.onImport(filelist);
+						setFilelist([] as File[]);
+					}}
 				></Button>
 			</DialogActions>
 		</Dialog>

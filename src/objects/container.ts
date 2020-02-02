@@ -15,7 +15,7 @@ export default class Container extends THREE.Group {
 	constructor(name: string, props?: ContainerProps) {
 		super();
 		this.name = name;
-		this.kind = "Container";
+		this.kind = "container";
 		props &&
 			(() => {
 				for (const key in props) {

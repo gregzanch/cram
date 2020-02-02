@@ -4957,7 +4957,7 @@ gpu-mock.js@^1.1.1:
   resolved "https://registry.yarnpkg.com/gpu-mock.js/-/gpu-mock.js-1.1.1.tgz#fe720db34b497c802b4e9381d8ddd883ecba999c"
   integrity sha512-BmoRk9nbMaxkrwzTJp4M0iuwIbzNEXt6tlBZ5+ZYzaGH9VWu5Nhn1Q1CBusCam3d8u3FfVEFf3Ueo8DocUCbUw==
 
-"gpu.js@file:/Users/greg/gpu.js":
+"gpu.js@file:../gpu.js":
   version "2.6.6"
   dependencies:
     acorn "^7.1.0"
@@ -10301,6 +10301,11 @@ three-loaders@^1.0.9:
   version "1.0.9"
   resolved "https://registry.yarnpkg.com/three-loaders/-/three-loaders-1.0.9.tgz#5b7a3f477a1f622e81f11ee6cde09fa78ef5d820"
   integrity sha512-O5mINga3ouCfl3eCIPjFV5tUzjiA1VvtbMwPUr1rkHfSpeSL8fBxsaXJzABzCU/c3/kflscIB+eiGcEUAVPSRg==
+
+three-mesh-bvh@^0.1.5:
+  version "0.1.5"
+  resolved "https://registry.yarnpkg.com/three-mesh-bvh/-/three-mesh-bvh-0.1.5.tgz#b76cabdc98a31a3499b6f3bbb4162b3dc0468911"
+  integrity sha512-ryT4RVDlSlwrRtCFgtH5PTRrAC+JGfzFxXJ1E5Wdfu2xVVcoeBkl2ocVp4XgOhzWJQWiSaHyq30VmSBhBPcigQ==
 
 three-obj-loader@^1.1.3:
   version "1.1.3"

@@ -1,0 +1,17 @@
+.float-controls{
+  position: absolute;
+  margin: .125em;
+  /* right: .125em; */
+}
+
+.float-button{
+  width: 3em;
+  height: 3em;
+  background-color: rgba(255, 255, 255, 0.884);
+  box-shadow: 0 0 2px 0px #0000007d;
+  border-radius: 4px;
+}
+
+.float-button:hover{
+  background-color: rgba(214, 227, 245, 0.884);
+}
