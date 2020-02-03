@@ -5,6 +5,7 @@ import { FDTD } from "../compute/fdtd";
 
 export interface RoomProps extends ContainerProps {
 	surfaces: Surface[];
+	// surfaceEdges: Surface[];
 	showBoundingBox?: boolean;
 }
 

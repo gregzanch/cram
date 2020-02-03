@@ -49,6 +49,12 @@ export default function SurfaceProperties(props: SurfacePropertiesProps) {
 						<CheckboxInput name="visible" checked={props.object.visible} onChange={props.onPropertyChange} />
 					</GridRow>
 				)}
+	
+				{props.object.hasOwnProperty('_displayVertexNormals') && (
+					<GridRow label={"vertex normals"}>
+						<CheckboxInput name="displayVertexNormals" checked={props.object.displayVertexNormals} onChange={props.onPropertyChange} />
+					</GridRow>
+				)}
 				
 				{props.object.hasOwnProperty('position') && (
 					<GridRow label={"position"}>

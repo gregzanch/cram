@@ -124,7 +124,8 @@ state.messenger.addMessageHandler("SHOULD_ADD_RAYTRACER", (acc, ...args) => {
         name: "new ray-tracer",
         containers: state.containers,
         reflectionOrder: 20,
-        updateInterval: 20
+        updateInterval: 100,
+        renderer: state.renderer
     });
     state.solvers[raytracer.uuid] = raytracer;
     return raytracer;
@@ -222,13 +223,33 @@ state.messenger.addMessageHandler("SIMULATION_SHOULD_PLAY", (acc, ...args) => {
     state.solvers[state.simulation].running = true;
     state.messenger.postMessage("SIMULATION_DID_PLAY");
 });
+
+
+
 state.messenger.addMessageHandler("SIMULATION_SHOULD_PAUSE", (acc, ...args) => {
     state.solvers[state.simulation].running = false;
     state.messenger.postMessage("SIMULATION_DID_PAUSE");
 });
+
 state.messenger.addMessageHandler("SIMULATION_SHOULD_CLEAR", (acc, ...args) => {
     (state.solvers[state.simulation] as FDTD).reset();
 });
+
+state.messenger.addMessageHandler("RAYTRACER_SHOULD_PLAY", (acc, ...args) => {
+    if (state.solvers[args[0]] instanceof RayTracer) {
+        (state.solvers[args[0]] as RayTracer).isRunning = true;
+    }
+    return state.solvers[args[0]].running
+});
+
+state.messenger.addMessageHandler("RAYTRACER_SHOULD_PAUSE", (acc, ...args) => {
+    if (state.solvers[args[0]] instanceof RayTracer) {
+        (state.solvers[args[0]] as RayTracer).isRunning = false;
+    }
+    return state.solvers[args[0]].running
+});
+
+
 
 
 setTimeout(() => {
@@ -261,8 +282,11 @@ setTimeout(() => {
     //     state.solvers[state.simulation].update();
     // }, 500);
     
+   
+    
     expose(
         {
+            raytracer:  state.messenger.postMessage("SHOULD_ADD_RAYTRACER")[0],
 			state,
             THREE,
 		},

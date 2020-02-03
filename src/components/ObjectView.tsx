@@ -12,18 +12,19 @@ import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
 import ChevronRightIcon from "@material-ui/icons/ChevronRight";
 
 import TimelineIcon from '@material-ui/icons/Timeline';
+import WifiIcon from '@material-ui/icons/Wifi';
 import HomeIcon from '@material-ui/icons/Home';
 import HomeOutlinedIcon from '@material-ui/icons/HomeOutlined';
 import TreeItem from "@material-ui/lab/TreeItem";
 import Source from "../objects/source";
 import Receiver from "../objects/receiver";
-
+import properCase from '../common/proper-case';
 import { KeyValuePair } from "../common/key-value-pair";
 import Container from "../objects/container";
 import Surface from "../objects/surface";
 import Solver from "../compute/solver";
 import { Colors } from "@blueprintjs/core";
-
+import { Icon } from '@fortawesome/fontawesome-svg-core'
 
 
 function NodesIcon(props) {
@@ -91,22 +92,11 @@ export function SurfaceIcon(props) {
 	);
 }
 export function SourceIcon(props) {
-	return (
-		<SvgIcon {...props}>
-			<svg
-				width="20"
-				height="20"
-				viewBox="-8 -8 32 32"
-				fill="none"
-				xmlns="http://www.w3.org/2000/svg">
-				<path
-					d="M1 1V7M1 1H7M1 1L9 9M20 1H14M20 1V7M20 1L12 9M20 20V14M20 20H14M20 20L12 12M1 20H7M1 20V14M1 20L9 12"
-					stroke="black"
-				/>
-				<circle cx="10.5" cy="10.5" r="3.5" fill="black" />
-			</svg>
-		</SvgIcon>
-	);
+	return <WifiIcon transform="rotate(45)" fillOpacity={0.95} fontSize="small" {...props}/>
+}
+
+export function ReceiverIcon(props) {
+	return <WifiIcon transform="rotate(135)" fillOpacity={0.95} fontSize="small" {...props} /> 
 }
 
 export function GeometryTreeNode(props) {
@@ -147,102 +137,53 @@ export function TreeItemLabel(props: TreeItemLabelProps) {
 	);
 }
 
+type ClickEvent = React.MouseEvent<HTMLElement, MouseEvent>;
 
 export default function ObjectView(props) {
 	function mapchildren(container: Container | THREE.Object3D) {
 		if (container["kind"]) {
+			const sharedProps = {
+				draggable: true,
+				key: container.uuid,
+				nodeId: container.uuid,
+			}
+			const draggable = true;
+			const key = container.uuid;
+			const nodeId = container.uuid;
+			const meta = properCase(container["kind"]);
+			const genericLabel = container.name || "untitled";
+			const onClick = (e: ClickEvent) => props.onClick(container, e);
+			const collapseIcon = (<ExpandMoreIcon onClick={e => setExpanded(expanded.filter(x => x !== container.uuid))} fontSize="small" />);
+			const expandIcon = (<ChevronRightIcon onClick={e => setExpanded(expanded.concat(container.uuid))} fontSize="small" />);
+			
+			const label = (<TreeItemLabel {...{ label: genericLabel, meta }} />);
+			const roomLabel = (<TreeItemLabel icon={<RoomIcon fontSize="small" />}  {...{label: genericLabel, meta}} />);
+			
+			console.log(container)
 			switch (container["kind"]) {
+				case "surface": return (
+					<TreeItem {...{ icon: <NodesIcon />, label, onClick, draggable, key, nodeId }} />
+				);
 				
-				case "surface":
-					return (<TreeItem
-						defaultChecked
-						icon={<NodesIcon />}
-						draggable={true}
-						nodeId={container.uuid}
-						label={<TreeItemLabel label={container.name || "untitled"} meta={"Surface"}/>}
-						key={container.uuid}
-						onClick={e => props.onClick(container, e)}
-					/>);
-				
-				
-				case "source":
-					return (<TreeItem
-						draggable={true}
-						icon={<SourceIcon />}
-						nodeId={container.uuid}
-						label={<TreeItemLabel label={container.name || "untitled"} meta={"Source"}/>}
-						key={container.uuid}
-						onClick={e => props.onClick(container, e)}
-					/>);
-				
+				case "source": return (
+					<TreeItem  {...{ icon: <SourceIcon />, label, onClick, draggable, key, nodeId }} />
+				);
 				
 				case "receiver":
-					return (<TreeItem
-						draggable={true}
-						nodeId={container.uuid}
-						label={<TreeItemLabel label={container.name || "untitled"} meta={"Receiver"}/>}
-						key={container.uuid}
-						onClick={e => props.onClick(container, e)}
-					/>);
-				
-				
-				case "room":
 					return (
-						<TreeItem
-							draggable={true}
-							nodeId={container.uuid}
-							label={
-								<TreeItemLabel
-									icon={<RoomIcon fontSize="small" />}
-									label={container.name || "untitled"}
-									meta={"Room"}
-								/>
-							}
-							collapseIcon={
-								<ExpandMoreIcon
-									onClick={e =>setExpanded(expanded.filter(x => x !== container.uuid))}
-									fontSize="small"
-								/>
-							}
-							expandIcon={
-								<ChevronRightIcon
-									onClick={e =>setExpanded(expanded.concat(container.uuid))}
-									fontSize="small"
-								/>
-							}
-							key={container.uuid}
-							onClick={e => props.onClick(container, e)}>
+					<TreeItem  {...{ icon: <ReceiverIcon />, label, onClick, draggable, key, nodeId }} />
+				);
+				
+				case "room": return (
+					<TreeItem {...{label: roomLabel, onClick, draggable, key, nodeId, collapseIcon, expandIcon}}>
 							{container.children.map(x => mapchildren(x))}
 						</TreeItem>
 					);
 
 				case "fdtd":
 					return (
-						<TreeItem
-							draggable={true}
-							nodeId={container.uuid}
-							label={
-								<TreeItemLabel
-									icon={<NodesIcon fontSize="small" />}
-									label={container.name || "untitled"}
-									meta={"FDTD"}
-								/>
-							}
-							collapseIcon={
-								<ExpandMoreIcon
-									onClick={e =>setExpanded(expanded.filter(x => x !== container.uuid))}
-									fontSize="small"
-								/>
-							}
-							expandIcon={
-								<ChevronRightIcon
-									onClick={e =>setExpanded(expanded.concat(container.uuid))}
-									fontSize="small"
-								/>
-							}
-							key={container.uuid}
-							onClick={e => props.onClick(container, e)}>
-							{ container.children && container.children.map(x => mapchildren(x))}
+						<TreeItem {...{label: roomLabel, draggable, key, nodeId, collapseIcon, expandIcon}}>
+							{container.children.map(x => mapchildren(x))}
 						</TreeItem>
 					);
 				
@@ -251,16 +192,14 @@ export default function ObjectView(props) {
 				case "container":
 					return (
 						<TreeItem
-							draggable={true}
-							nodeId={container.uuid}
 							label={
 								<TreeItemLabel
 									icon={<SurfaceIcon fontSize="small" />}
 									label={container.name || "untitled"}
-									meta={"Container"}
+									meta={properCase(container["kind"])}
 								/>
 							}
-							key={container.uuid}
+							
 							collapseIcon={
 								<ExpandMoreIcon
 									onClick={e =>
@@ -283,7 +222,7 @@ export default function ObjectView(props) {
 									fontSize="small"
 								/>
 							}
-							onClick={e => props.onClick(container, e)}>
+							{...sharedProps}>
 							{container.children.map(x => mapchildren(x))}
 						</TreeItem>
 					);
@@ -293,15 +232,15 @@ export default function ObjectView(props) {
 				default:
 					return (
 						<TreeItem
-							nodeId={container.uuid}
+							
 							label={
 								<TreeItemLabel
 									label={container.name || "untitled"}
 									meta={container["kind"] || container.type}
 								/>
 							}
-							key={container.uuid}
-							draggable={true}
+							
+							{...sharedProps}
 							collapseIcon={
 								<ExpandMoreIcon
 									onClick={e =>
@@ -324,7 +263,7 @@ export default function ObjectView(props) {
 									fontSize="small"
 								/>
 							}
-							onClick={e => props.onClick(container, e)}>
+							{...sharedProps}>
 							{container.children instanceof Array && container.children.map(x => mapchildren(x))}
 						</TreeItem>
 					);
@@ -382,25 +321,30 @@ export default function ObjectView(props) {
 	const [expanded, setExpanded] = useState(["containers"]);
 
 	const classes = useStyles();
-	return (
-		<TreeView
-			expanded={expanded}
-			className={classes.root}
-			defaultExpanded={["containers"]}
-			defaultCollapseIcon={<ExpandMoreIcon onClick={e => console.log(e)} fontSize="small"/>}
-			defaultExpandIcon={<ChevronRightIcon onClick={e => console.log(e)} fontSize="small"/>}>
-			<TreeItem
-				nodeId="solvers"
-				unselectable={Object.keys(props.containers).length == 0 ? "on" : "off"}
-				collapseIcon={<ExpandMoreIcon onClick={e => setExpanded(expanded.filter(x => x !== "solvers"))} fontSize="small" />}
-				expandIcon={<ChevronRightIcon onClick={e => setExpanded(expanded.concat("solvers"))} fontSize="small"/>}
-				label={<TreeItemLabel label={<div style={{ fontWeight: 400,color: Object.keys(props.containers).length == 0 ? Colors.LIGHT_GRAY3 : "#182026" }}>Solvers</div>} />}>
+	const unselectable = {
+		unselectable: (Object.keys(props.containers).length == 0 ? "on" : "off") as ("on" | "off")
+	}
+	
+	
+	
+	const SolverTreeItem = (
+		<TreeItem
+			nodeId="solvers"
+			collapseIcon={<ExpandMoreIcon onClick={e => setExpanded(expanded.filter(x => x !== "solvers"))} fontSize="small" />}
+			expandIcon={<ChevronRightIcon onClick={e => setExpanded(expanded.concat("solvers"))} fontSize="small" />}
+			{...unselectable}
+			label={<TreeItemLabel label={<div style={{ fontWeight: 400, color: Object.keys(props.containers).length == 0 ? Colors.LIGHT_GRAY3 : "#182026" }}>Solvers</div>} />}>
 				
-				{Object.keys(props.solvers).map((x: string) => mapsolver(props.solvers[x]))}
-			</TreeItem>
+			{Object.keys(props.solvers).map((x: string) => mapsolver(props.solvers[x]))}
+		</TreeItem>
+	);
+	
+	
+	
+	const ContainerTreeItem = (
 			<TreeItem
 				nodeId="containers"
-				unselectable={Object.keys(props.containers).length == 0 ? "on" : "off"}
+				{...unselectable}
 				collapseIcon={<ExpandMoreIcon onClick={e => setExpanded(expanded.filter(x => x !== "containers"))} fontSize="small" />}
 				expandIcon={<ChevronRightIcon onClick={e => setExpanded(expanded.concat("containers"))} fontSize="small"/>}
 				label={<TreeItemLabel label={<div style={{ fontWeight: 400, color: Object.keys(props.containers).length == 0 ? Colors.LIGHT_GRAY3 : "#182026" }}>Objects</div>}/>}>
@@ -408,6 +352,33 @@ export default function ObjectView(props) {
 					mapchildren(props.containers[x])
 				)}
 			</TreeItem>
+	)
+	
+	
+	const TreeViewProps = {
+		expanded,
+		className: classes.root,
+		defaultExpanded: (["containers"]),
+		defaultExpandIcon: (
+			<ExpandMoreIcon
+				onClick={e => console.log(e)}
+				fontSize="small"
+			/>
+		),
+		defaultCollapseIcon: (
+			<ChevronRightIcon
+				onClick={e => console.log(e)}
+				fontSize="small"
+			/>
+		),
+	};
+	
+	
+	
+	return (
+		<TreeView {...TreeViewProps}>
+			{SolverTreeItem}
+			{ContainerTreeItem}
 		</TreeView>
 	);
 }

@@ -16,12 +16,12 @@ export interface ObjectPropertiesProps {
 	object: Container|Solver;
   onPropertyChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 	onPropertyValueChangeAsNumber: (id: string, prop: string, valueAsNumber: number) => void;
-	onPropertyValueChangeAsString: (id: string, prop: string, valueAsString: string) => void;
+  onPropertyValueChangeAsString: (id: string, prop: string, valueAsString: string) => void;
+  onButtonClick?: (e: React.MouseEvent<HTMLElement, MouseEvent>) => void;
 }
 
 export default function ObjectProperties(props: ObjectPropertiesProps) {
   switch (props.object.kind) {
-    
     case "source":  return <SourceProperties {...props as SourcePropertiesProps}/>
     case "receiver":  return <ReceiverProperties {...props as ReceiverPropertiesProps}/>
     case "room":  return <RoomProperties {...props as RoomPropertiesProps}/>

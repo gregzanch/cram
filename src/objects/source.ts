@@ -3,10 +3,15 @@ import Container, { ContainerProps } from "./container";
 
 export interface SourceProps extends ContainerProps {
   f?: (t: number) => number;
+  theta?: number;
+  phi?: number;
 }
 
 export default class Source extends Container {
   f: (t: number) => number;
+  theta: number;
+  phi: number;
+  numRays: number;
   constructor(name: string, props?: SourceProps) {
     super(name);
     this.kind = "source";
@@ -20,5 +25,8 @@ export default class Source extends Container {
       )
     );
     this.f = (props && props.f) || (t => Math.sin(t));
+    this.theta = (props && props.theta) || 1;
+    this.phi = (props && props.phi) || 1;
+    this.numRays = 0;
   }
 }

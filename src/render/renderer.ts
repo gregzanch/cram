@@ -301,7 +301,9 @@ export default class Renderer {
 	settingChanged(setting: string, value: any) {
 		this.settingHandlers[setting](value);
 	}
-	
+	addRays(rays: THREE.LineSegments) {
+		this.scene.add(rays);
+	}
 	add(obj: THREE.Object3D) {
 		this.workspaceCursor.add(obj);
 	}
@@ -310,24 +312,30 @@ export default class Renderer {
 		this.workspaceCursor.add(room);
 	}
 	
-	smoothCameraTo(params: SmoothCameraParams) {
+	smoothCameraTo(
+		position: THREE.Vector3,
+		target?: THREE.Vector3,
+		duration?: number,
+		curve?: (t: number) => number
+	) {
 		const origin = this.camera.getWorldPosition(new THREE.Vector3());
 		const timer = new Ticker("inc");
-		const curve = params.curve || EasingFunctions.linear;
+		const _curve = curve || EasingFunctions.linear;
+		const _duration = (duration || 1000);
 		this.smoothingCamera = true;
 		this.smoothingCameraFunction = () => {
 			timer.tick();
-			if (timer.ticks > params.duration) {
-				this.smoothingCamera = false;
-				return;
-			}
+			if (timer.ticks > _duration) {
+        this.smoothingCamera = false;
+        return;
+      }
 			const pos = lerp3(
-				origin,
-				params.position,
-				curve(timer.ticks / params.duration)
-			);
+        origin,
+        position,
+        _curve(timer.ticks / _duration)
+      );
 			this.camera.position.set(pos.x, pos.y, pos.z);
-			params.target && this.camera.lookAt(params.target);
+			target && this.camera.lookAt(target);
 		};
 	}
 	update() {

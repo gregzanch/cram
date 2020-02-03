@@ -3,6 +3,7 @@ import Container, { ContainerProps } from "./container";
 import {chunk} from '../common/chunk';
 import hash from 'object-hash';
 import { KeyValuePair } from "../common/key-value-pair";
+import Renderer from "../render/renderer";
 
 
 const defaults = {
@@ -10,7 +11,7 @@ const defaults = {
 		mesh: new THREE.MeshPhysicalMaterial({
 			transparent: true,
 			opacity: 0.1,
-			side: THREE.DoubleSide,
+			side: THREE.FrontSide,
 			metalness: 0.05,
 			reflectivity: 0.15,
 			roughness: 0.3,
@@ -30,7 +31,8 @@ const defaults = {
 	},
 	displayInternalEdges: false,
 	displayEdges: true,
-	fillSurface: true
+	fillSurface: true,
+	_displayVertexNormals: false,
 };
 
 export interface SurfaceProps extends ContainerProps {
@@ -38,6 +40,7 @@ export interface SurfaceProps extends ContainerProps {
 	displayInternalEdges?: boolean;
 	displayEdges?: boolean;
 	fillSurface?: boolean;
+	_displayVertexNormals?: boolean;
 }
 
 interface KeepLine{
@@ -54,29 +57,35 @@ export default class Surface extends Container {
 	displayEdges: boolean;
 	triangles: number[][][];
 	fillSurface: boolean;
-	
+	_displayVertexNormals: boolean;
+	vertexNormals: THREE.VertexNormalsHelper;
 	// for acoustics
 	absorption!: number[];
 	reflection!: number[];
 	_triangles: THREE.Triangle[];
-	
+	// renderer: Renderer;
 	constructor(name: string, props: SurfaceProps) {
 		super(name);
 		this.kind = "surface";
 		this.displayInternalEdges = props.displayInternalEdges || defaults.displayInternalEdges;
 		this.displayEdges = props.displayEdges || defaults.displayEdges;
 		this.fillSurface = props.fillSurface || defaults.fillSurface;
+		this._displayVertexNormals = props._displayVertexNormals || defaults._displayVertexNormals;
 		this.wire = new THREE.Mesh(props.geometry, defaults.materials.wire);
 		this.mesh = new THREE.Mesh(props.geometry, defaults.materials.mesh);
 		this.mesh.geometry.computeBoundingBox();
 		this.mesh.geometry.computeBoundingSphere();
-				
+		// this.mesh.geometry.computeVertexNormals();
+		const tempmesh = new THREE.Mesh(props.geometry.clone(), undefined);
+		tempmesh.geometry.computeVertexNormals()
+		this.vertexNormals = new THREE.VertexNormalsHelper(tempmesh, 0.25, 0xff0000, 1);
+		
 		this.triangles = chunk(chunk(Array.from((props.geometry.getAttribute('position') as THREE.BufferAttribute).array), 3), 3);
 		this._triangles = this.triangles.map(x => new THREE.Triangle(
 			new THREE.Vector3(...x[0]),
 			new THREE.Vector3(...x[1]),
 			new THREE.Vector3(...x[2]),
-		));
+		));4
 		
 
 		// console.log(this.triangles);
@@ -108,18 +117,28 @@ export default class Surface extends Container {
 			});
 		});
 		this.edges = new THREE.LineSegments(segments, defaults.materials.line);
+
 		
 		this.add(this.mesh);
 		this.mesh.visible = this.fillSurface;
 		this.add(this.wire);
 		this.wire.visible = this.displayInternalEdges;
-		this.add(this.edges);
+		// this.add(this.edges);
 		this.edges.visible = this.displayEdges;
-		
-	
+		this.add(this.vertexNormals);
+		this.vertexNormals.visible = this._displayVertexNormals;
 		
 	}
 	
+	getEdges() {
+		return this.edges;
+	}
+	get displayVertexNormals() {
+		return this.vertexNormals.visible;
+	}
+	set displayVertexNormals(displayVertexNormals: boolean) {
+		this.vertexNormals.visible = displayVertexNormals
+	}
 	
 	get geometry() {
 		return this.mesh.geometry;

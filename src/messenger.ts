@@ -4,6 +4,7 @@ import { uuid } from "uuidv4";
 export type EventHandler = (...args) => void;
 
 
+
 export default class Messenger{
     private dictionary: KeyValuePair<KeyValuePair<EventHandler>>;
     private messageListeners: KeyValuePair<EventHandler>;
@@ -34,6 +35,7 @@ export default class Messenger{
         }
     }
     postMessage(message: string, ...args) {
+        message!=="RENDERER_UPDATED" && console.log(message);
         // if messgae exists
         if (this.dictionary[message]) {
             // accumulates the results of each handler

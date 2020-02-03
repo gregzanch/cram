@@ -39,6 +39,7 @@ import { EditorMode } from "../constants/editor-modes";
 // import { Process, Task } from "../common/process";
 import SettingsDrawerCheckBox from "../components/setting-components/SettingsDrawerCheckbox";
 import Solver from "../compute/solver";
+import RayTracer from "../compute/raytracer";
 
 FocusStyleManager.onlyShowFocusOnTabs();
 
@@ -103,6 +104,7 @@ export default class App extends React.Component<AppProps, AppState> {
 			this
 		);
 		this.handleSettingChange = this.handleSettingChange.bind(this);
+		this.handleObjectPropertyButtonClick = this.handleObjectPropertyButtonClick.bind(this);
 	}
 
 	setupMessageHandlers() {
@@ -168,7 +170,7 @@ export default class App extends React.Component<AppProps, AppState> {
 				simulationRunning: true
 			},()=>console.log("SIMULATION_DID_PLAY"));
 		})
-			this.props.messenger.addMessageHandler("SIMULATION_DID_PAUSE", (acc, ...args) => {
+		this.props.messenger.addMessageHandler("SIMULATION_DID_PAUSE", (acc, ...args) => {
 			this.setState({
 				simulationRunning: false
 			},()=>console.log("SIMULATION_DID_PAUSE"));
@@ -205,7 +207,25 @@ export default class App extends React.Component<AppProps, AppState> {
 			selectedObject: object
 		});
 	}
-
+	handleObjectPropertyButtonClick(e: React.MouseEvent<HTMLInputElement, MouseEvent>) {
+		const { selectedObject } = this.state;
+		if (selectedObject instanceof RayTracer) {
+			switch (e.currentTarget.name) {
+				case "ray-tracer-play":
+					this.props.messenger.postMessage("RAYTRACER_SHOULD_PLAY", selectedObject.uuid)
+					break;
+				case "ray-tracer-pause":
+					this.props.messenger.postMessage("RAYTRACER_SHOULD_PAUSE", selectedObject.uuid);
+					break;
+				default: break;
+			}
+		}
+		this.setState({
+			selectedObject
+		}, () => {
+				console.log(this.state.selectedObject)
+		})
+	}
 	handleObjectPropertyValueChangeAsNumber(
 		id: string,
 		prop: string,
@@ -379,17 +399,7 @@ export default class App extends React.Component<AppProps, AppState> {
 												}/>
 										</Menu>
 									</Popover>
-									<Button
-										icon={this.state.simulationRunning ? "pause" : "play"} 
-										onClick={e => {
-											this.props.messenger.postMessage(this.state.simulationRunning ? "SIMULATION_SHOULD_PAUSE" : "SIMULATION_SHOULD_PLAY");
-										}} />
-									
-									<Button
-										icon={"refresh"} 
-										onClick={e => {
-											this.props.messenger.postMessage("SIMULATION_SHOULD_CLEAR");
-										}} />
+								
 									
 								</ButtonGroup>
 							</Menu>
@@ -454,6 +464,7 @@ export default class App extends React.Component<AppProps, AppState> {
 									onPropertyChange={this.handleObjectPropertyChange}
 									onPropertyValueChangeAsNumber={this.handleObjectPropertyValueChangeAsNumber}
 									onPropertyValueChangeAsString={this.handleObjectPropertyValueChangeAsString}
+									onButtonClick={this.handleObjectPropertyButtonClick}
 								/>
 							)}
 						</PanelContainer>
