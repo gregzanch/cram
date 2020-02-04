@@ -49,6 +49,7 @@ import { uuid } from "uuidv4";
 
 
 
+
 expose({ chunk, THREE, EasingFunctions }, window);
 
 
@@ -123,8 +124,8 @@ state.messenger.addMessageHandler("SHOULD_ADD_RAYTRACER", (acc, ...args) => {
     const raytracer = new RayTracer({
         name: "new ray-tracer",
         containers: state.containers,
-        reflectionOrder: 20,
-        updateInterval: 100,
+        reflectionOrder: 10,
+        updateInterval: 10,
         renderer: state.renderer
     });
     state.solvers[raytracer.uuid] = raytracer;
@@ -174,6 +175,9 @@ state.messenger.addMessageHandler("SHOULD_ADD_SOURCE", (acc, ...args) => {
     state.containers[source.uuid] = source;
     state.sources.push(source.uuid);
     state.renderer.add(source);
+    Object.keys(state.solvers).forEach(x => {
+        state.solvers[x] instanceof RayTracer && (state.solvers[x] as RayTracer).addSource(source);
+    })
     return source;
 });
 
@@ -182,6 +186,9 @@ state.messenger.addMessageHandler("SHOULD_ADD_RECEIVER", (acc, ...args) => {
     state.containers[rec.uuid] = rec;
     state.sources.push(rec.uuid);
     state.renderer.add(rec);
+    Object.keys(state.solvers).forEach(x => {
+        state.solvers[x] instanceof RayTracer && (state.solvers[x] as RayTracer).addReceiver(rec);
+    });
     return rec;
 });
 
@@ -210,7 +217,7 @@ state.messenger.addMessageHandler("IMPORT_FILE", (acc, ...args) => {
 });
 
 state.messenger.addMessageHandler("APP_MOUNTED", (acc, ...args) => {
-    state.renderer.init(args[0]);
+     state.renderer.init(args[0]);
 });
 
 state.messenger.addMessageHandler("RENDERER_UPDATED", (acc, ...args) => {
@@ -249,13 +256,21 @@ state.messenger.addMessageHandler("RAYTRACER_SHOULD_PAUSE", (acc, ...args) => {
     return state.solvers[args[0]].running
 });
 
+state.messenger.addMessageHandler("RAYTRACER_SHOULD_CLEAR", (acc, ...args) => {
+    if (state.solvers[args[0]] instanceof RayTracer) {
+        (state.solvers[args[0]] as RayTracer).clearRays();
+    }
+});
+
 
 
 
 setTimeout(() => {
     // const parser = new OBJParser();
     // const geometry = parser.parse(testroom)
-    const {uuid: sourceid} = state.messenger.postMessage("SHOULD_ADD_SOURCE")[0];
+    const { uuid: sourceid } = state.messenger.postMessage("SHOULD_ADD_SOURCE")[0];
+    (state.containers[sourceid] as Source).y = -5;
+    (state.containers[sourceid] as Source).z = 3;
     const a = 1;
     const w = 2;
     (state.containers[sourceid] as Source).f = t => Math.sin(t*w) * a;
@@ -272,7 +287,13 @@ setTimeout(() => {
     // state.containers[sourceid].x = x / 2;
     // state.containers[sourceid].y = y / 2;
     // state.containers[sourceid].z = z / 2;
-    room.boundingBox.getCenter(state.containers[sourceid].position);
+
+    const { uuid: receiverId } = state.messenger.postMessage("SHOULD_ADD_RECEIVER")[0];
+    (state.containers[receiverId] as Receiver).y = 5;
+    (state.containers[receiverId] as Receiver).z = 3;
+    (state.containers[receiverId] as Receiver).scalex = 3;
+    (state.containers[receiverId] as Receiver).scaley = 3;
+    (state.containers[receiverId] as Receiver).scalez = 3;
     // (state.containers[room.uuid] as Room).surfaces.visible = false;
     // state.messenger.postMessage("SHOULD_ADD_FDTD")[0];
     

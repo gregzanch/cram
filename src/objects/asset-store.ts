@@ -1,21 +1,9 @@
 //@ts-ignore
-import speaker from "!raw-loader!../res/models/speaker.gltf";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+import * as THREE from "three";
+import matcapPorcelainWhite from "../res/matcaps/matcap-porcelain-white.jpg";
+import matcapRazin from "../res/matcaps/razin.png";
 
 
-
-export interface Assets{
-    speaker: THREE.Object3D[];
-}
-export default class AssetStore{
-    assets: {
-        speaker: THREE.Object3D[];
-    }
-    constructor() {
-        const gltfloader = new GLTFLoader();
-        this.assets = {} as Assets;
-        gltfloader.parse(speaker, '../res/models/speaker.gltf', (gltf) => {
-            this.assets.speaker = gltf.scene.children;
-        })
-    }
-}
+const loader = new THREE.TextureLoader();
+export const MATCAP_PORCELAIN_WHITE = loader.load(matcapPorcelainWhite);
+export const MATCAP_RAZIN = loader.load(matcapRazin);

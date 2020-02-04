@@ -4,7 +4,6 @@ import * as THREE from "three";
 //@ts-ignore
 // import vs from "!raw-loader!./shaders/beam/shader.vert";
 // import { AudioRenderer } from './audio';
-import { THREEGLTFLoader, THREEDracoLoader } from "three-loaders";
 import { CameraStore } from "../common/storage-schemas";
 
 const OrbitControls = require("./orbit-controls.js")(THREE);
@@ -97,7 +96,7 @@ export default class Renderer {
 		
 		
 		
-		params.elt && this.init(params.elt);
+
 		this.messenger = params.messenger;
 	}
 	init(elt: HTMLCanvasElement) {

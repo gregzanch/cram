@@ -7,7 +7,7 @@ import GridRow from '../GridRow';
 import Room from '../../objects/room';
 
 export interface RoomPropertiesProps {
-	object: Source;
+	object: Room;
   onPropertyChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 	onPropertyValueChangeAsNumber: (id: string, prop: string, valueAsNumber: number) => void;
 	onPropertyValueChangeAsString: (id: string, prop: string, valueAsString: string) => void;
@@ -47,6 +47,11 @@ export default function RoomProperties(props: RoomPropertiesProps) {
 				{props.object.hasOwnProperty('visible') && (
 					<GridRow label={"visible"}>
 						<CheckboxInput name="visible" checked={props.object.visible} onChange={props.onPropertyChange} />
+					</GridRow>
+				)}
+				{props.object.boundingBoxHelper.hasOwnProperty('visible') && (
+					<GridRow label={"bounding box"}>
+						<CheckboxInput name="showBoundingBox" checked={props.object.boundingBoxHelper.visible} onChange={props.onPropertyChange} />
 					</GridRow>
 				)}
 				

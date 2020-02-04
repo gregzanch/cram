@@ -5,6 +5,7 @@ import CheckboxInput from "../CheckboxInput";
 import Source from '../../objects/source';
 import GridRow from '../GridRow';
 import Receiver from "../../objects/receiver";
+import ColorInput from '../ColorInput';
 
 export interface ReceiverPropertiesProps {
 	object: Receiver;
@@ -71,6 +72,12 @@ export default function ReceiverProperties(props: ReceiverPropertiesProps) {
 						<NumberInput name="rotationx" value={props.object.rotation.x} {...XYZProps}/>
 						<NumberInput name="rotationy" value={props.object.rotation.y} {...XYZProps}/>
 						<NumberInput name="rotationz" value={props.object.rotation.z} {...XYZProps}/>
+					</GridRow>
+				)}
+				
+				{props.object.hasOwnProperty('mesh') && (
+					<GridRow label={"color"}>
+						<ColorInput name="color" value={props.object.color} onChange={props.onPropertyChange}/>
 					</GridRow>
 				)}
 			</div>

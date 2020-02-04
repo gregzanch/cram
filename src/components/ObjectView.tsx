@@ -25,7 +25,7 @@ import Surface from "../objects/surface";
 import Solver from "../compute/solver";
 import { Colors } from "@blueprintjs/core";
 import { Icon } from '@fortawesome/fontawesome-svg-core'
-
+import MicIcon from "@material-ui/icons/Mic";
 
 function NodesIcon(props) {
 	return (
@@ -96,7 +96,8 @@ export function SourceIcon(props) {
 }
 
 export function ReceiverIcon(props) {
-	return <WifiIcon transform="rotate(135)" fillOpacity={0.95} fontSize="small" {...props} /> 
+	// return <WifiIcon transform="rotate(135)" fillOpacity={0.95} fontSize="small" {...props} /> 
+	return <MicIcon fontSize="small" {...props} />
 }
 
 export function GeometryTreeNode(props) {
@@ -159,7 +160,7 @@ export default function ObjectView(props) {
 			const label = (<TreeItemLabel {...{ label: genericLabel, meta }} />);
 			const roomLabel = (<TreeItemLabel icon={<RoomIcon fontSize="small" />}  {...{label: genericLabel, meta}} />);
 			
-			console.log(container)
+
 			switch (container["kind"]) {
 				case "surface": return (
 					<TreeItem {...{ icon: <NodesIcon />, label, onClick, draggable, key, nodeId }} />
@@ -318,7 +319,7 @@ export default function ObjectView(props) {
 		}
 	}
 	
-	const [expanded, setExpanded] = useState(["containers"]);
+	const [expanded, setExpanded] = useState(["solvers","containers"]);
 
 	const classes = useStyles();
 	const unselectable = {
@@ -358,7 +359,7 @@ export default function ObjectView(props) {
 	const TreeViewProps = {
 		expanded,
 		className: classes.root,
-		defaultExpanded: (["containers"]),
+		defaultExpanded: (["solvers"]),
 		defaultExpandIcon: (
 			<ExpandMoreIcon
 				onClick={e => console.log(e)}

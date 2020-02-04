@@ -81,6 +81,19 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
               name={props.object.isRunning ? "ray-tracer-pause" : "ray-tracer-play"}
               icon={props.object.isRunning ? "pause" : "play"}
               onClick={props.onButtonClick}
+              minimal
+              className={"bp3-small-icon-button"}
+            />
+          </GridRow>
+        }
+        {
+          <GridRow label={"clear"}>
+            <Button
+              name="ray-tracer-clear"
+              icon="cross"
+              onClick={props.onButtonClick}
+              minimal
+              className={"bp3-small-icon-button"}
             />
           </GridRow>
         }

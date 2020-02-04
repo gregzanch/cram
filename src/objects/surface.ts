@@ -123,7 +123,7 @@ export default class Surface extends Container {
 		this.mesh.visible = this.fillSurface;
 		this.add(this.wire);
 		this.wire.visible = this.displayInternalEdges;
-		// this.add(this.edges);
+		this.add(this.edges);
 		this.edges.visible = this.displayEdges;
 		this.add(this.vertexNormals);
 		this.vertexNormals.visible = this._displayVertexNormals;

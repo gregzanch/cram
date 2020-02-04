@@ -41,6 +41,9 @@ import SettingsDrawerCheckBox from "../components/setting-components/SettingsDra
 import Solver from "../compute/solver";
 import RayTracer from "../compute/raytracer";
 
+import Gutter from '../components/Gutter';
+import { Stat } from "../components/Gutter/Stats";
+
 FocusStyleManager.onlyShowFocusOnTabs();
 
 export interface AppProps {
@@ -63,11 +66,14 @@ interface AppState {
 	solvers: KeyValuePair<Solver>;
 	tool: ToolName;
 	simulationRunning: boolean;
+	darkmode: boolean;
+	stats: Stat[];
 }
 
 export default class App extends React.Component<AppProps, AppState> {
 	state: AppState;
 	canvas: React.RefObject<HTMLCanvasElement>;
+	statsCanvas: React.RefObject<HTMLCanvasElement>;
 	prog: any;
 	constructor(props: AppProps) {
 		super(props);
@@ -81,6 +87,8 @@ export default class App extends React.Component<AppProps, AppState> {
 			settings: props.settings,
 			mode: "EDIT",
 			tool: "SELECT",
+			darkmode: false,
+			stats: [] as Stat[]
 			// process: new Process({name: "base", steps: [] as Task[]})
 			
 		};
@@ -88,6 +96,7 @@ export default class App extends React.Component<AppProps, AppState> {
 		this.setupMessageHandlers();
 
 		this.canvas = React.createRef<HTMLCanvasElement>();
+		this.statsCanvas = React.createRef<HTMLCanvasElement>();
 		this.showImportDialog = this.showImportDialog.bind(this);
 		this.handleImportDialogClose = this.handleImportDialogClose.bind(this);
 		this.handleObjectViewClick = this.handleObjectViewClick.bind(this);
@@ -175,10 +184,20 @@ export default class App extends React.Component<AppProps, AppState> {
 				simulationRunning: false
 			},()=>console.log("SIMULATION_DID_PAUSE"));
 		})
+		this.props.messenger.addMessageHandler("STATS_SETUP", (acc, ...args) => {
+			this.setState({
+				stats: Object.keys(args[0]).map(x => args[0][x]) as Stat[]
+			});
+		});
+		this.props.messenger.addMessageHandler("STATS_UPDATE", (acc, ...args) => {
+			this.setState({
+        stats: Object.keys(args[0]).map(x => args[0][x]) as Stat[]
+      });
+		})
 	}
 
 	componentDidMount() {
-		this.canvas.current &&
+		this.canvas.current && 
 			this.props.messenger.postMessage(
 				"APP_MOUNTED",
 				this.canvas.current
@@ -212,10 +231,13 @@ export default class App extends React.Component<AppProps, AppState> {
 		if (selectedObject instanceof RayTracer) {
 			switch (e.currentTarget.name) {
 				case "ray-tracer-play":
-					this.props.messenger.postMessage("RAYTRACER_SHOULD_PLAY", selectedObject.uuid)
+					this.props.messenger.postMessage("RAYTRACER_SHOULD_PLAY", selectedObject.uuid);
 					break;
 				case "ray-tracer-pause":
 					this.props.messenger.postMessage("RAYTRACER_SHOULD_PAUSE", selectedObject.uuid);
+					break;
+				case "ray-tracer-clear":
+					this.props.messenger.postMessage("RAYTRACER_SHOULD_CLEAR", selectedObject.uuid);
 					break;
 				default: break;
 			}
@@ -292,190 +314,210 @@ export default class App extends React.Component<AppProps, AppState> {
 
 	render() {
 		return (
-			<div>
-				<div>
-					<Navbar>
-						<Navbar.Group align={Alignment.LEFT}>
-							<Navbar.Group
-								style={{
-									fontSize: "16pt",
-									verticalAlign: "text-top",
-									margin: "0 0 .25em"
-								}}>
-								{/* <img src={resolve_svg} alt="resolve" /> */}
-								cram.ui
-							</Navbar.Group>
-							<Navbar.Divider />
+      <div>
+        <div>
+          <Navbar className={this.state.darkmode ? "bp3-dark" : ""}>
+            <Navbar.Group align={Alignment.LEFT}>
+              <Navbar.Group
+                style={{
+                  fontSize: "16pt",
+                  verticalAlign: "text-top",
+                  margin: "0 0 .25em"
+                }}>
+                {/* <img src={resolve_svg} alt="resolve" /> */}
+                cram.ui
+              </Navbar.Group>
+              <Navbar.Divider />
 
-							<Menu>
-								<ButtonGroup minimal={true}>
-									<Popover
-										minimal={true}
-										transitionDuration={50}
-										position={Position.BOTTOM_LEFT}>
-										<Button text="File" />
-										<Menu>
-											<MenuItem
-												text="New"
-												disabled></MenuItem>
-											<MenuItem
-												text="Open"
-												disabled></MenuItem>
-											<MenuItem
-												text="Save"
-												disabled></MenuItem>
-											<MenuDivider />
-											<MenuItem
-												text="Import"
-												onClick={
-													this.showImportDialog
-												}></MenuItem>
-											<MenuItem
-												text="Export"
-												disabled></MenuItem>
-										</Menu>
-									</Popover>
-									<Popover
-										minimal={true}
-										transitionDuration={50}
-										position={Position.BOTTOM_LEFT}>
-										<Button text="Edit" />
-										<Menu>
-											<MenuItem
-												text="Undo"
-												disabled></MenuItem>
-											<MenuItem
-												text="Redo"
-												disabled></MenuItem>
-											<MenuDivider />
-											<MenuItem
-												text="Cut"
-												disabled></MenuItem>
-											<MenuItem
-												text="Copy"
-												disabled></MenuItem>
-											<MenuItem
-												text="Paste"
-												disabled></MenuItem>
-										</Menu>
-									</Popover>
-									<Popover
-										minimal={true}
-										transitionDuration={50}
-										position={Position.BOTTOM_LEFT}>
-										<Button text="Add" />
-										<Menu>
-											<MenuItem
-												text={
-													<div style={{display: "flex", justifyContent: "space-between" }}>
-														<div>Source</div>
-														<div style={{color:Colors.LIGHT_GRAY1}}>{Characters.COMMAND}</div>
-													</div>
-												}
-												onClick={() =>
-													this.props.messenger.postMessage(
-														"SHOULD_ADD_SOURCE"
-													)
-												}/>
-											<MenuItem
-												text="Receiver"
-												onClick={() =>
-													this.props.messenger.postMessage(
-														"SHOULD_ADD_RECEIVER"
-													)
-												}></MenuItem>
-											<MenuDivider />
-											<MenuItem
-												text={
-													<div style={{display: "flex", justifyContent: "space-between" }}>
-														<div>Ray Tracer</div>
-														<div style={{color:Colors.LIGHT_GRAY1}}>{Characters.COMMAND}</div>
-													</div>
-												}
-												onClick={() =>
-													this.props.messenger.postMessage(
-														"SHOULD_ADD_RAYTRACER"
-													)
-												}/>
-										</Menu>
-									</Popover>
-								
-									
-								</ButtonGroup>
-							</Menu>
-						</Navbar.Group>
-						<Navbar.Group align={Alignment.RIGHT}>
-							<Button
-								icon="cog"
-								minimal={true}
-								onClick={
-									this.handleSettingsButtonClick
-								}></Button>
-						</Navbar.Group>
-					</Navbar>
-				</div>
-				<SettingsDrawer
-					size={"35%"}
-					onClose={this.handleSettingsButtonClick}
-					isOpen={this.state.settingsDrawerVisible}
-				>
-					<input name="background" type="color" onChange={e => this.props.messenger.postMessage("renderer-should-change-background", e.currentTarget.value)} />
-					<input name="fogColor" type="color" onChange={e => this.props.messenger.postMessage("renderer-should-change-fogColor", e.currentTarget.value)} />
-				</SettingsDrawer>
-				<ImportDialog
-					onImport={file => {
-						this.props.messenger.postMessage("IMPORT_FILE", file);
-						this.handleImportDialogClose();
-					}}
-					isOpen={this.state.importDialogVisible}
-					autoFocus={true}
-					canEscapeKeyClose={true}
-					canOutsideClickClose={true}
-					enforceFocus={false}
-					usePortal={true}
-					data={{ themeName: "dark" }}
-					onClose={this.handleImportDialogClose}
-					onDrop={file => {
-						this.props.messenger.postMessage("IMPORT_FILE", file);
-					}}
-				/>
-				<SplitterLayout
-					secondaryMinSize={50}
-					primaryMinSize={50}
-					secondaryInitialSize={250}
-					primaryIndex={1}
-					customClassName="modified-splitter-layout">
-					<SplitterLayout
-						vertical={true}
-						primaryMinSize={10}
-						secondaryMinSize={10}
-						percentage={true}>
-						<PanelContainer>
-							<ObjectView
-								containers={this.state.containers}
-								solvers={this.state.solvers}
-								onClick={this.handleObjectViewClick}
-							/>
-						</PanelContainer>
-						<PanelContainer className="panel full-bottom">
-							{(Object.keys(this.state.selectedObject).length > 0) && (
-								<ObjectProperties
-									object={this.state.selectedObject}
-									onPropertyChange={this.handleObjectPropertyChange}
-									onPropertyValueChangeAsNumber={this.handleObjectPropertyValueChangeAsNumber}
-									onPropertyValueChangeAsString={this.handleObjectPropertyValueChangeAsString}
-									onButtonClick={this.handleObjectPropertyButtonClick}
-								/>
-							)}
-						</PanelContainer>
-					</SplitterLayout>
-					<div className="webgl-canvas">
-						<FloatControls />
-						<canvas ref={this.canvas} />
-					</div>
-				</SplitterLayout>
-			</div>
-		);
+              <Menu>
+                <ButtonGroup minimal={true}>
+                  <Popover
+                    minimal={true}
+                    transitionDuration={50}
+                    position={Position.BOTTOM_LEFT}>
+                    <Button text="File" />
+                    <Menu>
+                      <MenuItem text="New" disabled></MenuItem>
+                      <MenuItem text="Open" disabled></MenuItem>
+                      <MenuItem text="Save" disabled></MenuItem>
+                      <MenuDivider />
+                      <MenuItem
+                        text="Import"
+                        onClick={this.showImportDialog}></MenuItem>
+                      <MenuItem text="Export" disabled></MenuItem>
+                    </Menu>
+                  </Popover>
+                  <Popover
+                    minimal={true}
+                    transitionDuration={50}
+                    position={Position.BOTTOM_LEFT}>
+                    <Button text="Edit" />
+                    <Menu>
+                      <MenuItem text="Undo" disabled></MenuItem>
+                      <MenuItem text="Redo" disabled></MenuItem>
+                      <MenuDivider />
+                      <MenuItem text="Cut" disabled></MenuItem>
+                      <MenuItem text="Copy" disabled></MenuItem>
+                      <MenuItem text="Paste" disabled></MenuItem>
+                    </Menu>
+                  </Popover>
+                  <Popover
+                    minimal={true}
+                    transitionDuration={50}
+                    position={Position.BOTTOM_LEFT}>
+                    <Button text="Add" />
+                    <Menu>
+                      <MenuItem
+                        text={
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between"
+                            }}>
+                            <div>Source</div>
+                            <div style={{ color: Colors.LIGHT_GRAY1 }}>
+                              {Characters.COMMAND}
+                            </div>
+                          </div>
+                        }
+                        onClick={() =>
+                          this.props.messenger.postMessage("SHOULD_ADD_SOURCE")
+                        }
+                      />
+                      <MenuItem
+                        text="Receiver"
+                        onClick={() =>
+                          this.props.messenger.postMessage(
+                            "SHOULD_ADD_RECEIVER"
+                          )
+                        }></MenuItem>
+                      <MenuDivider />
+                      <MenuItem
+                        text={
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between"
+                            }}>
+                            <div>Ray Tracer</div>
+                            <div style={{ color: Colors.LIGHT_GRAY1 }}>
+                              {Characters.COMMAND}
+                            </div>
+                          </div>
+                        }
+                        onClick={() =>
+                          this.props.messenger.postMessage(
+                            "SHOULD_ADD_RAYTRACER"
+                          )
+                        }
+                      />
+                    </Menu>
+                  </Popover>
+                </ButtonGroup>
+              </Menu>
+            </Navbar.Group>
+            <Navbar.Group align={Alignment.RIGHT}>
+              <Button
+                icon="cog"
+                minimal={true}
+                onClick={this.handleSettingsButtonClick}></Button>
+            </Navbar.Group>
+          </Navbar>
+        </div>
+        <SettingsDrawer
+          size={"35%"}
+          onClose={this.handleSettingsButtonClick}
+          isOpen={this.state.settingsDrawerVisible}>
+          <input
+            name="background"
+            type="color"
+            onChange={e =>
+              this.props.messenger.postMessage(
+                "renderer-should-change-background",
+                e.currentTarget.value
+              )
+            }
+          />
+          <input
+            name="fogColor"
+            type="color"
+            onChange={e =>
+              this.props.messenger.postMessage(
+                "renderer-should-change-fogColor",
+                e.currentTarget.value
+              )
+            }
+          />
+        </SettingsDrawer>
+        <ImportDialog
+          onImport={file => {
+            this.props.messenger.postMessage("IMPORT_FILE", file);
+            this.handleImportDialogClose();
+          }}
+          isOpen={this.state.importDialogVisible}
+          autoFocus={true}
+          canEscapeKeyClose={true}
+          canOutsideClickClose={true}
+          enforceFocus={false}
+          usePortal={true}
+          data={{ themeName: "dark" }}
+          onClose={this.handleImportDialogClose}
+          onDrop={file => {
+            this.props.messenger.postMessage("IMPORT_FILE", file);
+          }}
+        />
+        <SplitterLayout
+          secondaryMinSize={5}
+          primaryMinSize={50}
+          secondaryInitialSize={250}
+          primaryIndex={1}
+          customClassName="modified-splitter-layout">
+          <SplitterLayout
+            vertical={true}
+            primaryMinSize={10}
+            secondaryMinSize={10}
+            percentage={true}>
+            <PanelContainer>
+              <ObjectView
+                containers={this.state.containers}
+                solvers={this.state.solvers}
+                onClick={this.handleObjectViewClick}
+              />
+            </PanelContainer>
+            <PanelContainer className="panel full-bottom">
+              {Object.keys(this.state.selectedObject).length > 0 && (
+                <ObjectProperties
+                  object={this.state.selectedObject}
+                  onPropertyChange={this.handleObjectPropertyChange}
+                  onPropertyValueChangeAsNumber={
+                    this.handleObjectPropertyValueChangeAsNumber
+                  }
+                  onPropertyValueChangeAsString={
+                    this.handleObjectPropertyValueChangeAsString
+                  }
+                  onButtonClick={this.handleObjectPropertyButtonClick}
+                />
+              )}
+            </PanelContainer>
+          </SplitterLayout>
+          <SplitterLayout
+            vertical={true}
+            primaryMinSize={100}
+            secondaryMinSize={5}
+            secondaryInitialSize={200}>
+            <div className="webgl-canvas">
+              <canvas ref={this.canvas} />
+            </div>
+            <PanelContainer className="panel full-bottom">
+							<Gutter
+								messenger={this.props.messenger}
+								stats={this.state.stats}
+						/>
+            </PanelContainer>
+          </SplitterLayout>
+        </SplitterLayout>
+      </div>
+    );
 	}
 }
 

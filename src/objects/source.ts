@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import Container, { ContainerProps } from "./container";
+import { MATCAP_PORCELAIN_WHITE } from './asset-store';
 
 export interface SourceProps extends ContainerProps {
   f?: (t: number) => number;
@@ -15,12 +16,17 @@ export default class Source extends Container {
   constructor(name: string, props?: SourceProps) {
     super(name);
     this.kind = "source";
+    
+    const material = 
     this.add(
       new THREE.Mesh(
-        new THREE.SphereGeometry(0.1, 8, 8),
-        new THREE.MeshBasicMaterial({
+        new THREE.SphereGeometry(0.1, 32, 16),
+        // pointsGeometry,
+        // pointsMaterial,
+        new THREE.MeshMatcapMaterial({
           color: 0xa2c982,
-          reflectivity: 0.5
+          matcap: MATCAP_PORCELAIN_WHITE,
+          
         })
       )
     );

@@ -11,11 +11,22 @@ import {
 } from 'three-mesh-bvh';
 import Source from '../../objects/source';
 import Renderer from '../../render/renderer';
+import Surface from '../../objects/surface';
+import Receiver from '../../objects/receiver';
+import { Stat } from '../../components/Gutter/Stats';
 
+//@ts-ignore
 THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
+//@ts-ignore
 THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
+
+export interface RayPath {
+  intersectedReceiver: boolean;
+  chain: THREE.Intersection[];
+  time?: number;
+}
 
 export interface RayTracerParams {
   name?: string;
@@ -60,6 +71,9 @@ export default class RayTracer extends Solver {
   rayPositionIndex: number;
   maxrays: number;
   renderer: Renderer;
+  intersectableObjects: Array<THREE.Mesh | THREE.Object3D | Container>;
+  paths: KeyValuePair<RayPath[]>;
+  stats: KeyValuePair<Stat>;
   constructor(params: RayTracerParams) { 
     super(params);
     this.kind = "ray-tracer";
@@ -83,7 +97,9 @@ export default class RayTracer extends Solver {
     this.rays = new THREE.LineSegments(
       this.rayBufferGeometry,
       new THREE.LineBasicMaterial({
-        color: 0x4b4b4c,        
+        color: 0x000000,
+        transparent: true,
+        opacity: 0.5
       })
     );
     this.renderer.scene.add(this.rays);
@@ -93,24 +109,48 @@ export default class RayTracer extends Solver {
       writable: true
     });
     // raycaster.intersectObjects([mesh]);
-    this.intersections = [] as THREE.Intersection[];
-
-    
+    this.intersections = [] as THREE.Intersection[];    
     this.findIDs();
+    this.intersectableObjects = this.mapIntersectableObjects();
+    this.paths = {} as KeyValuePair<RayPath[]>
+    
+    this.stats = {
+      numRaysShot: {
+        name: "# of rays shot",
+        value: 0
+      }
+    }
+    
+    
+    this.renderer.messenger.postMessage('STATS_SETUP', this.stats);
+    
   }
   get sources() {
     return this.sourceIDs.map(x => this.containers[x]);
   }
   get receivers() {
-    return this.receiverIDs.map(x => this.containers[x]);
-  }
-  get surfaces() {
-    return this.room.surfaces
+    return this.receiverIDs.map(x => (this.containers[x] as Receiver).mesh) as THREE.Mesh[];
   }
   get room(): Room {
     return this.containers[this.roomID] as Room;
   }
   
+  addSource(source: Source) {
+    this.containers[source.uuid] = source;
+    this.findIDs();
+     this.intersectableObjects = this.mapIntersectableObjects();
+  }
+  addReceiver(rec: Receiver) {
+    this.containers[rec.uuid] = rec;
+    this.findIDs();
+     this.intersectableObjects = this.mapIntersectableObjects();
+  }
+  
+  mapIntersectableObjects() {
+    return this.room.surfaces.children.map(
+      (x: Surface) => x.mesh
+    ).concat(this.receivers);
+  }
 
   
   
@@ -141,15 +181,33 @@ export default class RayTracer extends Solver {
     }
   }
   
-  appendRay(p1: THREE.Vector3, p2: THREE.Vector3) {
-    this.rayBufferAttribute.setXYZ(this.rayPositionIndex++, p1.x, p1.y, p1.z);
-    this.rayBufferAttribute.setXYZ(this.rayPositionIndex++, p2.x, p2.y, p2.z);
-    this.rayBufferAttribute.needsUpdate = true;
-    this.rayBufferAttribute.version++;
-    this.rays.geometry.computeBoundingSphere();
+  clearRays() {
+    this.rayBufferGeometry.setDrawRange(0, 1);
+    this.rayPositionIndex = 0;
+    
   }
   
-  traceRay(ro: THREE.Vector3, rd: THREE.Vector3, order: number, energy: number, iter: number = 1) {
+  appendRay(p1: THREE.Vector3, p2: THREE.Vector3) {
+    // set p1
+    this.rayBufferAttribute.setXYZ(this.rayPositionIndex++, p1.x, p1.y, p1.z);
+    
+    // set p2
+    this.rayBufferAttribute.setXYZ(this.rayPositionIndex++, p2.x, p2.y, p2.z);
+    
+    //update the draw range
+    this.rayBufferGeometry.setDrawRange(0, this.rayPositionIndex);
+    
+    // update three.js
+    this.rayBufferAttribute.needsUpdate = true;
+    
+    //update version
+    this.rayBufferAttribute.version++;
+
+  }
+  
+  
+  
+  traceRay(ro: THREE.Vector3, rd: THREE.Vector3, order: number, energy: number, iter: number = 1, chain: THREE.Intersection[] = []) {
     rd = rd.normalize();
     // set the starting position
     this.raycaster.ray.origin = ro;
@@ -160,35 +218,53 @@ export default class RayTracer extends Solver {
     // console.log("dir",this.raycaster.ray.direction);
     
     // find the surface that the ray intersects
-    const intersections = this.raycaster.intersectObjects([this.surfaces], true);
+    const intersections = this.raycaster.intersectObjects(this.intersectableObjects, true); 
+    
+    
     
     // if there was an intersection
     if (intersections.length > 0) {
       // console.log("itx",intersections[0].point)
       
-      // find the incident angle
-      const angle = intersections[0].face && rd.clone().multiplyScalar(-1).angleTo(intersections[0].face.normal);
+      //check to see if the intersection was with a receiver
+      if (
+        intersections[0].object.userData["kind"] &&
+        intersections[0].object.userData["kind"] === "receiver"
+      ) {
+        chain.push(intersections[0]);
+        return { chain, intersectedReceiver: true } as RayPath;
+      }
+      else {
+        // find the incident angle
+        const angle =
+          intersections[0].face &&
+          rd
+            .clone()
+            .multiplyScalar(-1)
+            .angleTo(intersections[0].face.normal);
       
-      // draw the ray
-      this.appendRay(ro, intersections[0].point);
+        // this.appendRay(ro, intersections[0].point);
+        chain.push(intersections[0]);
       
-      // get the normal direction of the intersection
-      const normal = intersections[0].face && intersections[0].face.normal.normalize();
-      // console.log(normal);
+        // get the normal direction of the intersection
+        const normal = intersections[0].face && intersections[0].face.normal.normalize();
+        // console.log(normal);
       
-      // find the new direction for the ray to travel
-      const rr = (normal && intersections[0].face) &&
-        // rr = ri - 2N*(ri•N)
-        rd.clone()
-          .sub(normal.clone()
-          .multiplyScalar(rd.dot(normal.clone()))
-          .multiplyScalar(2));
+        // find the new direction for the ray to travel
+        const rr = (normal && intersections[0].face) &&
+          // rr = ri - 2N*(ri•N)
+          rd.clone()
+            .sub(normal.clone()
+              .multiplyScalar(rd.dot(normal.clone()))
+              .multiplyScalar(2));
       
-			if (iter < order && rr && normal) {
-			  this.traceRay(intersections[0].point.clone().addScaledVector(normal.clone(),0.01), rr, order, energy, iter + 1);
-			}
-		}
-		return energy;
+        if (iter < order && rr && normal) {
+          return this.traceRay(intersections[0].point.clone().addScaledVector(normal.clone(), 0.01), rr, order, energy, iter + 1, chain);
+        }
+      }
+      return { chain, intersectedReceiver: false } as RayPath;
+    }
+    
   }
   startAllMonteCarlo() {
     for (let i = 0; i < this.sourceIDs.length; i++) {
@@ -196,18 +272,46 @@ export default class RayTracer extends Solver {
         (() => {
           const t = (Math.random() - 0.5) * (this.containers[this.sourceIDs[i]] as Source).theta;
           const p = (Math.random() - 0.5) * (this.containers[this.sourceIDs[i]] as Source).phi;
-          this.traceRay(
-            (this.containers[this.sourceIDs[i]] as Source).position,
-            new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5),
-            this.reflectionOrder,
-            1.0
-          );
+          
+          // starting position
+          const position = (this.containers[this.sourceIDs[i]] as Source).position;
+          // random direction
+          const direction = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
+          //get the path traced buy the ray
+          const path = this.traceRay(position, direction, this.reflectionOrder, 1.0);
+        
+          if (path.intersectedReceiver) {
+            this.appendRay(position, (path.chain[0] as THREE.Intersection).point);
+            let time = 0;
+            for (let i = 1; i < path.chain.length; i++){
+              this.appendRay(
+                (path.chain[i-1] as THREE.Intersection).point,
+                (path.chain[i] as THREE.Intersection).point
+              );
+            }
+            const index = ((path.chain[path.chain.length - 1] as THREE.Intersection).object as Receiver).uuid
+            this.paths[index]
+              ? this.paths[index].push(path)
+              : this.paths[index] = [path];
+          }
+          (this.stats.numRaysShot.value as number)++;
+          
+          
+          
+          this.renderer.messenger.postMessage("STATS_UPDATE", this.stats);
           (this.containers[this.sourceIDs[i]] as Source).numRays++;
         }).bind(this),
         this.updateInterval
       )
     }
-	}
+  }
+  calculateTotalPathTime(path: RayPath) {
+    path.time = 0;
+    for (let i = 0; i < path.chain.length; i++){
+      path.time += path.chain[i].distance / 343.2;
+    }
+    return path;
+  }
   update = () => {
     console.log('a');
   }
@@ -222,6 +326,12 @@ export default class RayTracer extends Solver {
     for (const key in this.intervals) {
       clearInterval(this.intervals[key]);
     }
+    Object.keys(this.paths).forEach(key => {
+      this.paths[key].forEach(p => {
+        this.calculateTotalPathTime(p);
+      });
+    });
+    console.log(this.paths);
   }
   
   get precheck() {

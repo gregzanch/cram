@@ -24,7 +24,13 @@ export default class Room extends Container {
 		this.add(this.surfaces);
 		this.calculateBoundingBox();
 		this.add(this.boundingBoxHelper);
-		this.boundingBoxHelper.visible = props.showBoundingBox || true;
+		this.boundingBoxHelper.visible = props.showBoundingBox || false;
+	}
+	get showBoundingBox() {
+		return this.boundingBoxHelper.visible;
+	}
+	set showBoundingBox(_showBoundingBox: boolean) {
+		this.boundingBoxHelper.visible = _showBoundingBox;
 	}
 	calculateBoundingBox() {
 		this.boundingBox = this.surfaces.children.reduce((a: THREE.Box3, b: Container) => {
