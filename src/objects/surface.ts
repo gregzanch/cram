@@ -7,32 +7,47 @@ import Renderer from "../render/renderer";
 
 
 const defaults = {
-	materials: {
-		mesh: new THREE.MeshPhysicalMaterial({
-			transparent: true,
-			opacity: 0.1,
-			side: THREE.FrontSide,
-			metalness: 0.05,
-			reflectivity: 0.15,
-			roughness: 0.3,
-			color: 0xaaaaaa,
-			depthWrite: false,
-			depthTest: false
-		}),
+  materials: {
+    selected: new THREE.MeshPhysicalMaterial({
+      color: new THREE.Color(1, 1, 1),
+      emissiveIntensity: 2,
+      emissive: new THREE.Color(1, 1, 0),
+      transparent: true,
+      opacity: 0.5,
+      side: THREE.DoubleSide,
+      metalness: 0.05,
+      reflectivity: 0.15,
+      roughness: 0.3,
+      depthWrite: true,
+      depthTest: false
+    }),
+    mesh: new THREE.MeshPhysicalMaterial({
+      transparent: true,
+      opacity: 0.1,
+      side: THREE.DoubleSide,
+      emissive: new THREE.Color(0xffffff),
+      emissiveIntensity: 0,
+      metalness: 0.05,
+      reflectivity: 0.15,
+      roughness: 0.3,
+      color: 0xaaaaaa,
+      depthWrite: true,
+      depthTest: false
+    }),
 
-		wire: new THREE.MeshBasicMaterial({
-			side: THREE.FrontSide,
-			wireframe: true,
-			color: 0x2c2d2d
-		}),
-		line: new THREE.LineBasicMaterial({
-			color: 0xaaaaaa
-		})
-	},
-	displayInternalEdges: false,
-	displayEdges: true,
-	fillSurface: true,
-	_displayVertexNormals: false,
+    wire: new THREE.MeshBasicMaterial({
+      side: THREE.FrontSide,
+      wireframe: true,
+      color: 0x2c2d2d
+    }),
+    line: new THREE.LineBasicMaterial({
+      color: 0xaaaaaa
+    })
+  },
+  displayInternalEdges: false,
+  displayEdges: true,
+  fillSurface: true,
+  _displayVertexNormals: false
 };
 
 export interface SurfaceProps extends ContainerProps {
@@ -63,6 +78,9 @@ export default class Surface extends Container {
 	absorption!: number[];
 	reflection!: number[];
 	_triangles: THREE.Triangle[];
+	selectedMaterial: THREE.MeshPhysicalMaterial;
+	normalMaterial: THREE.MeshPhysicalMaterial;
+	normalColor: THREE.Color;
 	// renderer: Renderer;
 	constructor(name: string, props: SurfaceProps) {
 		super(name);
@@ -85,9 +103,13 @@ export default class Surface extends Container {
 			new THREE.Vector3(...x[0]),
 			new THREE.Vector3(...x[1]),
 			new THREE.Vector3(...x[2]),
-		));4
+		));
 		
-
+		this.selectedMaterial = defaults.materials.selected;
+		this.normalMaterial = defaults.materials.mesh;
+		this.normalColor = new THREE.Color(0xaaaaaa);
+		this.select = this.select.bind(this);
+		
 		// console.log(this.triangles);
 		const dict = {} as KeyValuePair<KeepLine>;
 		this.triangles.forEach(tri => {
@@ -129,7 +151,16 @@ export default class Surface extends Container {
 		this.vertexNormals.visible = this._displayVertexNormals;
 		
 	}
-	
+	select = () => {
+		this.selected = true;
+		(this.mesh.material as THREE.MeshPhysicalMaterial) = this.selectedMaterial;
+		// (this.mesh.material as THREE.MeshPhysicalMaterial).needsUpdate = true;
+		// console.log(this);
+	}
+	deselect = () => {
+			this.selected = false;
+		(this.mesh.material as THREE.MeshPhysicalMaterial) = this.normalMaterial;
+	}
 	getEdges() {
 		return this.edges;
 	}

@@ -141,6 +141,7 @@ export function TreeItemLabel(props: TreeItemLabelProps) {
 type ClickEvent = React.MouseEvent<HTMLElement, MouseEvent>;
 
 export default function ObjectView(props) {
+
 	function mapchildren(container: Container | THREE.Object3D) {
 		if (container["kind"]) {
 			const sharedProps = {

@@ -38,6 +38,9 @@ import Room from '../objects/room';
 import { FRAME_RATE } from "../constants";
 import Messenger from "../messenger";
 
+
+import PickHelper from './pick-helper';
+
 export interface RendererParams{
 	elt?: HTMLCanvasElement;
 	messenger: Messenger;
@@ -78,6 +81,7 @@ export default class Renderer {
 	smoothingCameraFunction!: any;
 	smoothingCamera!: boolean;
 	messenger: Messenger;
+	pickHelper!: PickHelper;
 	constructor(params: RendererParams) {
 		[
 			"init",
@@ -98,6 +102,7 @@ export default class Renderer {
 		
 
 		this.messenger = params.messenger;
+		
 	}
 	init(elt: HTMLCanvasElement) {
 
@@ -134,12 +139,15 @@ export default class Renderer {
 			up: [0, 0, 1]
 		});
 		
+		this.pickHelper = new PickHelper(this.scene,this.camera, this.renderer.domElement);
 		
 		this.setupFog({
 			color: this.scene.background,
 			start: this.camera.far - 200,
 			end: this.camera.far
 		});
+
+		
 
 
 	
@@ -262,6 +270,19 @@ export default class Renderer {
 				JSON.stringify(this.camera.toJSON())
 			);
 		});
+		// this.renderer.domElement.addEventListener('mousedown', e => {
+		// 	const selection = this.pickHelper.pick(e, [this.workspace]);
+		// 	if (selection) {
+		// 		this.select(selection);
+		// 	}
+		// 	// console.log(this.pickHelper);
+		// })
+		
+	}
+	
+	select(object: Container) {
+		this.messenger.postMessage("DESELECT_ALL_OBJECTS");
+		object.select();
 	}
 
 	resize() {

@@ -1,15 +1,25 @@
 import React from "react";
 import TextInput from "../TextInput";
-import NumberInput from "../NumberInput";
+import NumberInput, { ObjectPropertyInputEvent } from "../NumberInput";
 import CheckboxInput from "../CheckboxInput";
 import Source from '../../objects/source';
 import GridRow from '../GridRow';
+import Messenger from "../../messenger";
 
 export interface SourcePropertiesProps {
-	object: Source;
-  onPropertyChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-	onPropertyValueChangeAsNumber: (id: string, prop: string, valueAsNumber: number) => void;
-	onPropertyValueChangeAsString: (id: string, prop: string, valueAsString: string) => void;
+  object: Source;
+  messenger: Messenger;
+  onPropertyChange: (e: ObjectPropertyInputEvent) => void;
+  onPropertyValueChangeAsNumber: (
+    id: string,
+    prop: string,
+    valueAsNumber: number
+  ) => void;
+  onPropertyValueChangeAsString: (
+    id: string,
+    prop: string,
+    valueAsString: string
+  ) => void;
 }
 
 
@@ -31,6 +41,9 @@ export default function SourceProperties(props: SourcePropertiesProps) {
 	  },
     onChange: props.onPropertyChange
 	}
+	
+	const source = props.messenger.postMessage("FETCH_SOURCE", props.object.uuid)[0];
+	console.log(source);
 	
 	
 	return (

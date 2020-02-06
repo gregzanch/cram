@@ -12,6 +12,9 @@ export interface ContainerProps {
 
 export default class Container extends THREE.Group {
 	kind: string;
+	selected: boolean;
+	select: () => void;
+	deselect: () => void;
 	constructor(name: string, props?: ContainerProps) {
 		super();
 		this.name = name;
@@ -22,7 +25,11 @@ export default class Container extends THREE.Group {
 					this[key] = props[key];
 				}
 			})();
+		this.selected = false;
+		this.select = () => { };
+		this.deselect = () => { };
 	}
+
 	get x() {
 		return this.position.x;
 	}

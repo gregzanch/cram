@@ -43,8 +43,12 @@ import RayTracer from "../compute/raytracer";
 
 import Gutter from '../components/Gutter';
 import { Stat } from "../components/Gutter/Stats";
+import { ObjectPropertyInputEvent } from "../components/NumberInput";
 
 FocusStyleManager.onlyShowFocusOnTabs();
+
+
+
 
 export interface AppProps {
 	messenger: Messenger;
@@ -52,6 +56,8 @@ export interface AppProps {
 	settings: KeyValuePair<any>;
 	browser: Report;
 }
+
+
 
 
 
@@ -68,6 +74,7 @@ interface AppState {
 	simulationRunning: boolean;
 	darkmode: boolean;
 	stats: Stat[];
+	lastUpdateReason: string;
 }
 
 export default class App extends React.Component<AppProps, AppState> {
@@ -78,20 +85,20 @@ export default class App extends React.Component<AppProps, AppState> {
 	constructor(props: AppProps) {
 		super(props);
 		this.state = {
-			solvers: {} as KeyValuePair<Solver>,
-			simulationRunning: false,
-			importDialogVisible: false,
-			containers: {} as KeyValuePair<Container>,
-			selectedObject: {} as Container,
-			settingsDrawerVisible: false,
-			settings: props.settings,
-			mode: "EDIT",
-			tool: "SELECT",
-			darkmode: false,
-			stats: [] as Stat[]
-			// process: new Process({name: "base", steps: [] as Task[]})
-			
-		};
+      lastUpdateReason: "",
+      solvers: {} as KeyValuePair<Solver>,
+      simulationRunning: false,
+      importDialogVisible: false,
+      containers: {} as KeyValuePair<Container>,
+      selectedObject: {} as Container,
+      settingsDrawerVisible: false,
+      settings: props.settings,
+      mode: "EDIT",
+      tool: "SELECT",
+      darkmode: false,
+      stats: [] as Stat[]
+      // process: new Process({name: "base", steps: [] as Task[]})
+    };
 		this.setupMessageHandlers = this.setupMessageHandlers.bind(this);
 		this.setupMessageHandlers();
 
@@ -114,90 +121,101 @@ export default class App extends React.Component<AppProps, AppState> {
 		);
 		this.handleSettingChange = this.handleSettingChange.bind(this);
 		this.handleObjectPropertyButtonClick = this.handleObjectPropertyButtonClick.bind(this);
+		this.addMessageHandler = this.addMessageHandler.bind(this);
 	}
-
+	addMessageHandler(message: string, handler: (acc, ...args) => KeyValuePair<any>) {
+		this.props.messenger.addMessageHandler(message, (acc, ...args) => {
+			const nextState = handler(acc, ...args);
+			this.setState({
+				lastUpdateReason: message,
+				...nextState
+			})
+		})
+	}
 	setupMessageHandlers() {
-		this.props.messenger.addMessageHandler(
-			"SHOW_IMPORT_DIALOG",
+		this.addMessageHandler("SHOW_IMPORT_DIALOG", (acc, ...args) => {
+			return {
+				importDialogVisible: !this.state.importDialogVisible,
+			};
+		});
+		this.addMessageHandler("SHOW_IMPORT_DIALOG",
 			(acc, ...args) => {
-				this.setState({
-					importDialogVisible: !this.state.importDialogVisible
-				});
+				return ({
+          importDialogVisible: !this.state.importDialogVisible,
+        });
 			}
 		);
-
-		this.props.messenger.addMessageHandler(
-			"SHOULD_ADD_SOURCE",
-			(acc, ...args) => {
-				const containers = { ...this.state.containers };
-				containers[acc[0].uuid] = acc[0];
-				return this.setState({ containers });
-			}
-		);
-
-		this.props.messenger.addMessageHandler(
-			"SHOULD_ADD_RECEIVER",
+		this.addMessageHandler("SHOULD_ADD_SOURCE",
 			(acc, ...args) => {
 				const containers = { ...this.state.containers };
 				containers[acc[0].uuid] = acc[0];
-				return this.setState({ containers });
+				return ({
+          containers,
+          lastUpdateReason: "SHOULD_ADD_SOURCE"
+        });
 			}
 		);
-		this.props.messenger.addMessageHandler(
-			"SHOULD_ADD_RAYTRACER",
+		this.addMessageHandler("SHOULD_ADD_RECEIVER",
+			(acc, ...args) => {
+				const containers = { ...this.state.containers };
+				containers[acc[0].uuid] = acc[0];
+				return ({ containers });
+			}
+		);
+		this.addMessageHandler("SHOULD_ADD_RAYTRACER",
 			(acc, ...args) => {
 				const solvers = { ...this.state.solvers };
 				solvers[acc[0].uuid] = acc[0];
-				return this.setState({ solvers });
+				return ({ solvers });
 			}
 		);
-
-		this.props.messenger.addMessageHandler(
-			"SHOULD_ADD_FDTD",
+		this.addMessageHandler("SHOULD_ADD_FDTD",
 			(acc, ...args) => {
 				const solvers = { ...this.state.solvers };
 				solvers[acc[0].uuid] = acc[0];
-				return this.setState({ solvers });
+				return ({ solvers });
 			}
-		);
-
-		
-		this.props.messenger.addMessageHandler("ADDED_ROOM", (acc, ...args) => {
+		);		
+		this.addMessageHandler("ADDED_ROOM",
+			(acc, ...args) => {
 			const containers = { ...this.state.containers };
 			containers[args[0].uuid] = args[0];
-			return this.setState({ containers });
+			return ({ containers });
 		});
-
-		this.props.messenger.addMessageHandler(
-			"IMPORT_FILE",
+		this.addMessageHandler("IMPORT_FILE",
 			(acc, ...args) => {
-				console.log(acc);
+				// console.log(acc);
+				return {}
 			}
 		);
-		this.props.messenger.addMessageHandler("SIMULATION_DID_PLAY", (acc, ...args) => {
-			this.setState({
+		this.addMessageHandler("SIMULATION_DID_PLAY",
+			(acc, ...args) => {
+			return ({
 				simulationRunning: true
-			},()=>console.log("SIMULATION_DID_PLAY"));
-		})
-		this.props.messenger.addMessageHandler("SIMULATION_DID_PAUSE", (acc, ...args) => {
-			this.setState({
+			})
+		});
+		this.addMessageHandler("SIMULATION_DID_PAUSE",
+			(acc, ...args) => {
+			return({
 				simulationRunning: false
-			},()=>console.log("SIMULATION_DID_PAUSE"));
-		})
-		this.props.messenger.addMessageHandler("STATS_SETUP", (acc, ...args) => {
-			this.setState({
+			})
+		});
+		this.addMessageHandler("STATS_SETUP",
+			(acc, ...args) => {
+			return({
 				stats: Object.keys(args[0]).map(x => args[0][x]) as Stat[]
 			});
 		});
-		this.props.messenger.addMessageHandler("STATS_UPDATE", (acc, ...args) => {
-			this.setState({
-        stats: Object.keys(args[0]).map(x => args[0][x]) as Stat[]
-      });
-		})
+		this.addMessageHandler("STATS_UPDATE",
+			(acc, ...args) => {
+			return({
+				stats: Object.keys(args[0]).map(x => args[0][x]) as Stat[]
+			});
+		});
 	}
 
 	componentDidMount() {
-		this.canvas.current && 
+		this.canvas.current &&
 			this.props.messenger.postMessage(
 				"APP_MOUNTED",
 				this.canvas.current
@@ -206,24 +224,29 @@ export default class App extends React.Component<AppProps, AppState> {
 
 	showImportDialog() {
 		this.setState({
-			importDialogVisible: !this.state.importDialogVisible
+			importDialogVisible: !this.state.importDialogVisible,
+			lastUpdateReason: "showImportDialog"
 		});
 	}
 	handleImportDialogClose(e?) {
 		this.setState({
-			importDialogVisible: !this.state.importDialogVisible
-		});
+      importDialogVisible: !this.state.importDialogVisible,
+      lastUpdateReason: "handleImportDialogClose"
+    });
 	}
 	handleSettingsButtonClick(e?) {
 		this.setState({
-			settingsDrawerVisible: !this.state.settingsDrawerVisible
-		});
+      settingsDrawerVisible: !this.state.settingsDrawerVisible,
+      lastUpdateReason: "handleSettingsButtonClick"
+    });
 	}
 
 	handleObjectViewClick(object, e: React.MouseEvent) {
-		console.log(object);
 		this.setState({
-			selectedObject: object
+			selectedObject: object,
+			lastUpdateReason: "handleObjectViewClick"
+		}, () => {
+				console.log(this.state.selectedObject);
 		});
 	}
 	handleObjectPropertyButtonClick(e: React.MouseEvent<HTMLInputElement, MouseEvent>) {
@@ -243,10 +266,11 @@ export default class App extends React.Component<AppProps, AppState> {
 			}
 		}
 		this.setState({
-			selectedObject
+			selectedObject,
+			lastUpdateReason: "handleObjectPropertyButtonClick"
 		}, () => {
-				console.log(this.state.selectedObject)
-		})
+			// console.log(this.state.selectedObject);
+		});
 	}
 	handleObjectPropertyValueChangeAsNumber(
 		id: string,
@@ -256,7 +280,9 @@ export default class App extends React.Component<AppProps, AppState> {
 		const { selectedObject } = this.state;
 		selectedObject[prop] = valueAsNumber;
 		this.setState({
-			selectedObject
+			selectedObject,
+			lastUpdateReason: "handleObjectPropertyValueChangeAsNumber"
+			
 		});
 	}
 	handleObjectPropertyValueChangeAsString(
@@ -267,30 +293,32 @@ export default class App extends React.Component<AppProps, AppState> {
 		const { selectedObject } = this.state;
 		selectedObject[prop] = valueAsString;
 		this.setState({
-			selectedObject
-		});
+      selectedObject,
+      lastUpdateReason: "handleObjectPropertyValueChangeAsString"
+    });
 	}
 
-	handleObjectPropertyChange(e: React.ChangeEvent<HTMLInputElement>) {
+	handleObjectPropertyChange(e: ObjectPropertyInputEvent) {
 		const { selectedObject } = this.state;
-		const prop = e.currentTarget.name;
-		switch (e.currentTarget.type) {
+		const prop = e.name;
+		switch (e.type) {
 			case "checkbox":
-				selectedObject[prop] = e.currentTarget.checked;
+				selectedObject[prop] = e.value;
 				break;
 			case "text":
-				selectedObject[prop] = e.currentTarget.value;
+				selectedObject[prop] = e.value;
 				break;
 			case "number":
-				selectedObject[prop] = Number(e.currentTarget.value);
+				selectedObject[prop] = Number(e.value);
 				break;
 			default:
-				selectedObject[prop] = e.currentTarget.value;
+				selectedObject[prop] = e.value;
 				break;
 		}
 		this.setState({
-			selectedObject
-		});
+      selectedObject,
+      lastUpdateReason: "handleObjectPropertyChange"
+    });
 	}
 	handleSettingChange(e: React.ChangeEvent<HTMLInputElement>) {
 		const settings = { ...this.state.settings };
@@ -300,18 +328,24 @@ export default class App extends React.Component<AppProps, AppState> {
 				? e.currentTarget.checked
 				: e.currentTarget.value;
 		this.setState(
-			{
-				settings
-			},
-			() => {
-				this.props.messenger.postMessage("SETTING_CHANGE", {
-					setting: id,
-					value: settings[id].value
-				});
-			}
-		);
+      {
+        settings,
+        lastUpdateReason: "handleSettingChange"
+      },
+      () => {
+        this.props.messenger.postMessage("SETTING_CHANGE", {
+          setting: id,
+          value: settings[id].value
+        });
+      }
+    );
 	}
 
+	// shouldComponentUpdate(nextProps, nextState, nextContext) {
+	// 	console.log("shouldComponentUpdate::nextState", nextState);
+	// 	return true;
+	// }
+	
 	render() {
 		return (
       <div>
@@ -486,7 +520,8 @@ export default class App extends React.Component<AppProps, AppState> {
             </PanelContainer>
             <PanelContainer className="panel full-bottom">
               {Object.keys(this.state.selectedObject).length > 0 && (
-                <ObjectProperties
+								<ObjectProperties
+									messenger={this.props.messenger}
                   object={this.state.selectedObject}
                   onPropertyChange={this.handleObjectPropertyChange}
                   onPropertyValueChangeAsNumber={

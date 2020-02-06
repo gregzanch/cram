@@ -48,4 +48,9 @@ export default class Room extends Container {
 	getFDTDPressureAttribute(): THREE.InstancedBufferAttribute {
 		return (((this.getObjectById(this._fdtdmeshid) as THREE.Mesh).geometry as THREE.InstancedBufferGeometry).getAttribute('pressure') as THREE.InstancedBufferAttribute)
 	}
+	deselect = () => {
+		this.surfaces.children.forEach((x: Container) => {
+			x.deselect()
+		})
+	}
 }

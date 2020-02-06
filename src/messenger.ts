@@ -8,9 +8,11 @@ export type EventHandler = (...args) => void;
 export default class Messenger{
     private dictionary: KeyValuePair<KeyValuePair<EventHandler>>;
     private messageListeners: KeyValuePair<EventHandler>;
+    lastMessage: string;
     constructor() {
         this.dictionary = {};
         this.messageListeners = {};
+        this.lastMessage = "";
     }
     addMessageHandler(message: string, handler: EventHandler): string {
         const id = uuid();
@@ -35,7 +37,10 @@ export default class Messenger{
         }
     }
     postMessage(message: string, ...args) {
-        message!=="RENDERER_UPDATED" && console.log(message);
+        if (message != this.lastMessage) {
+            this.lastMessage = message;
+            // console.log(message);
+        }
         // if messgae exists
         if (this.dictionary[message]) {
             // accumulates the results of each handler

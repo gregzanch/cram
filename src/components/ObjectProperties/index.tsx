@@ -1,6 +1,5 @@
 import React from "react";
 import TabUnselectedIcon from '@material-ui/icons/TabUnselected';
-
 import FDTDProperties, { FDTDPropertiesProps } from './FDTDProperties';
 import SourceProperties, { SourcePropertiesProps } from './SourceProperties';
 import ReceiverProperties, { ReceiverPropertiesProps } from './ReceiverProperties';
@@ -10,17 +9,21 @@ import SurfaceProperties, { SurfacePropertiesProps } from './SurfaceProperties';
 import GenericObjectProperties, { GenericObjectPropertiesProps } from './GenericObjectProperties';
 import Container from "../../objects/container";
 import Solver from "../../compute/solver";
+import Messenger from "../../messenger";
+import { ObjectPropertyInputEvent } from "../NumberInput";
 
 
 export interface ObjectPropertiesProps {
-	object: Container|Solver;
-  onPropertyChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  object: Container | Solver;
+  messenger?: Messenger;
+  onPropertyChange: (e: ObjectPropertyInputEvent) => void;
 	onPropertyValueChangeAsNumber: (id: string, prop: string, valueAsNumber: number) => void;
   onPropertyValueChangeAsString: (id: string, prop: string, valueAsString: string) => void;
   onButtonClick?: (e: React.MouseEvent<HTMLElement, MouseEvent>) => void;
 }
 
 export default function ObjectProperties(props: ObjectPropertiesProps) {
+  console.log(props.object.uuid);
   switch (props.object.kind) {
     case "source":  return <SourceProperties {...props as SourcePropertiesProps}/>
     case "receiver":  return <ReceiverProperties {...props as ReceiverPropertiesProps}/>

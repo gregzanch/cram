@@ -1,6 +1,6 @@
 import React from "react";
 import TextInput from "../TextInput";
-import NumberInput from "../NumberInput";
+import NumberInput, { ObjectPropertyInputEvent } from "../NumberInput";
 import CheckboxInput from "../CheckboxInput";
 import Source from '../../objects/source';
 import GridRow from '../GridRow';
@@ -8,10 +8,18 @@ import Receiver from "../../objects/receiver";
 import ColorInput from '../ColorInput';
 
 export interface ReceiverPropertiesProps {
-	object: Receiver;
-  onPropertyChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-	onPropertyValueChangeAsNumber: (id: string, prop: string, valueAsNumber: number) => void;
-	onPropertyValueChangeAsString: (id: string, prop: string, valueAsString: string) => void;
+  object: Receiver;
+  onPropertyChange: (e: ObjectPropertyInputEvent) => void;
+  onPropertyValueChangeAsNumber: (
+    id: string,
+    prop: string,
+    valueAsNumber: number
+  ) => void;
+  onPropertyValueChangeAsString: (
+    id: string,
+    prop: string,
+    valueAsString: string
+  ) => void;
 }
 
 
@@ -77,7 +85,15 @@ export default function ReceiverProperties(props: ReceiverPropertiesProps) {
 				
 				{props.object.hasOwnProperty('mesh') && (
 					<GridRow label={"color"}>
-						<ColorInput name="color" value={props.object.color} onChange={props.onPropertyChange}/>
+						<ColorInput name="color" value={props.object.color} onChange={e => {
+							props.onPropertyChange({
+								value: e.currentTarget.value,
+								name: e.currentTarget.name,
+								id: e.currentTarget.id,
+								type: e.currentTarget.type,
+								checked: undefined
+							});
+						}}/>
 					</GridRow>
 				)}
 			</div>

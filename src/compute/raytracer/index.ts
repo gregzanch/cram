@@ -119,6 +119,7 @@ export default class RayTracer extends Solver {
         name: "# of rays shot",
         value: 0
       }
+      
     }
     
     
@@ -184,6 +185,12 @@ export default class RayTracer extends Solver {
   clearRays() {
     this.rayBufferGeometry.setDrawRange(0, 1);
     this.rayPositionIndex = 0;
+    this.stats.numRaysShot.value = 0;
+    this.renderer.messenger.postMessage("STATS_UPDATE", this.stats);
+    this.sourceIDs.forEach(x => {
+      (this.containers[x] as Source).numRays = 0;
+    })
+    
     
   }
   
@@ -313,7 +320,7 @@ export default class RayTracer extends Solver {
     return path;
   }
   update = () => {
-    console.log('a');
+    // console.log('a');
   }
   start() {
     // this.raycaster.ray.origin = this.sources[0].position;
@@ -323,15 +330,16 @@ export default class RayTracer extends Solver {
     this.startAllMonteCarlo();
   }
   stop() {
-    for (const key in this.intervals) {
-      clearInterval(this.intervals[key]);
-    }
+    Object.keys(this.intervals).forEach(key => {
+      // console.log(this.intervals[key]);
+      window.clearInterval(this.intervals[key]);
+    })
     Object.keys(this.paths).forEach(key => {
       this.paths[key].forEach(p => {
         this.calculateTotalPathTime(p);
       });
     });
-    console.log(this.paths);
+    // console.log(this.paths);
   }
   
   get precheck() {

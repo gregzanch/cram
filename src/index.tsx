@@ -119,6 +119,11 @@ const importHandlers = {
     }
 }
 
+state.messenger.addMessageHandler("DESELECT_ALL_OBJECTS", (acc, ...args) => {
+  Object.keys(state.containers).forEach(x => {
+    state.containers[x].deselect();
+  });
+});
 
 state.messenger.addMessageHandler("SHOULD_ADD_RAYTRACER", (acc, ...args) => {
     const raytracer = new RayTracer({
@@ -169,6 +174,24 @@ state.messenger.addMessageHandler("SHOULD_ADD_FDTD", (acc, ...args) => {
   return state.solvers[state.simulation];
 });
 
+state.messenger.addMessageHandler("FETCH_ALL_SOURCES", (acc, ...args) => {
+    return state.sources.map(x => {
+        if (args && args[0] && args[0] instanceof Array) {
+            return args[0].map(y => state.containers[x][y]);
+        } else return state.containers[x];
+    })
+});
+state.messenger.addMessageHandler("FETCH_ALL_RECEIVERS", (acc, ...args) => {
+     return state.receivers.map(x => {
+       if (args && args[0] && args[0] instanceof Array) {
+         return args[0].map(y => state.containers[x][y]);
+       } else return state.containers[x];
+     });
+});
+
+state.messenger.addMessageHandler("FETCH_SOURCE", (acc, ...args) => {
+    return state.containers[args[0]];
+});
 
 state.messenger.addMessageHandler("SHOULD_ADD_SOURCE", (acc, ...args) => {
     const source = new Source("new source");
@@ -184,7 +207,7 @@ state.messenger.addMessageHandler("SHOULD_ADD_SOURCE", (acc, ...args) => {
 state.messenger.addMessageHandler("SHOULD_ADD_RECEIVER", (acc, ...args) => {
     const rec = new Receiver("new receiver");
     state.containers[rec.uuid] = rec;
-    state.sources.push(rec.uuid);
+    state.receivers.push(rec.uuid);
     state.renderer.add(rec);
     Object.keys(state.solvers).forEach(x => {
         state.solvers[x] instanceof RayTracer && (state.solvers[x] as RayTracer).addReceiver(rec);
@@ -273,7 +296,8 @@ setTimeout(() => {
     (state.containers[sourceid] as Source).z = 3;
     const a = 1;
     const w = 2;
-    (state.containers[sourceid] as Source).f = t => Math.sin(t*w) * a;
+    (state.containers[sourceid] as Source).f = t => Math.sin(t * w) * a;
+    const { uuid: receiverId } = state.messenger.postMessage("SHOULD_ADD_RECEIVER")[0];
     const models = importHandlers.obj(testroom);
     
     const surfaces = models.map(model => new Surface(model.name, { geometry: model.geometry }));
@@ -282,13 +306,14 @@ setTimeout(() => {
     });
     state.containers[room.uuid] = room;
     state.renderer.addRoom(room);
+    
     state.messenger.postMessage("ADDED_ROOM", room);
     // const { x, y, z } = room.boundingBox.getSize(new THREE.Vector3());
     // state.containers[sourceid].x = x / 2;
     // state.containers[sourceid].y = y / 2;
     // state.containers[sourceid].z = z / 2;
 
-    const { uuid: receiverId } = state.messenger.postMessage("SHOULD_ADD_RECEIVER")[0];
+
     (state.containers[receiverId] as Receiver).y = 5;
     (state.containers[receiverId] as Receiver).z = 3;
     (state.containers[receiverId] as Receiver).scalex = 3;
@@ -303,6 +328,7 @@ setTimeout(() => {
     //     state.solvers[state.simulation].update();
     // }, 500);
     
+    console.log(state.messenger .postMessage("FETCH_ALL_RECEIVERS_AS_OBJECT", ["name", "uuid"]))
    
     
     expose(
