@@ -467,7 +467,7 @@ export default class App extends React.Component<AppProps, AppState> {
             type="color"
             onChange={e =>
               this.props.messenger.postMessage(
-                "renderer-should-change-background",
+                "RENDERER_SHOULD_CHANGE_BACKGROUND",
                 e.currentTarget.value
               )
             }
@@ -477,11 +477,13 @@ export default class App extends React.Component<AppProps, AppState> {
             type="color"
             onChange={e =>
               this.props.messenger.postMessage(
-                "renderer-should-change-fogColor",
+                "RENDERER_SHOULD_CHANGE_FOG_COLOR",
                 e.currentTarget.value
               )
             }
           />
+
+      
         </SettingsDrawer>
         <ImportDialog
           onImport={file => {
@@ -503,13 +505,14 @@ export default class App extends React.Component<AppProps, AppState> {
         <SplitterLayout
           secondaryMinSize={5}
           primaryMinSize={50}
-          secondaryInitialSize={250}
+          secondaryInitialSize={500}
           primaryIndex={1}
           customClassName="modified-splitter-layout">
           <SplitterLayout
             vertical={true}
             primaryMinSize={10}
             secondaryMinSize={10}
+            secondaryInitialSize={70}
             percentage={true}>
             <PanelContainer>
               <ObjectView
@@ -520,8 +523,8 @@ export default class App extends React.Component<AppProps, AppState> {
             </PanelContainer>
             <PanelContainer className="panel full-bottom">
               {Object.keys(this.state.selectedObject).length > 0 && (
-								<ObjectProperties
-									messenger={this.props.messenger}
+                <ObjectProperties
+                  messenger={this.props.messenger}
                   object={this.state.selectedObject}
                   onPropertyChange={this.handleObjectPropertyChange}
                   onPropertyValueChangeAsNumber={
@@ -539,15 +542,15 @@ export default class App extends React.Component<AppProps, AppState> {
             vertical={true}
             primaryMinSize={100}
             secondaryMinSize={5}
-            secondaryInitialSize={200}>
+            secondaryInitialSize={100}>
             <div className="webgl-canvas">
               <canvas ref={this.canvas} />
             </div>
             <PanelContainer className="panel full-bottom">
-							<Gutter
-								messenger={this.props.messenger}
-								stats={this.state.stats}
-						/>
+              <Gutter
+                messenger={this.props.messenger}
+                stats={this.state.stats}
+              />
             </PanelContainer>
           </SplitterLayout>
         </SplitterLayout>

@@ -5,9 +5,15 @@ import CheckboxInput from "../CheckboxInput";
 import Source from '../../objects/source';
 import GridRow from '../GridRow';
 import Surface from '../../objects/surface';
+import GridRowSeperator from "../GridRowSeperator";
+import { Select } from "@material-ui/core";
+import AutoCompleteTextInput from '../AutoCompleteTextInput';
+import Messenger from "../../messenger";
+
 
 export interface SurfacePropertiesProps {
-  object: Surface;
+	object: Surface;
+	messenger: Messenger;
   onPropertyChange: (e: ObjectPropertyInputEvent) => void;
   onPropertyValueChangeAsNumber: (
     id: string,
@@ -31,6 +37,33 @@ const SurfacePropertiesContainerStyle: React.CSSProperties = {
 	gridColumnGap: ".25em"
 };
 
+const customStyles = {
+  indicatorsContainer: (provided, state) => ({
+    ...provided,
+    padding: 0
+  }),
+  clearIndicator: (provided, state) => ({
+    ...provided,
+    padding: 0
+  }),
+  dropdownIndicator: (provided, state) => ({
+    ...provided,
+    padding: 0
+  }),
+  control: (provided, state) => ({
+    ...provided,
+    minHeight: 0
+  }),
+  container: (provided, state) => ({
+    ...provided,
+    width: "100%"
+  })
+};
+
+
+
+
+
 
 export default function SurfaceProperties(props: SurfacePropertiesProps) {
 
@@ -41,53 +74,130 @@ export default function SurfaceProperties(props: SurfacePropertiesProps) {
     onChange: props.onPropertyChange
 	}
 	
+	async function getMaterialSuggestions(value: string) {
+		const materials = props.messenger.postMessage("SEARCH_ALL_MATERIALS", value)[0];
+
+		return new Promise<any[]>((resolve, reject) => { 
+			let res = materials;
+			if (res) {
+				resolve(res);
+				return;
+			}
+			else {
+				reject("problem occured")
+			}
+		})
+	}
+
 	
 	return (
-		<div>
-			<div style={SurfacePropertiesContainerStyle}>
-				
-				{props.object.hasOwnProperty('name') && (
-					<GridRow label={"name"}>
-						<TextInput name="name" value={props.object.name} onChange={props.onPropertyChange} />
-					</GridRow>
-				)}
-				
-				{props.object.hasOwnProperty('visible') && (
-					<GridRow label={"visible"}>
-						<CheckboxInput name="visible" checked={props.object.visible} onChange={props.onPropertyChange} />
-					</GridRow>
-				)}
-	
-				{props.object.hasOwnProperty('_displayVertexNormals') && (
-					<GridRow label={"vertex normals"}>
-						<CheckboxInput name="displayVertexNormals" checked={props.object.displayVertexNormals} onChange={props.onPropertyChange} />
-					</GridRow>
-				)}
-				
-				{props.object.hasOwnProperty('position') && (
-					<GridRow label={"position"}>
-						<NumberInput name="x" value={props.object.position.x} {...XYZProps}/>
-						<NumberInput name="y" value={props.object.position.y} {...XYZProps}/>
-						<NumberInput name="z" value={props.object.position.z} {...XYZProps}/>
-					</GridRow>
-				)}
+    <div>
+      <div style={SurfacePropertiesContainerStyle}>
+        {props.object.hasOwnProperty("name") && (
+          <GridRow label={"name"}>
+            <TextInput
+              name="name"
+              value={props.object.name}
+              onChange={props.onPropertyChange}
+            />
+          </GridRow>
+        )}
 
-				{props.object.hasOwnProperty('scale') && (
-					<GridRow label={"scale"}>
-						<NumberInput name="scalex" value={props.object.scale.x} {...XYZProps}/>
-						<NumberInput name="scaley" value={props.object.scale.y} {...XYZProps}/>
-						<NumberInput name="scalez" value={props.object.scale.z} {...XYZProps} />
-					</GridRow>
-				)}
+        {props.object.hasOwnProperty("visible") && (
+          <GridRow label={"visible"}>
+            <CheckboxInput
+              name="visible"
+              checked={props.object.visible}
+              onChange={props.onPropertyChange}
+            />
+          </GridRow>
+        )}
 
-				{props.object.hasOwnProperty('rotation') && (
-					<GridRow label={"rotation"}>
-						<NumberInput name="rotationx" value={props.object.rotation.x} {...XYZProps}/>
-						<NumberInput name="rotationy" value={props.object.rotation.y} {...XYZProps}/>
-						<NumberInput name="rotationz" value={props.object.rotation.z} {...XYZProps}/>
-					</GridRow>
-				)}
-			</div>
-		</div>
-	);
+        {props.object.hasOwnProperty("_displayVertexNormals") && (
+          <GridRow label={"vertex normals"}>
+            <CheckboxInput
+              name="displayVertexNormals"
+              checked={props.object.displayVertexNormals}
+              onChange={props.onPropertyChange}
+            />
+          </GridRow>
+        )}
+
+        {props.object.hasOwnProperty("position") && (
+          <GridRow label={"position"}>
+            <NumberInput
+              name="x"
+              value={props.object.position.x}
+              {...XYZProps}
+            />
+            <NumberInput
+              name="y"
+              value={props.object.position.y}
+              {...XYZProps}
+            />
+            <NumberInput
+              name="z"
+              value={props.object.position.z}
+              {...XYZProps}
+            />
+          </GridRow>
+        )}
+
+        {props.object.hasOwnProperty("scale") && (
+          <GridRow label={"scale"}>
+            <NumberInput
+              name="scalex"
+              value={props.object.scale.x}
+              {...XYZProps}
+            />
+            <NumberInput
+              name="scaley"
+              value={props.object.scale.y}
+              {...XYZProps}
+            />
+            <NumberInput
+              name="scalez"
+              value={props.object.scale.z}
+              {...XYZProps}
+            />
+          </GridRow>
+        )}
+
+        {props.object.hasOwnProperty("rotation") && (
+          <GridRow label={"rotation"}>
+            <NumberInput
+              name="rotationx"
+              value={props.object.rotation.x}
+              {...XYZProps}
+            />
+            <NumberInput
+              name="rotationy"
+              value={props.object.rotation.y}
+              {...XYZProps}
+            />
+            <NumberInput
+              name="rotationz"
+              value={props.object.rotation.z}
+              {...XYZProps}
+            />
+          </GridRow>
+        )}
+        <GridRowSeperator marginBottom={".125em"}/>
+        <GridRow label="material" style={{
+          display: "unset",
+        }}>
+					<AutoCompleteTextInput
+						getSuggestions={async (value: string) => {
+							return await getMaterialSuggestions(value);
+						}}
+						getSuggestionValue={(suggestion => suggestion.name)}
+						renderSuggestion={suggestion => (
+							<div className="material-suggestion">{suggestion.material}</div>
+						)}
+						onChange={(value: string) => console.log(value)}
+					/>
+        </GridRow>
+      </div>
+    </div>
+  );
 }

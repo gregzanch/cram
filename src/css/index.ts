@@ -20,3 +20,4 @@ import "./float-button.css";
 import "./settings.css";
 import "./gutter.css";
 import "./small-button.css";
+import "./suggestions.css";

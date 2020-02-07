@@ -41,6 +41,13 @@ import Messenger from "../messenger";
 
 import PickHelper from './pick-helper';
 
+
+
+
+
+
+
+
 export interface RendererParams{
 	elt?: HTMLCanvasElement;
 	messenger: Messenger;
@@ -49,6 +56,7 @@ export interface RendererParams{
 export default class Renderer {
 	elt!: HTMLCanvasElement;
 	renderer!: THREE.Renderer;
+
 	camera!: THREE.PerspectiveCamera;
 
 	scene!: THREE.Scene;
@@ -155,15 +163,15 @@ export default class Renderer {
 		this.setupSettingHandlers();
 		this.setupMessageHandlers();
 
-		
     this.setupTextures();
 		this.setupEventListeners();
 		this.render();
 		// setInterval(this.render, 1000 / 20);
 	}
+
 	setupMessageHandlers() {
-		this.messenger.addMessageHandler("renderer-should-change-background", (acc, ...args) => this.background = args[0])
-		this.messenger.addMessageHandler("renderer-should-change-fogColor", (acc, ...args) => this.fogColor = args[0])
+		this.messenger.addMessageHandler("RENDERER_SHOULD_CHANGE_BACKGROUND", (acc, ...args) => this.background = args[0])
+		this.messenger.addMessageHandler("RENDERER_SHOULD_CHANGE_FOG_COLOR", (acc, ...args) => this.fogColor = args[0])
 	}
 	setupScene({background}) {
 		this.scene = new THREE.Scene();
@@ -330,6 +338,13 @@ export default class Renderer {
 	
 	addRoom(room: Room) {
 		this.workspaceCursor.add(room);
+		const near =
+			room.boundingBox.max
+				.clone()
+				.sub(room.boundingBox.min)
+				.length() * 2;
+		const far = near * 1.5;
+		this.setupFog({ color: this.fogColor, start: near, end: far });
 	}
 	
 	smoothCameraTo(

@@ -4,8 +4,8 @@ import {chunk} from '../common/chunk';
 import hash from 'object-hash';
 import { KeyValuePair } from "../common/key-value-pair";
 import Renderer from "../render/renderer";
-
-
+import interpolateAlpha from '../compute/acoustics/interpolate-alpha';
+import reflectionCoefficient from '../compute/acoustics/reflection-coefficient';
 const defaults = {
   materials: {
     selected: new THREE.MeshPhysicalMaterial({
@@ -76,7 +76,9 @@ export default class Surface extends Container {
 	vertexNormals: THREE.VertexNormalsHelper;
 	// for acoustics
 	absorption!: number[];
+	absorptionFunction: (freq: number) => number;
 	reflection!: number[];
+	reflectionFunction: (freq: number, theta: number) => number;
 	_triangles: THREE.Triangle[];
 	selectedMaterial: THREE.MeshPhysicalMaterial;
 	normalMaterial: THREE.MeshPhysicalMaterial;
@@ -109,6 +111,7 @@ export default class Surface extends Container {
 		this.normalMaterial = defaults.materials.mesh;
 		this.normalColor = new THREE.Color(0xaaaaaa);
 		this.select = this.select.bind(this);
+		this.select = this.deselect.bind(this);
 		
 		// console.log(this.triangles);
 		const dict = {} as KeyValuePair<KeepLine>;
@@ -149,6 +152,12 @@ export default class Surface extends Container {
 		this.edges.visible = this.displayEdges;
 		this.add(this.vertexNormals);
 		this.vertexNormals.visible = this._displayVertexNormals;
+		
+		// this.absorption = [0.05, 0.15, 0.10, 0.05, 0.04, 0.07, 0.09, 0.09];
+		this.absorption = [0.00,0.04,0.23,0.52,0.90,0.94,0.66,0.66];
+		const freq = [63, 125, 250, 500, 1000., 2000, 4000, 8000];
+		this.absorptionFunction = interpolateAlpha(this.absorption, freq);
+		this.reflectionFunction = (freq, theta) => reflectionCoefficient(this.absorptionFunction(freq), theta);
 		
 	}
 	select = () => {

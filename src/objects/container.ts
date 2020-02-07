@@ -1,4 +1,8 @@
 import * as THREE from "three";
+import Receiver from "./receiver";
+import Surface from "./surface";
+import Room from "./room";
+import Source from "./source";
 
 type UserData = {
 	[key: string]: any;
@@ -15,6 +19,7 @@ export default class Container extends THREE.Group {
 	selected: boolean;
 	select: () => void;
 	deselect: () => void;
+	
 	constructor(name: string, props?: ContainerProps) {
 		super();
 		this.name = name;
@@ -26,8 +31,18 @@ export default class Container extends THREE.Group {
 				}
 			})();
 		this.selected = false;
-		this.select = () => { };
-		this.deselect = () => { };
+		this.select = () => {
+			this.children.forEach((child: Receiver|Room|Source|Surface) => {
+					child.select();
+			})
+			this.selected = true;
+		};
+		this.deselect = () => {
+			this.children.forEach((child: Receiver | Room | Source | Surface) => {
+        child.deselect();
+			});
+			this.selected = false;
+		 };
 	}
 
 	get x() {

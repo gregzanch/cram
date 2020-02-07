@@ -8,7 +8,6 @@ import GridRowSeperator from '../GridRowSeperator';
 import RayTracer from "../../compute/raytracer";
 import { Button } from "@blueprintjs/core";
 import Select, { components } from "react-select";
-
 import Messenger from "../../messenger";
 
 
@@ -41,10 +40,19 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
     style: {
       width: "30%"
     },
-    onChange: props.onPropertyChange
+    onChange: props.onPropertyChange,
   };
 
+  const onSourceChange = (e) => {
+    console.log("onSourceChange");
+    props.messenger.postMessage("RAYTRACER_SOURCE_CHANGE", e);
+    
+  }
 
+  const onReceiverChange = e => {
+    console.log("onSourceChange");
+    props.messenger.postMessage("RAYTRACER_RECEIVER_CHANGE", e);
+  };
 
   const sources = props.messenger.postMessage("FETCH_ALL_SOURCES")[0]
   const sourcesSelectOptions = sources.map(x => {
@@ -152,7 +160,7 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
         <GridRow label="sources"></GridRow>
         <GridRow span={2}>
           <Select
-            defaultValue={[sourcesSelectOptions[0]]}
+            defaultValue={sourcesSelectOptions}
             isMulti
             name="sources"
             options={sourcesSelectOptions}
@@ -160,13 +168,14 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
             classNamePrefix="select"
             key={"sources"}
             styles={customStyles}
+            onChange={onSourceChange}
           />
         </GridRow>
 
         <GridRow label="receivers"></GridRow>
         <GridRow span={2}>
           <Select
-            defaultValue={[sourcesSelectOptions[0]]}
+            defaultValue={receiverSelectOptions}
             isMulti
             name="receivers"
             options={receiverSelectOptions}
@@ -174,10 +183,19 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
             classNamePrefix="select"
             key={"receievers"}
             styles={customStyles}
+            onChange={onReceiverChange}
           />
         </GridRow>
+        {props.object.hasOwnProperty("runWithoutReceiver") && (
+          <GridRow span={2} label="run without receiver">
+            <CheckboxInput
+              name={"runWithoutReceiver"}
+              onChange={props.onPropertyChange}
+              checked={props.object.runWithoutReceiver} />
+          </GridRow>
+        )}
         <GridRowSeperator />
-        <GridRow span={2}>1x
+        <GridRow span={2}>
           <Button text="Generate IR" />
         </GridRow>
       </div>

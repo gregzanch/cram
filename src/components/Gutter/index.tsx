@@ -3,6 +3,7 @@ import { Tab, Tabs, Icon, Text } from "@blueprintjs/core";
 import Messenger from '../../messenger';
 import Stats, {StatsProps, Stat} from './Stats';
 import { ParametersPanel } from './ParametersPanel';
+import MaterialsPanel from './MaterialsPanel';
 
 
 export interface GutterProps {
@@ -17,26 +18,41 @@ export default function Gutter(props: GutterProps) {
     setSelectedTabId(newTabId);
   };
   
+  const iconProps = (icon) => ({
+    icon,
+    iconSize: 16,
+    style: {
+      marginRight: ".5em"
+    }
+  })
+  
   const statsTitle = (
     <Text>
-      <Icon icon="chart" iconSize={16} style={{ marginRight: ".5em" }} />
+      <Icon {...iconProps("chart")}/>
       Stats
     </Text>
   );
   
   const logTitle = (
     <Text>
-      <Icon icon="application" iconSize={16} style={{ marginRight: ".5em" }} />
+      <Icon {...iconProps("application")} />
       Log
     </Text>
   );
   
   const parametersTitle = (
     <Text>
-      <Icon icon="function" iconSize={16} style={{ marginRight: ".5em" }} />
+      <Icon {...iconProps("function")} />
       Parameters
     </Text>
   );
+  
+  const materialsTitle = (
+    <Text>
+      <Icon {...iconProps("database")} />
+      Materials
+    </Text>
+  )
   
   return (
     <div
@@ -62,6 +78,12 @@ export default function Gutter(props: GutterProps) {
           title={parametersTitle}
           panel={<ParametersPanel messenger={props.messenger} />}
           panelClassName="parameter-panel"
+        />
+        <Tab
+          id="materials"
+          title={materialsTitle}
+          panel={<MaterialsPanel messenger={props.messenger} />}
+          panelClassName="materials-panel"
         />
         <Tabs.Expander />
         <Tab
