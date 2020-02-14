@@ -29,3 +29,12 @@
 	margin-right: .25em;
 	margin-left: -.25em;
 }
+.tree-view-root{	
+	height: 264;
+	flex-grow: 1;
+}
+
+
+.tree-item-selected{
+	background-color: #182026;
+}

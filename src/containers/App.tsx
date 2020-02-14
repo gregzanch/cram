@@ -341,7 +341,6 @@ export default class App extends React.Component<AppProps, AppState> {
 					this.state.selectedObject instanceof Receiver ||
 					this.state.selectedObject instanceof Source
 				) {
-					console.log(this.state.selectedObject.uuid);
 					this.props.messenger.postMessage("SET_SELECTION", [this.state.selectedObject.uuid]);
 				}
 		});
@@ -449,7 +448,6 @@ export default class App extends React.Component<AppProps, AppState> {
 		})
 	}
 	handleMaterialBarItemSelect(e) {
-		console.log(e);
 	}
 	
 	MaterialOptionListRenderer: ItemListRenderer<AcousticMaterial> = (props: IItemListRendererProps<AcousticMaterial>) => {

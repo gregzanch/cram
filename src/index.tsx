@@ -220,11 +220,12 @@ state.messenger.addMessageHandler("SHOULD_ADD_RAYTRACER", (acc, ...args) => {
     messenger: state.messenger,
     name: "ray-tracer",
     containers: state.containers,
-    reflectionOrder: 100,
-    updateInterval: 20,
+    reflectionOrder: 25,
+    updateInterval: 5,
     renderer: state.renderer
   });
   state.solvers[raytracer.uuid] = raytracer;
+  raytracer.runWithoutReceiver = false;
   return raytracer;
 });
 

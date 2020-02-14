@@ -145,11 +145,15 @@ export default function ObjectView(props) {
 
 	function mapchildren(container: Container | THREE.Object3D) {
 		if (container["kind"]) {
+			if ((container as Container).selected) {
+				console.log('selected', container);
+			}
 			const sharedProps = {
 				draggable: true,
 				key: container.uuid,
 				nodeId: container.uuid,
 			}
+			const className = (container as Container).selected ? "" : "";
 			const draggable = true;
 			const key = container.uuid;
 			const nodeId = container.uuid;
@@ -165,27 +169,27 @@ export default function ObjectView(props) {
 
 			switch (container["kind"]) {
 				case "surface": return (
-					<TreeItem {...{ icon: <NodesIcon />, label, onClick, draggable, key, nodeId }} />
+					<TreeItem {...{ icon: <NodesIcon />, className, label, onClick, draggable, key, nodeId }} />
 				);
 				
 				case "source": return (
-					<TreeItem  {...{ icon: <SourceIcon />, label, onClick, draggable, key, nodeId }} />
+					<TreeItem {...{ icon: <SourceIcon />, className, label, onClick, draggable, key, nodeId }} />
 				);
 				
 				case "receiver":
 					return (
-					<TreeItem  {...{ icon: <ReceiverIcon />, label, onClick, draggable, key, nodeId }} />
+					<TreeItem  {...{ icon: <ReceiverIcon />, className, label, onClick, draggable, key, nodeId }} />
 				);
 				
 				case "room": return (
-					<TreeItem {...{label: roomLabel, onClick, draggable, key, nodeId, collapseIcon, expandIcon}}>
+					<TreeItem {...{label: roomLabel, onClick, draggable, key, nodeId, collapseIcon, className, expandIcon}}>
 							{container.children.map(x => mapchildren(x))}
 						</TreeItem>
 					);
 
 				case "fdtd":
 					return (
-						<TreeItem {...{label: roomLabel, draggable, key, nodeId, collapseIcon, expandIcon}}>
+						<TreeItem {...{label: roomLabel, draggable, key, nodeId, collapseIcon, className, expandIcon}}>
 							{container.children.map(x => mapchildren(x))}
 						</TreeItem>
 					);
@@ -225,6 +229,7 @@ export default function ObjectView(props) {
 									fontSize="small"
 								/>
 							}
+							className={className}
 							{...sharedProps}>
 							{container.children.map(x => mapchildren(x))}
 						</TreeItem>
@@ -370,17 +375,15 @@ export default function ObjectView(props) {
 	
 	const TreeViewProps = {
 		expanded,
-		className: classes.root,
+		className: "tree-view-root",
 		defaultExpanded: (["solvers"]),
 		defaultExpandIcon: (
 			<ExpandMoreIcon
-				onClick={e => console.log(e)}
 				fontSize="small"
 			/>
 		),
 		defaultCollapseIcon: (
 			<ChevronRightIcon
-				onClick={e => console.log(e)}
 				fontSize="small"
 			/>
 		),

@@ -227,7 +227,6 @@ export default class Surface extends Container {
 			// 	//@ts-ignore
 			// 	(this.mesh.material as THREE.ShaderMaterial).uniforms["time"] += 1;
 			// }, 16);
-			console.log(this.uuid + " surface selected");
 		};
 		this.deselect = () => {
 			this.selected = false;
