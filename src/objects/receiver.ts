@@ -12,7 +12,7 @@ const defaults = {
 };
 
 export default class Receiver extends Container{
-    mesh: THREE.Mesh;
+  mesh: THREE.Mesh;
     constructor(name: string, props?: ReceiverProps) {
         super(name);
         this.kind = "receiver";

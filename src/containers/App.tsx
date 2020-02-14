@@ -55,6 +55,7 @@ import Surface from "../objects/surface";
 import { AcousticMaterial } from "..";
 import { Searcher } from "fast-fuzzy";
 import MaterialDrawer from "../components/MaterialDrawer";
+import { SettingsPanel } from "../components/setting-components/SettingsPanel";
 FocusStyleManager.onlyShowFocusOnTabs();
 
 
@@ -665,9 +666,16 @@ export default class App extends React.Component<AppProps, AppState> {
           Are you sure you want to start over?
         </Alert>
         <SettingsDrawer
-          size={"35%"}
+          size={"55%"}
           onClose={this.handleSettingsButtonClick}
-          isOpen={this.state.settingsDrawerVisible}>
+          isOpen={this.state.settingsDrawerVisible}
+          onSubmit={() => {
+            this.setState({
+              settings: this.props.messenger.postMessage("SUBMIT_ALL_SETTINGS")[0]
+            });
+          }}
+        >
+          <SettingsPanel messenger={this.props.messenger}/>
           <input
             name="background"
             type="color"

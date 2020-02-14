@@ -368,7 +368,7 @@ export default class Renderer {
 				.clone()
 				.sub(room.boundingBox.min)
 				.length() * 4;
-		const far = near * 2;
+		const far = near * 4;
 		this.setupFog({ color: this.fogColor, start: near, end: far });
 	}
 	setControls() {

@@ -2,6 +2,7 @@ import React from "react";
 import VisibilityIcon from '@material-ui/icons/Visibility';
 import VisibilityOffIcon from '@material-ui/icons/VisibilityOff';
 import { ObjectPropertyInputEvent } from "./NumberInput";
+
 export interface CheckboxInputProps {
 	name: string;
 	className?: string;

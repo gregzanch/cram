@@ -23,7 +23,7 @@ import { chunk } from "./common/chunk";
 //@ts-ignore
 import triangleroom from "!raw-loader!./res/triangle.stl";
 //@ts-ignore
-import testroom from "!raw-loader!./res/models/testthing.obj";
+import testroom from "!raw-loader!./res/models/bigger.obj";
 import Solver from "./compute/solver";
 import { FDTD } from "./compute/fdtd";
 import GLFDTD from "./compute/gl-fdtd";
@@ -113,9 +113,25 @@ const state = {
   glfdtd: {} as GLFDTD,
   renderer: {} as Renderer,
   messenger: new Messenger(),
+  // settings: {
+  //   lightHelpersVisible: new Setting(true, "checkbox")
+  // } as KeyValuePair<Setting<any>>
   settings: {
-    lightHelpersVisible: new Setting(true, "checkbox")
-  } as KeyValuePair<Setting<any>>
+    fog_color: new Setting<string>({
+      id: "fog_color",
+      name: "Fog Color",
+      description: "Changes the color of the scene's fog",
+      kind: "color",
+      value: "#ffffff"
+    }),
+    default_save_name: new Setting<string>({
+      id: "default_save_name",
+      name: "Default Save Name",
+      description: "The default name when saving",
+      kind: "text",
+      value: "new-project.json"
+    })
+  } as KeyValuePair<Setting<string|number|boolean>>
 };
 
 state.renderer = new Renderer({
@@ -199,6 +215,16 @@ state.messenger.addMessageHandler("SET_SELECTION", (acc, ...args) => {
   // })
 });
 
+state.messenger.addMessageHandler("FETCH_SETTINGS", () => {
+  return state.settings;
+})
+
+state.messenger.addMessageHandler("SUBMIT_ALL_SETTINGS", () => {
+  for (const key in state.settings) {
+    state.settings[key].submit();
+  }
+  return state.settings;
+});
 
 state.messenger.addMessageHandler("FETCH_ALL_MATERIALS", (acc, ...args) => {
   return state.materials;
@@ -220,12 +246,12 @@ state.messenger.addMessageHandler("SHOULD_ADD_RAYTRACER", (acc, ...args) => {
     messenger: state.messenger,
     name: "ray-tracer",
     containers: state.containers,
-    reflectionOrder: 25,
+    reflectionOrder: 500,
     updateInterval: 5,
     renderer: state.renderer
   });
   state.solvers[raytracer.uuid] = raytracer;
-  raytracer.runWithoutReceiver = false;
+  raytracer.runWithoutReceiver = true;
   return raytracer;
 });
 
@@ -408,7 +434,7 @@ setTimeout(() => {
   const { uuid: sourceid } = state.messenger.postMessage(
     "SHOULD_ADD_SOURCE"
   )[0];
-  (state.containers[sourceid] as Source).position.set(29,8,2.5);
+  (state.containers[sourceid] as Source).position.set(11.5, 19, 1);
   (state.containers[sourceid] as Source).scale.set(3,3,3);
 
   const { uuid: receiverId } = state.messenger.postMessage(
@@ -433,7 +459,7 @@ setTimeout(() => {
 
 
 
-  (state.containers[receiverId] as Receiver).position.set(6,9,1.8);
+  (state.containers[receiverId] as Receiver).position.set(3.8, 16.59, 1.3);
   (state.containers[receiverId] as Receiver).scale.set(5, 5, 5);
 
 

@@ -1,0 +1,5 @@
+.settings-title-bar{
+  display: flex;
+  align-items: center;
+  font-size: 13pt;
+}
