@@ -6,9 +6,11 @@ import Source from '../../objects/source';
 import GridRow from '../GridRow';
 import Surface from '../../objects/surface';
 import GridRowSeperator from "../GridRowSeperator";
-import { Select } from "@material-ui/core";
+
 import AutoCompleteTextInput from '../AutoCompleteTextInput';
 import Messenger from "../../messenger";
+import { Button, Tag } from "@blueprintjs/core";
+
 
 
 export interface SurfacePropertiesProps {
@@ -28,6 +30,7 @@ export interface SurfacePropertiesProps {
 }
 
 
+// const MaterialMultiSelect = MultiSelect.ofType<AcousticMaterial>();
 
 const SurfacePropertiesContainerStyle: React.CSSProperties = {
 	display: "grid",
@@ -182,11 +185,13 @@ export default function SurfaceProperties(props: SurfacePropertiesProps) {
             />
           </GridRow>
         )}
-        <GridRowSeperator marginBottom={".125em"}/>
-        <GridRow label="material" style={{
-          display: "unset",
-        }}>
-					<AutoCompleteTextInput
+        <GridRowSeperator marginBottom={".125em"} />
+        <GridRow
+          label="material"
+          style={{
+            display: "unset"
+          }}>
+          {/* <AutoCompleteTextInput
 						getSuggestions={async (value: string) => {
 							return await getMaterialSuggestions(value);
 						}}
@@ -195,7 +200,24 @@ export default function SurfaceProperties(props: SurfacePropertiesProps) {
 							<div className="material-suggestion">{suggestion.material}</div>
 						)}
 						onChange={(value: string) => console.log(value)}
-					/>
+					/> */}
+          {props.object instanceof Surface && (props.object as Surface) && (
+            // (<Button text={props.object.acousticMaterial.name} minimal={true} />)
+            <>
+              <Tag
+              // onRemove={removable && onRemove}
+              // icon={icon === true ? "home" : undefined}
+              >
+                {props.object.acousticMaterial.name}
+              </Tag>
+              <Button
+                icon="edit"
+                minimal
+                small
+                onClick={e=>props.messenger.postMessage("OPEN_MATERIAL_SEARCH",props.object)}
+              />
+            </>
+          )}
         </GridRow>
       </div>
     </div>

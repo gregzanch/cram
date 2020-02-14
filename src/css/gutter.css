@@ -7,5 +7,13 @@
 }
 
 .gutter > .bp3-tab-list{
-  background: rgba(0,0,0,0.01);
+  margin-top: 4px;
+  height: 20px;
+
+}
+
+.chart-tab{
+  width: 100%;
+  /* height: 100px; */
+  display: flex;
 }

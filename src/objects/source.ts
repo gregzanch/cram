@@ -34,5 +34,13 @@ export default class Source extends Container {
     this.theta = (props && props.theta) || 1;
     this.phi = (props && props.phi) || 1;
     this.numRays = 0;
+        this.select = () => {
+          this.selected = true;
+          console.log("source selected");
+        };
+        this.deselect = () => {
+          this.selected = false;
+        };
   }
+
 }

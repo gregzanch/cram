@@ -229,6 +229,29 @@ export class FDTD extends Solver {
 			this.satisfyBounds();
 			this.step();
 		}
+		// console.log(this.running);
+	}
+	updateSources() {
+		for (let i = 0; i < this.sourceLocations.length; i++) {
+					// console.log(this.sources[i].f(this.t))
+          this.f[
+            this.getIndex(
+              this.sourceLocations[i][2],
+              this.sourceLocations[i][1],
+              this.sourceLocations[i][0]
+            )
+					] = this.sources[i].f(this.t);
+			// console.log(
+      //   this.f[
+      //     this.getIndex(
+      //       this.sourceLocations[i][2],
+      //       this.sourceLocations[i][1],
+      //       this.sourceLocations[i][0]
+      //     )
+      //   ]
+			// );
+			// console.log(this.sourceLocations[i]);
+        }
 	}
 	step() { 
 		if (this.clearpass) {
@@ -237,7 +260,6 @@ export class FDTD extends Solver {
 		}
 		
 		//@ts-ignore
-
 		this.u[this.prev] = this.kernel(
       //@ts-ignore
       new Input(this.u[this.prev], [this.nz, this.ny, this.nx]),
@@ -255,24 +277,12 @@ export class FDTD extends Solver {
 		);
 		
 		this.t += this.dt;
+		// console.log(this.sources[0].f(this.t))
 		this.n++;
-		let sum = 0;
-		for (let i = 0; i < 100; i++){
-			if (this.u[this.curr][i] > sum) {
-				sum = this.u[this.curr][i];
-			}
-		}
+
 		// this.gain = 
 		
-		for (let i = 0; i < this.sourceLocations.length; i++) {
-			this.f[
-				this.getIndex(
-					this.sourceLocations[i][0],
-					this.sourceLocations[i][1],
-					this.sourceLocations[i][2]
-				)
-			] = this.sources[i].f(this.t);
-		}
+		this.updateSources();
 		// this.satisfyBounds();
 		this.pressureAttribute.set(this.u[this.curr], 0);
 		//@ts-ignore

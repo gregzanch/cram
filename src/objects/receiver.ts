@@ -25,7 +25,14 @@ export default class Receiver extends Container{
           })
         );
         this.mesh.userData['kind'] = 'receiver';
-        this.add(this.mesh);
+      this.add(this.mesh);
+          this.select = () => {
+            this.selected = true;
+            console.log("receiver selected");
+          };
+          this.deselect = () => {
+            this.selected = false;
+          };
     }
     get color() {
         return String.fromCharCode(35)+(this.mesh.material as THREE.MeshBasicMaterial).color.getHexString();
@@ -33,5 +40,5 @@ export default class Receiver extends Container{
     set color(col: string) {
         (this.mesh.material as THREE.MeshBasicMaterial).color.setStyle(col)
     }
-    
+
 }

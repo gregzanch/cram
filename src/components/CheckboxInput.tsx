@@ -6,6 +6,8 @@ export interface CheckboxInputProps {
 	name: string;
 	className?: string;
 	checked: boolean;
+	checkedNode?: React.ReactNode
+	uncheckedNode?: React.ReactNode
 	onChange: (e: ObjectPropertyInputEvent) => void;
 }
 
@@ -27,7 +29,7 @@ export function CheckboxInput(props: CheckboxInputProps) {
 				name={props.name}
 				checked={props.checked}
 			/>
-			{props.checked ? <VisibilityIcon fontSize="small" className="checkbox-checkmark"/> : <VisibilityOffIcon fontSize="small" className="checkbox-checkmark"/>}
+			{props.checked ? (props.checkedNode || <VisibilityIcon fontSize="small" className="checkbox-checkmark"/>) : (props.uncheckedNode || <VisibilityOffIcon fontSize="small" className="checkbox-checkmark"/>)}
 		</label> 
 	)
 }

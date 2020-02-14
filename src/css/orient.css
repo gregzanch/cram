@@ -1,0 +1,7 @@
+.oriental-rug{
+  background: rgba(0,0,0,0.5);
+}
+.oriental-rug:hover{
+  fill-opacity: 1;
+}
+

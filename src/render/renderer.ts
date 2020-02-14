@@ -57,7 +57,9 @@ export default class Renderer {
 	elt!: HTMLCanvasElement;
 	renderer!: THREE.Renderer;
 
-	camera!: THREE.PerspectiveCamera;
+	camera!: THREE.PerspectiveCamera|THREE.OrthographicCamera;
+	perspectiveCamera!: THREE.PerspectiveCamera;
+	orthoCamera!: THREE.OrthographicCamera
 
 	scene!: THREE.Scene;
 	env!: Container;
@@ -101,7 +103,9 @@ export default class Renderer {
 			"setupRenderer",
 			"setupSettingHandlers",
 			"setupScene",
-			"smoothCameraTo"
+			"smoothCameraTo",
+			"setOrtho",
+			"setControls"
 		].forEach(method => {
 			this[method] = this[method].bind(this);
 		});
@@ -140,9 +144,9 @@ export default class Renderer {
 		this.setupRenderer();
 		
 		this.setupCamera({
-			fov: 25,
+			fov: 45,
 			aspect: this.aspect,
-			near: 0.0001,
+			near: 0.01,
 			far: 500,
 			up: [0, 0, 1]
 		});
@@ -172,6 +176,7 @@ export default class Renderer {
 	setupMessageHandlers() {
 		this.messenger.addMessageHandler("RENDERER_SHOULD_CHANGE_BACKGROUND", (acc, ...args) => this.background = args[0])
 		this.messenger.addMessageHandler("RENDERER_SHOULD_CHANGE_FOG_COLOR", (acc, ...args) => this.fogColor = args[0])
+		this.messenger.addMessageHandler("TOGGLE_CAMERA_ORTHO", (acc, ...args) => this.setOrtho(this.camera instanceof THREE.PerspectiveCamera))
 	}
 	setupScene({background}) {
 		this.scene = new THREE.Scene();
@@ -208,16 +213,20 @@ export default class Renderer {
 		this.scene.fog = this.fog;
 
 	}
-	setupCamera({fov, aspect, near, far, up}) {
+	setupCamera({ fov, aspect, near, far, up }) {
+		
 		this.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+		this.perspectiveCamera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+		const canvas = this.renderer.domElement;
+		const left = -canvas.width / 2;
+    const right = canvas.width / 2;
+    const top = canvas.height / 2;
+    const bottom = -canvas.height / 2;
+		this.orthoCamera = new THREE.OrthographicCamera(left, right, top, bottom, near, far);
 		this.camera.up.set(up[0], up[1], up[2]);
 		
 		const storedState = JSON.parse(localStorage.getItem("camera") || defaults.camera) as CameraStore;
-		this.controls = new OrbitControls(
-			this.camera,
-			this.renderer.domElement
-		);
-		this.controls.target.set(0, 0, 0);
+		
 		if (storedState) {
 			if (storedState.object) {
 				this.camera.position.set(
@@ -225,9 +234,14 @@ export default class Renderer {
 					storedState.object.matrix[13],
 					storedState.object.matrix[14]
 				);
-				this.camera.fov = storedState.object.fov;
+				if (this.camera instanceof THREE.PerspectiveCamera) {
+					this.camera.fov = storedState.object.fov;
+					this.camera.aspect = storedState.object.aspect;
+				}
 			}
 		}
+
+		this.setControls();
 		this.controls.update();
 	}
 	setupTextures() {
@@ -273,10 +287,12 @@ export default class Renderer {
 	
 	setupEventListeners() {
 		window.addEventListener("mouseup", e => {
-			localStorage.setItem(
-				"camera",
-				JSON.stringify(this.camera.toJSON())
-			);
+			if (this.camera instanceof THREE.PerspectiveCamera) {
+				localStorage.setItem(
+					"camera",
+					JSON.stringify(this.camera.toJSON())
+				);
+			}
 		});
 		// this.renderer.domElement.addEventListener('mousedown', e => {
 		// 	const selection = this.pickHelper.pick(e, [this.workspace]);
@@ -304,12 +320,21 @@ export default class Renderer {
 		// look up the size the canvas is being displayed
 		const width = canvas.clientWidth;
 		const height = canvas.clientHeight;
-
+	
 		// adjust displayBuffer size to match
 		if (canvas.width !== width || canvas.height !== height) {
 			// you must pass false here or three.js sadly fights the browser
 			this.renderer.setSize(width, height, false);
-			this.camera.aspect = width / height;
+				if (this.camera instanceof THREE.OrthographicCamera) {
+          this.camera.left = -canvas.width / 2;
+          this.camera.right = canvas.width / 2;
+          this.camera.top = canvas.height / 2;
+          this.camera.bottom = -canvas.height / 2;
+        } else {
+          (this.camera as THREE.PerspectiveCamera).aspect = width / height;
+
+        }
+			
 			this.camera.updateProjectionMatrix();
 
 			// update any render target sizes here
@@ -342,9 +367,32 @@ export default class Renderer {
 			room.boundingBox.max
 				.clone()
 				.sub(room.boundingBox.min)
-				.length() * 2;
-		const far = near * 1.5;
+				.length() * 4;
+		const far = near * 2;
 		this.setupFog({ color: this.fogColor, start: near, end: far });
+	}
+	setControls() {
+		this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    this.controls.update();
+	}
+	setOrtho(on: boolean) {
+		if (on && this.camera instanceof THREE.PerspectiveCamera) {
+			const { x, y, z } = this.camera.position.clone();
+			this.orthoCamera.position.set(x,y,z)
+			this.orthoCamera.setRotationFromQuaternion(this.camera.quaternion);
+			this.perspectiveCamera = this.camera.clone();
+			this.camera = this.orthoCamera;
+			this.camera.up.set(0, 0, 1);
+		}
+		else if(!on && this.camera instanceof THREE.OrthographicCamera) {
+			const { x, y, z } = this.camera.position.clone();
+      this.perspectiveCamera.position.set(x, y, z);
+			this.perspectiveCamera.setRotationFromQuaternion(this.camera.quaternion);
+			this.orthoCamera = this.camera.clone();
+			this.camera = this.perspectiveCamera;
+			this.camera.up.set(0, 0, 1);
+		}
+		this.setControls();
 	}
 	
 	smoothCameraTo(

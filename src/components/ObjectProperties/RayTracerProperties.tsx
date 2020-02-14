@@ -189,14 +189,26 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
         {props.object.hasOwnProperty("runWithoutReceiver") && (
           <GridRow span={2} label="run without receiver">
             <CheckboxInput
+              checkedNode={"on"}
+              uncheckedNode={"off"}
               name={"runWithoutReceiver"}
               onChange={props.onPropertyChange}
-              checked={props.object.runWithoutReceiver} />
+              checked={props.object.runWithoutReceiver}
+            />
           </GridRow>
         )}
         <GridRowSeperator />
         <GridRow span={2}>
-          <Button text="Generate IR" />
+          <Button
+            text="Calulate Response"
+            onClick={e =>
+              props.messenger.postMessage(
+                "RAYTRACER_CALCULATE_RESPONSE",
+                props.object.uuid,
+                props.object.reflectionLossFrequencies
+              )
+            }
+          />
         </GridRow>
       </div>
     </div>

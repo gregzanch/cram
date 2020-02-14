@@ -11,8 +11,6 @@ export interface StatsProps {
   data: Stat[];
 }
 
-
-
 export default function Stats(props: StatsProps) {
   const valueCellRenderer = (i: number) => {
     return <Cell>{props.data[i].value}</Cell>;

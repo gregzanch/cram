@@ -22,7 +22,7 @@ vec3 HSLtoRGB(vec3 HSL){
 }
 
 void main() {
-  // vec4 diffuseColor = texture2D( map, vUv );
+  vec4 diffuseColor = texture2D( map, vUv );
   if(abs(vPressure)<threshold){
     discard;
   }

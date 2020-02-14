@@ -14,6 +14,7 @@ export default class Room extends Container {
 	boundingBoxHelper!: THREE.Box3Helper;
 	surfaces: Container;
 	_fdtdmeshid!: number;
+	volume: number;
 	constructor(name: string, props: RoomProps) {
 		super(name);
 		this.kind = "room";
@@ -25,6 +26,17 @@ export default class Room extends Container {
 		this.calculateBoundingBox();
 		this.add(this.boundingBoxHelper);
 		this.boundingBoxHelper.visible = props.showBoundingBox || false;
+			this.deselect = () => {
+        this.surfaces.children.forEach((x: Container) => {
+          x.deselect();
+        });
+      };
+      this.select = () => {
+        this.surfaces.children.forEach((x: Container) => {
+          x.select();
+        });
+			};
+		this.volume = this.volumeOfMesh();
 	}
 	get showBoundingBox() {
 		return this.boundingBoxHelper.visible;
@@ -48,9 +60,16 @@ export default class Room extends Container {
 	getFDTDPressureAttribute(): THREE.InstancedBufferAttribute {
 		return (((this.getObjectById(this._fdtdmeshid) as THREE.Mesh).geometry as THREE.InstancedBufferGeometry).getAttribute('pressure') as THREE.InstancedBufferAttribute)
 	}
-	deselect = () => {
-		this.surfaces.children.forEach((x: Container) => {
-			x.deselect()
+	signedVolumeOfTriangle(p1: THREE.Vector3, p2: THREE.Vector3, p3: THREE.Vector3) {
+ 		return p1.dot(p2.clone().cross(p3)) / 6.0;
+	}
+	volumeOfMesh() {
+		let sum = 0;
+		this.surfaces.children.forEach((surface: Surface) => {
+			surface._triangles.forEach((triangle: THREE.Triangle) => {
+				sum+=this.signedVolumeOfTriangle(triangle.a, triangle.b, triangle.c);	
+			})
 		})
+		return Math.abs(sum);
 	}
 }

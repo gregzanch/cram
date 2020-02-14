@@ -4,15 +4,21 @@ import Messenger from '../../messenger';
 import Stats, {StatsProps, Stat} from './Stats';
 import { ParametersPanel } from './ParametersPanel';
 import MaterialsPanel from './MaterialsPanel';
+import { ChartTab } from './ChartTab';
 
 
 export interface GutterProps {
   messenger: Messenger;
   stats: Stat[];
+  chartData?: {
+    label: string;
+    x: number[];
+    y: number[];
+  }[];
 }
 
 export default function Gutter(props: GutterProps) {
-  const [selectedTabId, setSelectedTabId] = useState("stats");
+  const [selectedTabId, setSelectedTabId] = useState("chart-tab");
   
   const onChange = (newTabId: string, prevTabId: string, event: React.MouseEvent<HTMLElement, MouseEvent>) => {
     setSelectedTabId(newTabId);
@@ -20,7 +26,7 @@ export default function Gutter(props: GutterProps) {
   
   const iconProps = (icon) => ({
     icon,
-    iconSize: 16,
+    iconSize: 14,
     style: {
       marginRight: ".5em"
     }
@@ -54,6 +60,15 @@ export default function Gutter(props: GutterProps) {
     </Text>
   )
   
+  const chartTabTitle = (
+    <Text>
+      <Icon {...iconProps("chart")} />
+      Impulse Response
+    </Text>
+  )
+  
+  
+  
   return (
     <div
       style={{
@@ -64,7 +79,7 @@ export default function Gutter(props: GutterProps) {
         id="gutter-tabs"
         className="gutter"
         {...{ onChange, selectedTabId }}>
-        <Tab
+        {/* <Tab
           id="stats"
           title={statsTitle}
           panel={
@@ -72,18 +87,17 @@ export default function Gutter(props: GutterProps) {
               <Stats data={props.stats} />
             </div>
           }
-        />
-        <Tab
+        /> */}
+        {/* <Tab
           id="parameters"
           title={parametersTitle}
           panel={<ParametersPanel messenger={props.messenger} />}
           panelClassName="parameter-panel"
-        />
+        /> */}
         <Tab
-          id="materials"
-          title={materialsTitle}
-          panel={<MaterialsPanel messenger={props.messenger} />}
-          panelClassName="materials-panel"
+          id="chart-tab"
+          title={chartTabTitle}
+          panel={<ChartTab data={props.chartData} />}
         />
         <Tabs.Expander />
         <Tab

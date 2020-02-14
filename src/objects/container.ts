@@ -17,8 +17,8 @@ export interface ContainerProps {
 export default class Container extends THREE.Group {
 	kind: string;
 	selected: boolean;
-	select: () => void;
-	deselect: () => void;
+	select!: () => void;
+	deselect!: () => void;
 	
 	constructor(name: string, props?: ContainerProps) {
 		super();
@@ -32,16 +32,20 @@ export default class Container extends THREE.Group {
 			})();
 		this.selected = false;
 		this.select = () => {
-			this.children.forEach((child: Receiver|Room|Source|Surface) => {
-					child.select();
-			})
-			this.selected = true;
+			// this.children.forEach((child: Receiver | Room | Source | Surface) => {
+			// 	if (child['kind']) {
+			// 		child.select();
+			// 	}
+			// })
+			// this.selected = true;
 		};
 		this.deselect = () => {
-			this.children.forEach((child: Receiver | Room | Source | Surface) => {
-        child.deselect();
-			});
-			this.selected = false;
+			// this.children.forEach((child: Receiver | Room | Source | Surface) => {
+			// 		if (child["kind"]) {
+			// 			child.deselect();
+			// 		}
+			// });
+			// this.selected = false;
 		 };
 	}
 

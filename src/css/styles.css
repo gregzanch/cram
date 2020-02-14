@@ -25,7 +25,7 @@ body {
   margin: .5em .5em;
 }
 
-canvas{
+#renderer-canvas{
   width: 100% !important;
   height: 100% !important;
 }

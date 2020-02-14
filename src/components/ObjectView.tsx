@@ -3,14 +3,10 @@ import {
 	makeStyles,
 	createStyles
 } from "@material-ui/core/styles";
-
-
 import { SvgIcon } from '@material-ui/core';
-
 import TreeView from "@material-ui/lab/TreeView";
 import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
 import ChevronRightIcon from "@material-ui/icons/ChevronRight";
-
 import TimelineIcon from '@material-ui/icons/Timeline';
 import WifiIcon from '@material-ui/icons/Wifi';
 import HomeIcon from '@material-ui/icons/Home';
@@ -26,6 +22,8 @@ import Solver from "../compute/solver";
 import { Colors } from "@blueprintjs/core";
 import { Icon } from '@fortawesome/fontawesome-svg-core'
 import MicIcon from "@material-ui/icons/Mic";
+
+
 
 function NodesIcon(props) {
 	return (
@@ -47,6 +45,10 @@ function RayTracerIcon(props) {
 	return (
 		<TimelineIcon {...props}/>
 	)
+}
+
+function RT60Icon(props) {
+  return <TimelineIcon {...props} />;
 }
 
 function FDTDIcon(props) {
@@ -114,7 +116,6 @@ const useStyles = makeStyles(
 		root: {
 			height: 264,
 			flexGrow: 1,
-			maxWidth: 400
 		}
 	})
 );
@@ -287,6 +288,16 @@ export default function ObjectView(props) {
 				return (<TreeItem
 					defaultChecked
 					icon={<RayTracerIcon />}
+					draggable={true}
+					nodeId={solver.uuid}
+					label={<TreeItemLabel label={solver.name || ("untitled" + solver.kind)} meta={solver.kind} />}
+					key={solver.name}
+					onClick={e => props.onClick(solver, e)}
+				/>);
+			case "rt60":
+				return (<TreeItem
+					defaultChecked
+					icon={<RT60Icon />}
 					draggable={true}
 					nodeId={solver.uuid}
 					label={<TreeItemLabel label={solver.name || ("untitled" + solver.kind)} meta={solver.kind} />}

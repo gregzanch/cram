@@ -5,7 +5,6 @@ export const camera = {
 		generator: "Object3D.toJSON"
 	},
 	object: {
-		uuid: "5C0F06A0-7840-4E25-BC3E-D89BDE9FC751",
 		type: "PerspectiveCamera",
 		layers: 1,
 		matrix: [

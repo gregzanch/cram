@@ -14,8 +14,14 @@ import {
 	Drawer,
 	Classes,
 	Colors,
-	AnchorButton
+	AnchorButton,
+	Overlay,
+	Alert,
+	Intent
 } from "@blueprintjs/core";
+import MenuItemText from '../components/MenuItemText';
+import { ItemListRenderer, IItemListRendererProps } from "@blueprintjs/select";
+import MaterialBar from '../components/MaterialBar';
 import { Characters, EditorModes, ToolNames } from "../constants";
 import ImportDialog from "../components/ImportDialog";
 import ObjectView from "../components/ObjectView";
@@ -34,6 +40,7 @@ import { Setting } from "../common/setting";
 import { Report } from "../common/browser-report";
 
 import "../css";
+import "./App.css";
 import { ToolName } from "../constants/tool-names";
 import { EditorMode } from "../constants/editor-modes";
 // import { Process, Task } from "../common/process";
@@ -44,7 +51,10 @@ import RayTracer from "../compute/raytracer";
 import Gutter from '../components/Gutter';
 import { Stat } from "../components/Gutter/Stats";
 import { ObjectPropertyInputEvent } from "../components/NumberInput";
-
+import Surface from "../objects/surface";
+import { AcousticMaterial } from "..";
+import { Searcher } from "fast-fuzzy";
+import MaterialDrawer from "../components/MaterialDrawer";
 FocusStyleManager.onlyShowFocusOnTabs();
 
 
@@ -75,6 +85,14 @@ interface AppState {
 	darkmode: boolean;
 	stats: Stat[];
 	lastUpdateReason: string;
+	chartData?: {
+		label: string;
+		x: number[];
+		y: number[];
+	}[];
+	materialDrawerOpen: boolean;
+	terminalOpen: boolean;
+	newWarningVisible: boolean;
 }
 
 export default class App extends React.Component<AppProps, AppState> {
@@ -85,6 +103,9 @@ export default class App extends React.Component<AppProps, AppState> {
 	constructor(props: AppProps) {
 		super(props);
 		this.state = {
+			terminalOpen: false,
+			newWarningVisible: false,
+			materialDrawerOpen: false,
       lastUpdateReason: "",
       solvers: {} as KeyValuePair<Solver>,
       simulationRunning: false,
@@ -96,7 +117,12 @@ export default class App extends React.Component<AppProps, AppState> {
       mode: "EDIT",
       tool: "SELECT",
       darkmode: false,
-      stats: [] as Stat[]
+      stats: [] as Stat[],
+			chartData: [{
+				label: "a",
+				x: [0],
+				y: [0]
+			}]
       // process: new Process({name: "base", steps: [] as Task[]})
     };
 		this.setupMessageHandlers = this.setupMessageHandlers.bind(this);
@@ -119,21 +145,78 @@ export default class App extends React.Component<AppProps, AppState> {
 		this.handleSettingsButtonClick = this.handleSettingsButtonClick.bind(
 			this
 		);
+		this.handleMaterialBarClose = this.handleMaterialBarClose.bind(this);
+		this.handleMaterialBarItemSelect = this.handleMaterialBarItemSelect.bind(this);
 		this.handleSettingChange = this.handleSettingChange.bind(this);
 		this.handleObjectPropertyButtonClick = this.handleObjectPropertyButtonClick.bind(this);
 		this.addMessageHandler = this.addMessageHandler.bind(this);
 	}
-	addMessageHandler(message: string, handler: (acc, ...args) => KeyValuePair<any>) {
+	addMessageHandler(message: string, handler: (acc, ...args) => KeyValuePair<any>, cb?: ()=>void) {
 		this.props.messenger.addMessageHandler(message, (acc, ...args) => {
 			const nextState = handler(acc, ...args);
 			this.setState({
 				lastUpdateReason: message,
 				...nextState
-			})
+			}, cb || (()=> {}))
 		})
 	}
 	setupMessageHandlers() {
-		this.addMessageHandler("SHOW_IMPORT_DIALOG", (acc, ...args) => {
+		this.addMessageHandler("SHOW_NEW_WARNING",
+			() => {
+				return ({
+					newWarningVisible: true
+			})
+		});
+		this.addMessageHandler("SHOW_TERMINAL",
+			() => {
+			return ({
+				terminalOpen: true
+			});
+		});
+		this.addMessageHandler("TOGGLE_TERMINAL",
+			() => {
+      return {
+        terminalOpen: !this.state.terminalOpen
+      };
+    });
+		this.addMessageHandler("OPEN_MATERIAL_SEARCH",
+			(acc, ...args) => {
+			return ({
+				materialDrawerOpen: true
+			});
+		});
+		
+		this.addMessageHandler("ASSIGN_MATERIAL",
+			(acc, material) => {
+			if ((this.state.selectedObject) && (this.state.selectedObject instanceof Surface)) {
+				// this.state.selectedObject.acousticMaterial = material;
+				const { selectedObject } = this.state;
+				selectedObject.acousticMaterial = material;
+				return ({
+					selectedObject,
+					materialDrawerOpen: false
+				})
+			}
+			return ({
+				selectedObject: this.state.selectedObject,
+				materialDrawerOpen: false
+			})
+		});
+		
+		this.addMessageHandler("TOGGLE_MATERIAL_SEARCH",
+			(acc, ...args) => {
+      return {
+        materialDrawerOpen: !this.state.materialDrawerOpen
+      };
+    });
+		this.addMessageHandler("UPDATE_CHART_DATA",
+			(acc, ...args) => {
+			return ({
+				chartData: args[0]
+			})
+		})
+		this.addMessageHandler("SHOW_IMPORT_DIALOG",
+			(acc, ...args) => {
 			return {
 				importDialogVisible: !this.state.importDialogVisible,
 			};
@@ -163,6 +246,13 @@ export default class App extends React.Component<AppProps, AppState> {
 			}
 		);
 		this.addMessageHandler("SHOULD_ADD_RAYTRACER",
+			(acc, ...args) => {
+				const solvers = { ...this.state.solvers };
+				solvers[acc[0].uuid] = acc[0];
+				return ({ solvers });
+			}
+		);
+		this.addMessageHandler("SHOULD_ADD_RT60",
 			(acc, ...args) => {
 				const solvers = { ...this.state.solvers };
 				solvers[acc[0].uuid] = acc[0];
@@ -246,7 +336,14 @@ export default class App extends React.Component<AppProps, AppState> {
 			selectedObject: object,
 			lastUpdateReason: "handleObjectViewClick"
 		}, () => {
-				console.log(this.state.selectedObject);
+				if (
+					this.state.selectedObject instanceof Surface ||
+					this.state.selectedObject instanceof Receiver ||
+					this.state.selectedObject instanceof Source
+				) {
+					console.log(this.state.selectedObject.uuid);
+					this.props.messenger.postMessage("SET_SELECTION", [this.state.selectedObject.uuid]);
+				}
 		});
 	}
 	handleObjectPropertyButtonClick(e: React.MouseEvent<HTMLInputElement, MouseEvent>) {
@@ -346,46 +443,81 @@ export default class App extends React.Component<AppProps, AppState> {
 	// 	return true;
 	// }
 	
+	handleMaterialBarClose(e) {
+		this.setState({
+			materialDrawerOpen: false
+		})
+	}
+	handleMaterialBarItemSelect(e) {
+		console.log(e);
+	}
+	
+	MaterialOptionListRenderer: ItemListRenderer<AcousticMaterial> = (props: IItemListRendererProps<AcousticMaterial>) => {
+		
+		return (
+			<div>
+			{props.filteredItems.map((x, i) => {
+				return (
+					<div key={i}>
+						{x.material}
+					</div>
+					)
+				
+			})}
+			</div>
+		)
+	};
+	
 	render() {
 		return (
       <div>
         <div>
-          <Navbar className={this.state.darkmode ? "bp3-dark" : ""}>
-            <Navbar.Group align={Alignment.LEFT}>
-              <Navbar.Group
-                style={{
-                  fontSize: "16pt",
-                  verticalAlign: "text-top",
-                  margin: "0 0 .25em"
-                }}>
-                {/* <img src={resolve_svg} alt="resolve" /> */}
+          <Navbar className="main-nav_bar">
+            <Navbar.Group
+              align={Alignment.LEFT}
+              className="main-nav_bar-left_group">
+              <Navbar.Group className="main-nav_bar-logo_text">
                 cram.ui
               </Navbar.Group>
               <Navbar.Divider />
-
-              <Menu>
+              <Menu className="main-nav_bar-left_menu">
                 <ButtonGroup minimal={true}>
                   <Popover
                     minimal={true}
-                    transitionDuration={50}
-                    position={Position.BOTTOM_LEFT}>
-                    <Button text="File" />
+                    transitionDuration={20}
+                    position={Position.BOTTOM_LEFT}
+                    className="main-nav_bar-left_menu-popover-file">
+                    <Button
+                      text="File"
+                      className={"main-nav_bar-left_menu-button"}
+                    />
                     <Menu>
-                      <MenuItem text="New" disabled></MenuItem>
-                      <MenuItem text="Open" disabled></MenuItem>
+                      <MenuItem
+                        text={
+                          <MenuItemText
+                            text="New"
+                            hotkey={Characters.SHIFT + "N"}
+                          />
+                        }
+                        onClick={e =>
+                          this.setState({ newWarningVisible: true })
+                        }
+                      />
                       <MenuItem text="Save" disabled></MenuItem>
                       <MenuDivider />
                       <MenuItem
                         text="Import"
                         onClick={this.showImportDialog}></MenuItem>
-                      <MenuItem text="Export" disabled></MenuItem>
                     </Menu>
                   </Popover>
                   <Popover
                     minimal={true}
                     transitionDuration={50}
                     position={Position.BOTTOM_LEFT}>
-                    <Button text="Edit" />
+                    <Button
+                      text="Edit"
+                      className={"main-nav_bar-left_menu-button"}
+                    />
                     <Menu>
                       <MenuItem text="Undo" disabled></MenuItem>
                       <MenuItem text="Redo" disabled></MenuItem>
@@ -399,7 +531,22 @@ export default class App extends React.Component<AppProps, AppState> {
                     minimal={true}
                     transitionDuration={50}
                     position={Position.BOTTOM_LEFT}>
-                    <Button text="Add" />
+                    <Button
+                      text="View"
+                      className={"main-nav_bar-left_menu-button"}
+                    />
+                    <Menu>
+                      <MenuItem text="Dock" icon="small-tick"></MenuItem>
+                    </Menu>
+                  </Popover>
+                  <Popover
+                    minimal={true}
+                    transitionDuration={50}
+                    position={Position.BOTTOM_LEFT}>
+                    <Button
+                      text="Add"
+                      className={"main-nav_bar-left_menu-button"}
+                    />
                     <Menu>
                       <MenuItem
                         text={
@@ -445,19 +592,80 @@ export default class App extends React.Component<AppProps, AppState> {
                           )
                         }
                       />
+
+                      <MenuItem
+                        text={
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between"
+                            }}>
+                            <div>FDTD</div>
+                            <div style={{ color: Colors.LIGHT_GRAY1 }}>
+                              {Characters.COMMAND}
+                            </div>
+                          </div>
+                        }
+                        onClick={() =>
+                          this.props.messenger.postMessage("SHOULD_ADD_FDTD")
+                        }
+                      />
+                      <MenuItem
+                        text={
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between"
+                            }}>
+                            <div>RT60</div>
+                            <div style={{ color: Colors.LIGHT_GRAY1 }}>
+                              {Characters.COMMAND}
+                            </div>
+                          </div>
+                        }
+                        onClick={() =>
+                          this.props.messenger.postMessage("SHOULD_ADD_RT60")
+                        }
+                      />
+                      {/* </Menu> */}
                     </Menu>
                   </Popover>
                 </ButtonGroup>
               </Menu>
             </Navbar.Group>
-            <Navbar.Group align={Alignment.RIGHT}>
+            <Navbar.Group
+              align={Alignment.RIGHT}
+							className="main-nav_bar-right_group"
+						>
               <Button
                 icon="cog"
                 minimal={true}
+                className={"main-nav_bar-right_menu-button"}
                 onClick={this.handleSettingsButtonClick}></Button>
             </Navbar.Group>
           </Navbar>
         </div>
+        <Alert
+          isOpen={this.state.newWarningVisible}
+          transitionDuration={100}
+          canOutsideClickCancel
+          canEscapeKeyCancel
+          cancelButtonText="No, cancel"
+          confirmButtonText="Yes, start over"
+          intent={Intent.DANGER}
+          onConfirm={e => {
+            this.props.messenger.postMessage("NEW");
+            this.setState({
+              newWarningVisible: false
+            });
+          }}
+          onCancel={e => {
+            this.setState({
+              newWarningVisible: false
+            });
+          }}>
+          Are you sure you want to start over?
+        </Alert>
         <SettingsDrawer
           size={"35%"}
           onClose={this.handleSettingsButtonClick}
@@ -482,9 +690,31 @@ export default class App extends React.Component<AppProps, AppState> {
               )
             }
           />
-
-      
         </SettingsDrawer>
+
+        <Drawer
+          position={Position.RIGHT}
+          size="100%"
+          autoFocus={true}
+          enforceFocus={true}
+          hasBackdrop={true}
+          onClose={this.handleMaterialBarClose}
+          canOutsideClickClose={true}
+          canEscapeKeyClose={true}
+          isCloseButtonShown={true}
+          title="Material Selection"
+          isOpen={this.state.materialDrawerOpen}>
+          <MaterialDrawer
+            messenger={this.props.messenger}
+            object={
+              this.state.selectedObject &&
+              this.state.selectedObject instanceof Surface
+                ? this.state.selectedObject
+                : undefined
+            }
+          />
+        </Drawer>
+
         <ImportDialog
           onImport={file => {
             this.props.messenger.postMessage("IMPORT_FILE", file);
@@ -505,7 +735,7 @@ export default class App extends React.Component<AppProps, AppState> {
         <SplitterLayout
           secondaryMinSize={5}
           primaryMinSize={50}
-          secondaryInitialSize={500}
+          secondaryInitialSize={300}
           primaryIndex={1}
           customClassName="modified-splitter-layout">
           <SplitterLayout
@@ -522,34 +752,41 @@ export default class App extends React.Component<AppProps, AppState> {
               />
             </PanelContainer>
             <PanelContainer className="panel full-bottom">
-              {Object.keys(this.state.selectedObject).length > 0 && (
-                <ObjectProperties
-                  messenger={this.props.messenger}
-                  object={this.state.selectedObject}
-                  onPropertyChange={this.handleObjectPropertyChange}
-                  onPropertyValueChangeAsNumber={
-                    this.handleObjectPropertyValueChangeAsNumber
-                  }
-                  onPropertyValueChangeAsString={
-                    this.handleObjectPropertyValueChangeAsString
-                  }
-                  onButtonClick={this.handleObjectPropertyButtonClick}
-                />
-              )}
+              {(() => {
+                if (Object.keys(this.state.selectedObject).length > 0) {
+                  return (
+                    <ObjectProperties
+                      messenger={this.props.messenger}
+                      object={this.state.selectedObject}
+                      onPropertyChange={this.handleObjectPropertyChange}
+                      onPropertyValueChangeAsNumber={
+                        this.handleObjectPropertyValueChangeAsNumber
+                      }
+                      onPropertyValueChangeAsString={
+                        this.handleObjectPropertyValueChangeAsString
+                      }
+                      onButtonClick={this.handleObjectPropertyButtonClick}
+                    />
+                  );
+                }
+              })()}
             </PanelContainer>
           </SplitterLayout>
           <SplitterLayout
             vertical={true}
             primaryMinSize={100}
             secondaryMinSize={5}
-            secondaryInitialSize={100}>
+            secondaryInitialSize={200}
+            customClassName="canvas-gutter"
+            onSecondaryPaneSizeChange={(value: number) => {}}>
             <div className="webgl-canvas">
-              <canvas ref={this.canvas} />
+              <canvas id="renderer-canvas" ref={this.canvas} />
             </div>
             <PanelContainer className="panel full-bottom">
               <Gutter
                 messenger={this.props.messenger}
                 stats={this.state.stats}
+                chartData={this.state.chartData}
               />
             </PanelContainer>
           </SplitterLayout>
@@ -557,49 +794,4 @@ export default class App extends React.Component<AppProps, AppState> {
       </div>
     );
 	}
-}
-
-export function FloatButton(props) {
-	return (
-		<div className="float-button">{props.children}</div>
-	)
-}
-
-export function FloatControls(props) {
-	return (
-		<div className="float-controls">
-			<ButtonGroup vertical>
-				<Button small active={true} icon="select" />
-				<Button small active={false} icon="move" />
-				<Button small active={false} icon="refresh" />
-				<Button small active={false} icon="maximize" />
-			</ButtonGroup>
-		</div>
-	);
-}
-
-
-function SelectIcon(props) {
-	return (
-		<svg
-			width="42"
-			height="42"
-			viewBox="-4 -4 45 45"
-			fill="none"
-			xmlns="http://www.w3.org/2000/svg">
-			<path
-				d="M1 1H36V36H1V1Z"
-				stroke="#999A9C"
-				stroke-width="2"
-				stroke-linejoin="round"
-				stroke-dasharray="6 2"
-			/>
-			<path
-				d="M13.3036 28.1857L12.84 9.14134L26.9837 21.9031L18.2498 21.0481L13.3036 28.1857Z"
-				fill="#ECECEC"
-				stroke="#7C7C7C"
-			/>
-		</svg>
-	);
-
 }

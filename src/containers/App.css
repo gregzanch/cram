@@ -1,0 +1,19 @@
+.main-nav_bar{
+  height: 30px;
+}
+.main-nav_bar-logo_text{
+  font-size: 12pt;
+  vertical-align: text-top;
+  margin: 0 0 .25em;
+  height: 30px;
+}
+.main-nav_bar-left_group, .main-nav_bar-right_group{
+  height: 30px;
+  font-size: 12pt;
+  
+}
+.main-nav_bar-left_menu,.main-nav_bar-right_menu{
+  height: 30px;
+  font-size: 12pt;
+  padding: 0 5px;
+}

@@ -17,13 +17,13 @@ import { KeyValuePair } from "./common/key-value-pair";
 import expose from "./common/expose";
 import Container from "./objects/container";
 import { Setting } from "./common/setting";
-
+import {randomInteger} from './common/random';
 const STL = new STLLoader();
 import { chunk } from "./common/chunk";
 //@ts-ignore
 import triangleroom from "!raw-loader!./res/triangle.stl";
 //@ts-ignore
-import testroom from "!raw-loader!./res/models/hall.obj";
+import testroom from "!raw-loader!./res/models/testthing.obj";
 import Solver from "./compute/solver";
 import { FDTD } from "./compute/fdtd";
 import GLFDTD from "./compute/gl-fdtd";
@@ -31,7 +31,8 @@ import Room from "./objects/room";
 import Surface from "./objects/surface";
 import RayTracer from "./compute/raytracer";
 import { uuid } from "uuidv4";
-
+// import { RT60 } from './compute/rt60';
+import RT60 from './compute/rt';
 import * as ac from "./compute/acoustics";
 
 import materials from "./db/material.json";
@@ -97,11 +98,7 @@ const state = {
   materialsIndex,
   materials,
   materialSearcher: new Searcher(
-    materials.map(x => ({
-      id: x._id,
-      name: x.name,
-      material: x.material
-    })),
+  materials,
     {
       keySelector: obj => obj.material
     }
@@ -178,6 +175,31 @@ const importHandlers = {
   }
 };
 
+state.messenger.addMessageHandler("SET_SELECTION", (acc, ...args) => {
+  Object.keys(state.containers).forEach(x => {
+    if ((args[0] as string[]).includes(x)) {
+      state.containers[x].select();
+    }
+    else {
+      state.containers[x].traverse(obj => {
+        if ((args[0] as string[]).includes(obj.uuid)) {
+            obj instanceof Container && (obj as Container).select();  
+        }
+        else {
+            obj instanceof Container && (obj as Container).deselect();
+        }
+      })
+    }
+  });
+  // (args[0] as string[]).forEach(x => {
+  //   const obj = state.renderer.scene.getObjectByProperty('uuid', x);
+  //   if (obj) {
+  //     (obj as Container).select()
+  //   }
+  // })
+});
+
+
 state.messenger.addMessageHandler("FETCH_ALL_MATERIALS", (acc, ...args) => {
   return state.materials;
 });
@@ -198,12 +220,24 @@ state.messenger.addMessageHandler("SHOULD_ADD_RAYTRACER", (acc, ...args) => {
     messenger: state.messenger,
     name: "ray-tracer",
     containers: state.containers,
-    reflectionOrder: 10,
-    updateInterval: 10,
+    reflectionOrder: 100,
+    updateInterval: 20,
     renderer: state.renderer
   });
   state.solvers[raytracer.uuid] = raytracer;
   return raytracer;
+});
+
+state.messenger.addMessageHandler("SHOULD_ADD_RT60", (acc, ...args) => {
+  const rooms = Object.keys(state.containers).filter(x => state.containers[x] instanceof Room);
+  if (rooms.length>0) {
+    const rt60 = new RT60({
+      room: state.containers[rooms[0]] as Room,
+      name: 'rt60'
+    });
+    state.solvers[rt60.uuid] = rt60;
+    return rt60;
+  }
 });
 
 state.messenger.addMessageHandler("SHOULD_ADD_FDTD", (acc, ...args) => {
@@ -230,7 +264,7 @@ state.messenger.addMessageHandler("SHOULD_ADD_FDTD", (acc, ...args) => {
   state.solvers[state.simulation] = new FDTD({
     room: rooms[0],
     dt: 0.0005,
-    dx: 1,
+    dx: 2,
     gain: 1,
     threshold: 0.0001,
     q: 0.43,
@@ -242,6 +276,15 @@ state.messenger.addMessageHandler("SHOULD_ADD_FDTD", (acc, ...args) => {
 
   return state.solvers[state.simulation];
 });
+
+state.messenger.addMessageHandler("NEW", (acc, ...args) => {
+  
+});
+
+state.messenger.addMessageHandler("RAYTRACER_CALCULATE_RESPONSE", (acc, id, frequencies) => {
+  (state.solvers[id] instanceof RayTracer) && (state.solvers[id] as RayTracer).calculateWithDiffuse(frequencies);
+})
+
 
 state.messenger.addMessageHandler("FETCH_ALL_SOURCES", (acc, ...args) => {
   return state.sources.map(x => {
@@ -299,7 +342,10 @@ state.messenger.addMessageHandler("IMPORT_FILE", (acc, ...args) => {
       const result = await (await fetch(objectURL)).text();
       const models = importHandlers.obj(result);
       const surfaces = models.map(
-        model => new Surface(model.name, { geometry: model.geometry })
+        model => new Surface(model.name, {
+          geometry: model.geometry,
+          acousticMaterial: state.materials[0]
+        })
       );
       const room = new Room("new room", {
         surfaces
@@ -361,8 +407,8 @@ setTimeout(() => {
   const { uuid: sourceid } = state.messenger.postMessage(
     "SHOULD_ADD_SOURCE"
   )[0];
-  (state.containers[sourceid] as Source).position.set(0,15,8);
-  (state.containers[sourceid] as Source).scale.set(10,10,10);
+  (state.containers[sourceid] as Source).position.set(29,8,2.5);
+  (state.containers[sourceid] as Source).scale.set(3,3,3);
 
   const { uuid: receiverId } = state.messenger.postMessage(
     "SHOULD_ADD_RECEIVER"
@@ -370,7 +416,11 @@ setTimeout(() => {
   const models = importHandlers.obj(testroom);
 
   const surfaces = models.map(
-    model => new Surface(model.name, { geometry: model.geometry })
+    model =>
+      new Surface(model.name, {
+        geometry: model.geometry,
+        acousticMaterial: state.materials[randomInteger(0,state.materials.length-1)]
+      })
   );
   const room = new Room("room", {
     surfaces
@@ -382,12 +432,13 @@ setTimeout(() => {
 
 
 
-  (state.containers[receiverId] as Receiver).position.set(0,30,14);
-  (state.containers[receiverId] as Receiver).scale.set(15, 15, 15);
+  (state.containers[receiverId] as Receiver).position.set(6,9,1.8);
+  (state.containers[receiverId] as Receiver).scale.set(5, 5, 5);
 
 
   expose(
     {
+      // fdtd: state.messenger.postMessage("SHOULD_ADD_FDTD")[0],
       raytracer: state.messenger.postMessage("SHOULD_ADD_RAYTRACER")[0],
       state,
       THREE
