@@ -427,7 +427,7 @@ registerHotKeys(state.messenger);
 // the main app
 ReactDOM.render(<App {...state} />, document.getElementById("root"));
 
-// This is to simulate user uploading a mesh file and adding source+receiver
+// This is to simulate user uploading a mesh file and adding source + receiver
 setTimeout(() => {
 
   const { uuid: sourceid } = state.messenger.postMessage(

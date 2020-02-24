@@ -43,7 +43,7 @@ export default function SourceProperties(props: SourcePropertiesProps) {
 	}
 	
 	const source = props.messenger.postMessage("FETCH_SOURCE", props.object.uuid)[0];
-	console.log(source);
+	// console.log(source);
 	
 	
 	return (

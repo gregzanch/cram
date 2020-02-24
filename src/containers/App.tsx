@@ -134,6 +134,7 @@ export default class App extends React.Component<AppProps, AppState> {
 		this.showImportDialog = this.showImportDialog.bind(this);
 		this.handleImportDialogClose = this.handleImportDialogClose.bind(this);
 		this.handleObjectViewClick = this.handleObjectViewClick.bind(this);
+		this.handleObjectViewDelete = this.handleObjectViewDelete.bind(this);
 		this.handleObjectPropertyChange = this.handleObjectPropertyChange.bind(
 			this
 		);
@@ -228,7 +229,20 @@ export default class App extends React.Component<AppProps, AppState> {
           importDialogVisible: !this.state.importDialogVisible,
         });
 			}
-		);
+    );
+    this.addMessageHandler("SHOULD_REMOVE_CONTAINER", (acc, ...args) => {
+      if (args[0] && this.state.containers[args[0]]) {
+        const containers = { ...this.state.containers };
+        delete containers[args[0]];
+        return {
+          containers,
+          lastUpdateReason: "SHOULD_REMOVE_CONTAINER"
+        }
+      }
+      else {
+        return {}
+      }
+    })
 		this.addMessageHandler("SHOULD_ADD_SOURCE",
 			(acc, ...args) => {
 				const containers = { ...this.state.containers };
@@ -252,7 +266,20 @@ export default class App extends React.Component<AppProps, AppState> {
 				solvers[acc[0].uuid] = acc[0];
 				return ({ solvers });
 			}
-		);
+    );
+    this.addMessageHandler("SHOULD_REMOVE_SOLVER", (acc, ...args) => {
+      if (args[0] && this.state.solvers[args[0]]) {
+        const solvers = { ...this.state.solvers };
+        delete solvers[args[0]];
+        return {
+          solvers,
+          lastUpdateReason: "SHOULD_REMOVE_SOLVER"
+        };
+      }
+      else {
+        return {}
+      }
+    });
 		this.addMessageHandler("SHOULD_ADD_RT60",
 			(acc, ...args) => {
 				const solvers = { ...this.state.solvers };
@@ -345,7 +372,15 @@ export default class App extends React.Component<AppProps, AppState> {
 					this.props.messenger.postMessage("SET_SELECTION", [this.state.selectedObject.uuid]);
 				}
 		});
-	}
+  }
+  handleObjectViewDelete(object: Container | Solver) {
+    if (object instanceof Container) {
+      this.props.messenger.postMessage("SHOULD_REMOVE_CONTAINER", object.uuid);
+    }
+    else if (object instanceof Solver) {
+      this.props.messenger.postMessage("SHOULD_REMOVE_SOLVER", object.uuid);
+    }
+  }
 	handleObjectPropertyButtonClick(e: React.MouseEvent<HTMLInputElement, MouseEvent>) {
 		const { selectedObject } = this.state;
 		if (selectedObject instanceof RayTracer) {
@@ -756,6 +791,7 @@ export default class App extends React.Component<AppProps, AppState> {
                 containers={this.state.containers}
                 solvers={this.state.solvers}
                 onClick={this.handleObjectViewClick}
+                onDelete={this.handleObjectViewDelete}
               />
             </PanelContainer>
             <PanelContainer className="panel full-bottom">

@@ -177,6 +177,15 @@ export default class Renderer {
 		this.messenger.addMessageHandler("RENDERER_SHOULD_CHANGE_BACKGROUND", (acc, ...args) => this.background = args[0])
 		this.messenger.addMessageHandler("RENDERER_SHOULD_CHANGE_FOG_COLOR", (acc, ...args) => this.fogColor = args[0])
 		this.messenger.addMessageHandler("TOGGLE_CAMERA_ORTHO", (acc, ...args) => this.setOrtho(this.camera instanceof THREE.PerspectiveCamera))
+		this.messenger.addMessageHandler("SHOULD_REMOVE_CONTAINER", (acc, ...args) => {
+			const id = args[0];
+			const object = this.scene.getObjectByProperty("uuid", id);
+			if (object) {
+				console.log(object);
+				object.parent && object.parent.remove(object);
+				// this.scene.remove(object);
+			}
+		})
 	}
 	setupScene({background}) {
 		this.scene = new THREE.Scene();

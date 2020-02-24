@@ -223,10 +223,18 @@ export default class RayTracer extends Solver {
   }
   update = () => {};
   get sources() {
-    return this.sourceIDs.map(x => this.containers[x]);
+    if (this.sourceIDs.length > 0) {
+      return this.sourceIDs.map(x => this.containers[x]);
+    }
+    else {
+      return [];
+    }
   }
   get receivers() {
-    return this.receiverIDs.map(x => (this.containers[x] as Receiver).mesh) as THREE.Mesh[];
+    if (this.receiverIDs.length > 0) {
+      return this.receiverIDs.map(x => (this.containers[x] as Receiver).mesh) as THREE.Mesh[];
+    }
+    else return [];
   }
   get room(): Room {
     return this.containers[this.roomID] as Room;

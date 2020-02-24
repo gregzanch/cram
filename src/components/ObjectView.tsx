@@ -130,7 +130,7 @@ export default function ObjectView(props) {
   function mapchildren(container: Container | THREE.Object3D) {
     if (container["kind"]) {
       if ((container as Container).selected) {
-        console.log("selected", container);
+        // console.log("selected", container);
       }
       const sharedProps = {
         draggable: true,
@@ -149,41 +149,47 @@ export default function ObjectView(props) {
 
       const label = <TreeItemLabel {...{ label: genericLabel, meta }} />;
       const roomLabel = <TreeItemLabel icon={<RoomIcon fontSize="small" />} {...{ label: genericLabel, meta }} />;
+      
+      const ContextMenuSharedProps = {
+        handleMenuItemClick: e => {
+          if (e.target.textContent) {
+            switch (e.target.textContent) {
+              case "Delete":
+                props.onDelete(container);
+                break;
+              default:
+                break;
+            }
+          }
+        },
+        key: key+"context-menu"
+      };
 
       switch (container["kind"]) {
         case "surface":
           return (
-            <ContextMenu handleMenuItemClick={e => {
-              if (e.target.textContent) {
-                switch (e.target.textContent) {
-                  case "Delete":
-                    
-                    break;
-                  default: break;
-                }
-              }
-            }} key={key + "context-menu"}>
+            <ContextMenu {...ContextMenuSharedProps}>
               <TreeItem {...{ icon: <NodesIcon />, className, label, onClick, draggable, key, nodeId }} />
             </ContextMenu>
           );
 
         case "source":
           return (
-            <ContextMenu handleMenuItemClick={e => console.log(e)} key={key + "context-menu"}>
+            <ContextMenu {...ContextMenuSharedProps}>
               <TreeItem {...{ icon: <SourceIcon />, className, label, onClick, draggable, key, nodeId }} />
             </ContextMenu>
           );
 
         case "receiver":
           return (
-            <ContextMenu handleMenuItemClick={e => console.log(e)} key={key + "context-menu"}>
+            <ContextMenu {...ContextMenuSharedProps}>
               <TreeItem {...{ icon: <ReceiverIcon />, className, label, onClick, draggable, key, nodeId }} />
             </ContextMenu>
           );
 
         case "room":
           return (
-            <ContextMenu handleMenuItemClick={e => console.log(e)} key={key + "context-menu"}>
+            <ContextMenu {...ContextMenuSharedProps}>
               <TreeItem {...{ label: roomLabel, onClick, draggable, key, nodeId, collapseIcon, className, expandIcon }}>
                 {container.children.map(x => mapchildren(x))}
               </TreeItem>
@@ -192,7 +198,7 @@ export default function ObjectView(props) {
 
         case "fdtd":
           return (
-            <ContextMenu handleMenuItemClick={e => console.log(e)} key={key + "context-menu"}>
+            <ContextMenu {...ContextMenuSharedProps}>
               <TreeItem {...{ label: roomLabel, draggable, key, nodeId, collapseIcon, className, expandIcon }}>
                 {container.children.map(x => mapchildren(x))}
               </TreeItem>
@@ -201,7 +207,7 @@ export default function ObjectView(props) {
 
         case "container":
           return (
-            <ContextMenu handleMenuItemClick={e => console.log(e)} key={key + "context-menu"}>
+            <ContextMenu {...ContextMenuSharedProps}>
               <TreeItem
                 label={<TreeItemLabel icon={<SurfaceIcon fontSize="small" />} label={container.name || "untitled"} meta={properCase(container["kind"])} />}
                 collapseIcon={<ExpandMoreIcon onClick={e => setExpanded(expanded.filter(x => x !== container.uuid))} fontSize="small" />}
@@ -215,7 +221,7 @@ export default function ObjectView(props) {
 
         default:
           return (
-            <ContextMenu handleMenuItemClick={e => console.log(e)} key={key + "context-menu"}>
+            <ContextMenu {...ContextMenuSharedProps}>
               <TreeItem
                 label={<TreeItemLabel label={container.name || "untitled"} meta={container["kind"] || container.type} />}
                 {...sharedProps}
@@ -229,7 +235,17 @@ export default function ObjectView(props) {
       }
     }
     return (
-      <ContextMenu handleMenuItemClick={e => console.log(e)} key={container.uuid + "context-menu"}>
+      <ContextMenu handleMenuItemClick={e => {
+          if (e.target.textContent) {
+            switch (e.target.textContent) {
+              case "Delete":
+                props.onDelete(container);
+                break;
+              default:
+                break;
+            }
+          }
+        }} key={container.uuid + "context-menu"}>
         <TreeItem
           nodeId={container.uuid}
           label={<TreeItemLabel label={container.name || "untitled"} meta={container.type} />}
@@ -243,10 +259,24 @@ export default function ObjectView(props) {
   }
 
   function mapsolver(solver: Solver) {
+    const ContextMenuSharedProps = {
+      handleMenuItemClick: e => {
+        if (e.target.textContent) {
+          switch (e.target.textContent) {
+            case "Delete":
+              props.onDelete(solver);
+              break;
+            default:
+              break;
+          }
+        }
+      },
+      key: solver.uuid + "context-menu"
+    };
     switch (solver.kind) {
       case "ray-tracer":
         return (
-					<ContextMenu handleMenuItemClick={e => console.log(e.target)} key={solver.uuid + "context-menu"}>
+          <ContextMenu {...ContextMenuSharedProps}>
             <TreeItem
               defaultChecked
               icon={<RayTracerIcon />}
@@ -260,7 +290,7 @@ export default function ObjectView(props) {
         );
       case "rt60":
         return (
-          <ContextMenu handleMenuItemClick={e => console.log(e)} key={solver.uuid + "context-menu"}>
+          <ContextMenu {...ContextMenuSharedProps}>
             <TreeItem
               defaultChecked
               icon={<RT60Icon />}
@@ -274,7 +304,7 @@ export default function ObjectView(props) {
         );
       case "fdtd":
         return (
-          <ContextMenu handleMenuItemClick={e => console.log(e)} key={solver.uuid + "context-menu"}>
+          <ContextMenu {...ContextMenuSharedProps}>
             <TreeItem
               defaultChecked
               icon={<FDTDIcon />}
@@ -288,7 +318,7 @@ export default function ObjectView(props) {
         );
       default:
         return (
-          <ContextMenu handleMenuItemClick={e => console.log(e)} key={solver.uuid + "context-menu"}>
+          <ContextMenu {...ContextMenuSharedProps}>
             <TreeItem
               defaultChecked
               icon={<NodesIcon />}
