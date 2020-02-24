@@ -25,7 +25,7 @@ export function ChartTab(props: ChartTabProps) {
         x: d.x,
         y: d.y,
         type: 'scatter',
-        title: d.label,
+        name: d.label,
         mode: 'lines',
         marker: { color:  colors[i%colors.length]},
       };
@@ -34,7 +34,7 @@ export function ChartTab(props: ChartTabProps) {
       <div className="chart-tab">
         <Plot
           data={data}
-          layout={{ title: "IR" }}
+          layout={{ title: "Energy Response" }}
           config={{ responsive: true }}
           style={{ width: "100%", height: "100%" }}
         />

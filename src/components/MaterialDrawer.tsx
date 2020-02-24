@@ -8,6 +8,9 @@ import MaterialSliders from './MaterialSliders';
 import { clamp } from '../common/clamp';
 import { Icon, Tag } from '@blueprintjs/core';
 import { ButtonGroup, Button } from '@blueprintjs/core';
+import Room from '../objects/room';
+import ObjectView from './ObjectView';
+import { KeyValuePair } from '../common/key-value-pair';
 
 
 const max = (a: number, b: number) => (a > b ? a : b);
@@ -37,6 +40,7 @@ export default class MaterialDrawer extends React.Component<MaterialDrawerProps,
     };
     this.handleQueryChange = this.handleQueryChange.bind(this);
     this.handleInput = this.handleInput.bind(this);
+    this.handleObjectViewClick = this.handleObjectViewClick.bind(this);
     this.handleListItemDoubleClick = this.handleListItemDoubleClick.bind(this);
     this.listref = React.createRef<HTMLDivElement>();
     this.listScroll = 0;
@@ -69,6 +73,14 @@ export default class MaterialDrawer extends React.Component<MaterialDrawerProps,
   }
   handleListItemDoubleClick(item: AcousticMaterial) {
     console.log(item);
+  }
+  handleObjectViewClick(e) {
+    console.log(e);
+    if (e instanceof Surface) {
+      this.setState({
+        query: e.acousticMaterial.name
+      });
+    }
   }
   render() {
     const filteredItems = this.state.query.length > 0
@@ -130,93 +142,79 @@ export default class MaterialDrawer extends React.Component<MaterialDrawerProps,
       this.state.selected_item &&
       this.state.selected_item.absorption &&
       Object.keys(this.state.selected_item.absorption);
+    
+    const rooms = this.props.messenger.postMessage("FETCH_ROOMS")[0];
+    
     return (
-      <div className="material_drawer-container">
-        <div className="material_drawer-searchbar-container">
-          <div className="material_drawer-searchbar-input_container">
-            <Icon
-              icon="search"
-              iconSize={14}
-              color="darkgray"
-              className="material_drawer-search_icon"
-            />
-            <input
-              type="text"
-              className="material_drawer-searchbar-input"
-              value={this.state.query}
-              onChange={this.handleQueryChange}
-              onInput={this.handleInput}
-            />
-          </div>
-          {/* <MaterialSliders
-            values={
-              this.state.selected_item &&
-              this.state.selected_item.absorption &&
-              Object.keys(this.state.selected_item.absorption).map(
-                x => this.state.selected_item.absorption[x]
-              )
-            }
-          /> */}
+      <div className="material_drawer-grid">
+        <div className="material_drawer-surface-container">
+          <ObjectView
+            solvers={{}}
+            containers={rooms.reduce((a, b) => {
+              a[b.uuid] = b;
+              return a;
+            }, {} as KeyValuePair<Room>)}
+            onClick={this.handleObjectViewClick}
+          />
         </div>
-        <div className="material_drawer-list" ref={this.listref} key={uuid()}>
-          {MaterialDrawerList()}
-        </div>
-        <div>
-          <a
-            className="show-more"
-            onClick={e =>
-              this.setState({
-                bufferLength: clamp(
-                  15 + this.state.bufferLength,
-                  1,
-                  filteredItems.length
-                )
-              })
-            }>
-            show more...
-          </a>
-        </div>
-        <div className={"material_drawer-display-container"}>
-          <div className={"material_drawer-display-material_name"}>
-            {this.state.selected_item && this.state.selected_item.name && (
-              <span>{this.state.selected_item.name}</span>
-            )}
-          </div>
-          <div className={"material_drawer-display-material_material"}>
-            {this.state.selected_item && this.state.selected_item.material && (
-              <em>{this.state.selected_item.material}</em>
-            )}
-          </div>
-          <div className={"material_drawer-display-material_absorption"}>
-            {this.state.selected_item &&
-              this.state.selected_item.absorption &&
-              absorptionKeys.map(x => {
-                return (
-                  <div key={uuid()}>
-                    <div className="material_drawer-display-material_absorption-header">
-                      {x}Hz
-                    </div>
-                    <div className="material_drawer-display-material_absorption-value">
-                      {this.state.selected_item.absorption[x]}
-                    </div>
-                  </div>
-                );
-              })}
-          </div>
-          {
-            <div className={"material_drawer-display-assign_button"}>
-              <Button
-                intent="success"
-                text={"assign"}
-                icon={"tick"}
-                disabled={
-                  !this.state.selected_item ||
-                  typeof this.state.selected_item._id === "undefined"
-                }
-                onClick={e=>this.props.messenger.postMessage("ASSIGN_MATERIAL", this.state.selected_item)}
+        <div className="material_drawer-container">
+          <div className="material_drawer-searchbar-container">
+            <div className="material_drawer-searchbar-input_container">
+              <Icon icon="search" iconSize={14} color="darkgray" className="material_drawer-search_icon" />
+              <input
+                type="text"
+                className="material_drawer-searchbar-input"
+                value={this.state.query}
+                onChange={this.handleQueryChange}
+                onInput={this.handleInput}
               />
             </div>
-          }
+          </div>
+          <div className="material_drawer-list" ref={this.listref} key={uuid()}>
+            {MaterialDrawerList()}
+          </div>
+          <div>
+            <a
+              className="show-more"
+              onClick={e =>
+                this.setState({
+                  bufferLength: clamp(15 + this.state.bufferLength, 1, filteredItems.length)
+                })
+              }>
+              show more...
+            </a>
+          </div>
+          <div className={"material_drawer-display-container"}>
+            <div className={"material_drawer-display-material_name"}>
+              {this.state.selected_item && this.state.selected_item.name && <span>{this.state.selected_item.name}</span>}
+            </div>
+            <div className={"material_drawer-display-material_material"}>
+              {this.state.selected_item && this.state.selected_item.material && <em>{this.state.selected_item.material}</em>}
+            </div>
+            <div className={"material_drawer-display-material_absorption"}>
+              {this.state.selected_item &&
+                this.state.selected_item.absorption &&
+                absorptionKeys.map(x => {
+                  return (
+                    <div key={uuid()}>
+                      <div className="material_drawer-display-material_absorption-header">{x}Hz</div>
+                      <div className="material_drawer-display-material_absorption-value">{this.state.selected_item.absorption[x]}</div>
+                    </div>
+                  );
+                })}
+            </div>
+            {
+              <div className={"material_drawer-display-assign_button"}>
+                <Button
+                  intent="success"
+                  text={"assign"}
+                  icon={"tick"}
+                  disabled={!this.state.selected_item || typeof this.state.selected_item._id === "undefined"}
+                  onClick={e => this.props.messenger.postMessage("ASSIGN_MATERIAL", this.state.selected_item)}
+                />
+              </div>
+            }
+          </div>
         </div>
       </div>
     );

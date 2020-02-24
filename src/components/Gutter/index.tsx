@@ -1,10 +1,14 @@
 import React, {useState} from 'react';
-import { Tab, Tabs, Icon, Text } from "@blueprintjs/core";
 import Messenger from '../../messenger';
+
+import {  Icon } from "@blueprintjs/core";
 import Stats, {StatsProps, Stat} from './Stats';
 import { ParametersPanel } from './ParametersPanel';
 import MaterialsPanel from './MaterialsPanel';
 import { ChartTab } from './ChartTab';
+import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
+
+import './Gutter.css';
 
 
 export interface GutterProps {
@@ -18,94 +22,22 @@ export interface GutterProps {
 }
 
 export default function Gutter(props: GutterProps) {
-  const [selectedTabId, setSelectedTabId] = useState("chart-tab");
-  
-  const onChange = (newTabId: string, prevTabId: string, event: React.MouseEvent<HTMLElement, MouseEvent>) => {
-    setSelectedTabId(newTabId);
-  };
-  
-  const iconProps = (icon) => ({
-    icon,
-    iconSize: 14,
-    style: {
-      marginRight: ".5em"
-    }
-  })
-  
-  const statsTitle = (
-    <Text>
-      <Icon {...iconProps("chart")}/>
-      Stats
-    </Text>
-  );
-  
-  const logTitle = (
-    <Text>
-      <Icon {...iconProps("application")} />
-      Log
-    </Text>
-  );
-  
-  const parametersTitle = (
-    <Text>
-      <Icon {...iconProps("function")} />
-      Parameters
-    </Text>
-  );
-  
-  const materialsTitle = (
-    <Text>
-      <Icon {...iconProps("database")} />
-      Materials
-    </Text>
-  )
-  
-  const chartTabTitle = (
-    <Text>
-      <Icon {...iconProps("chart")} />
-      Impulse Response
-    </Text>
-  )
-  
-  
-  
+  const [selectedTabIndex, setSelectedTabIndex] = useState(1);
   return (
     <div
       style={{
         height: "100%",
-        margin: "0 0.5em"
+        margin: "0"
       }}>
-      <Tabs
-        id="gutter-tabs"
-        className="gutter"
-        {...{ onChange, selectedTabId }}>
-        {/* <Tab
-          id="stats"
-          title={statsTitle}
-          panel={
-            <div>
-              <Stats data={props.stats} />
-            </div>
-          }
-        /> */}
-        {/* <Tab
-          id="parameters"
-          title={parametersTitle}
-          panel={<ParametersPanel messenger={props.messenger} />}
-          panelClassName="parameter-panel"
-        /> */}
-        <Tab
-          id="chart-tab"
-          title={chartTabTitle}
-          panel={<ChartTab data={props.chartData} />}
-        />
-        <Tabs.Expander />
-        <Tab
-          id="debug-log"
-          title={logTitle}
-          panel={<div>Log</div>}
-          panelClassName="panel-2"
-        />
+      <Tabs selectedIndex={selectedTabIndex} onSelect={tabIndex => setSelectedTabIndex(tabIndex)}>
+        <TabList>
+          <Tab disabled></Tab> {/* ignore */}
+          <Tab>Energy Response</Tab>
+        </TabList>
+        <TabPanel></TabPanel> {/* ignore */}
+        <TabPanel>
+          <ChartTab data={props.chartData} />
+        </TabPanel>
       </Tabs>
     </div>
   );

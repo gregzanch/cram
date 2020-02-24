@@ -1,13 +1,29 @@
-.material_drawer-container{
+.material_drawer-grid{
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+}
 
-    height: 100%;
+.material_drawer-container{
+  overflow-y: scroll;
+  grid-column-start: 2;
+  grid-column-end: 3;
+  height: 100%;
   margin: 1em;
 }
+
+.material_drawer-surface-container{
+  overflow-y: scroll;
+  grid-column-start: 1;
+  grid-column-end: 2;
+  height: 100%;
+  margin: 1em;
+}
+
 .material_drawer-list{
   /* border: solid 1px rgba(0,0,0,.1); */
   box-shadow: inset 0px 0px 17px 0px rgba(0,0,0,0.2);
   overflow-y: scroll;
-  height: 50%;
+  height: 25vh;
   margin: 0 1em;
   cursor: pointer;
   padding: 0 .75em;

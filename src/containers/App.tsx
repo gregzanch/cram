@@ -721,6 +721,7 @@ export default class App extends React.Component<AppProps, AppState> {
           />
         </Drawer>
 
+
         <ImportDialog
           onImport={file => {
             this.props.messenger.postMessage("IMPORT_FILE", file);
@@ -788,7 +789,7 @@ export default class App extends React.Component<AppProps, AppState> {
             <div className="webgl-canvas">
               <canvas id="renderer-canvas" ref={this.canvas} />
             </div>
-            <PanelContainer className="panel full-bottom">
+            <PanelContainer className="panel full-bottom gutter-panel">
               <Gutter
                 messenger={this.props.messenger}
                 stats={this.state.stats}

@@ -9,8 +9,8 @@ import Receiver from "./objects/receiver";
 import Renderer from "./render/renderer";
 import { registerHotKeys } from "./hotkeys";
 import { fileType, allowed } from "./common/file-type";
-import { STLLoader, OBJLoader } from "./render/loaders";
-import OBJParser from "./render/loaders/OBJLoader";
+
+import * as importHandlers from './import-handlers';
 import EasingFunctions from "./common/easing";
 import * as THREE from "three";
 import { KeyValuePair } from "./common/key-value-pair";
@@ -18,12 +18,12 @@ import expose from "./common/expose";
 import Container from "./objects/container";
 import { Setting } from "./common/setting";
 import {randomInteger} from './common/random';
-const STL = new STLLoader();
+
 import { chunk } from "./common/chunk";
 //@ts-ignore
 import triangleroom from "!raw-loader!./res/triangle.stl";
 //@ts-ignore
-import testroom from "!raw-loader!./res/models/bigger.obj";
+import testroom from "!raw-loader!./res/models/rect.obj";
 import Solver from "./compute/solver";
 import { FDTD } from "./compute/fdtd";
 import GLFDTD from "./compute/gl-fdtd";
@@ -113,9 +113,7 @@ const state = {
   glfdtd: {} as GLFDTD,
   renderer: {} as Renderer,
   messenger: new Messenger(),
-  // settings: {
-  //   lightHelpersVisible: new Setting(true, "checkbox")
-  // } as KeyValuePair<Setting<any>>
+
   settings: {
     fog_color: new Setting<string>({
       id: "fog_color",
@@ -137,59 +135,6 @@ const state = {
 state.renderer = new Renderer({
   messenger: state.messenger
 });
-
-const importHandlers = {
-  stl: data => {
-    return STL.parseASCII(data);
-  },
-  obj: data => {
-    const loader = new OBJLoader(data);
-    const res = loader.parse();
-
-    const [vertices, vertexNormals, textureCoords] = res.models.reduce(
-      (a, b) => [
-        a[0].concat(b.vertices),
-        a[1].concat(b.vertexNormals),
-        a[2].concat(b.textureCoords)
-      ],
-      [[] as any[], [] as any[], [] as any[]]
-    );
-    const models = res.models.map(model => {
-      const buffer = new THREE.BufferGeometry();
-      const verts = [] as number[];
-      const vertNormals = [] as number[];
-      const texCoords = [] as number[];
-      model.faces.forEach(face => {
-        face.vertices.forEach(vertex => {
-          const v = vertices[vertex.vertexIndex - 1];
-          v && verts.push(v.x, v.y, v.z);
-          const vn = vertexNormals[vertex.vertexNormalIndex - 1];
-          vn && vertNormals.push(vn.x, vn.y, vn.z);
-          const tc = textureCoords[vertex.textureCoordsIndex - 1];
-          tc && texCoords.push(tc.u, tc.v, tc.w);
-        });
-      });
-      buffer.setAttribute(
-        "position",
-        new THREE.BufferAttribute(new Float32Array(verts), 3, false)
-      );
-      buffer.setAttribute(
-        "normals",
-        new THREE.BufferAttribute(new Float32Array(vertNormals), 3, false)
-      );
-      buffer.setAttribute(
-        "texCoords",
-        new THREE.BufferAttribute(new Float32Array(texCoords), 3, false)
-      );
-      return {
-        name: model.name,
-        geometry: buffer
-      };
-    });
-
-    return models;
-  }
-};
 
 state.messenger.addMessageHandler("SET_SELECTION", (acc, ...args) => {
   Object.keys(state.containers).forEach(x => {
@@ -213,6 +158,15 @@ state.messenger.addMessageHandler("SET_SELECTION", (acc, ...args) => {
   //     (obj as Container).select()
   //   }
   // })
+});
+
+state.messenger.addMessageHandler("FETCH_ROOMS", () => {
+  const roomkeys = Object.keys(state.containers).filter(x => {
+    return state.containers[x].kind === "room";
+  });
+  if (roomkeys && roomkeys.length > 0) {
+    return roomkeys.map(x => state.containers[x] as Room);
+  }
 });
 
 state.messenger.addMessageHandler("FETCH_SETTINGS", () => {
@@ -253,6 +207,12 @@ state.messenger.addMessageHandler("SHOULD_ADD_RAYTRACER", (acc, ...args) => {
   state.solvers[raytracer.uuid] = raytracer;
   raytracer.runWithoutReceiver = true;
   return raytracer;
+});
+
+state.messenger.addMessageHandler("SHOULD_REMOVE_SOLVER", (acc, id) => {
+ if (state.solvers && state.solvers[id]) {
+   delete state.solvers[id];
+ }
 });
 
 state.messenger.addMessageHandler("SHOULD_ADD_RT60", (acc, ...args) => {
@@ -304,14 +264,9 @@ state.messenger.addMessageHandler("SHOULD_ADD_FDTD", (acc, ...args) => {
   return state.solvers[state.simulation];
 });
 
-state.messenger.addMessageHandler("NEW", (acc, ...args) => {
-  
-});
-
 state.messenger.addMessageHandler("RAYTRACER_CALCULATE_RESPONSE", (acc, id, frequencies) => {
-  (state.solvers[id] instanceof RayTracer) && (state.solvers[id] as RayTracer).calculateWithDiffuse(frequencies);
-})
-
+  (state.solvers[id] instanceof RayTracer) && (state.solvers[id] as RayTracer).calculateReflectionLoss(frequencies);
+});
 
 state.messenger.addMessageHandler("FETCH_ALL_SOURCES", (acc, ...args) => {
   return state.sources.map(x => {
@@ -343,6 +298,32 @@ state.messenger.addMessageHandler("SHOULD_ADD_SOURCE", (acc, ...args) => {
       (state.solvers[x] as RayTracer).addSource(source);
   });
   return source;
+});
+
+state.messenger.addMessageHandler("SHOULD_REMOVE_CONTAINER", (acc, id) => {
+  if (state.containers[id]) {
+    switch (state.containers[id].kind) {
+      case "source": {
+        state.sources = state.sources.reduce((a, b) => {
+          if (b !== id) {
+            a.push(b);
+          }
+          return a;
+        }, [] as string[]);
+      } break;
+      case "receiver": {
+        state.receivers = state.receivers.reduce((a, b) => {
+          if (b !== id) {
+            a.push(b);
+          }
+          return a;
+        }, [] as string[]);
+      } break;
+      
+    }
+    state.renderer.remove(state.containers[id]);
+    delete state.containers[id];
+  }
 });
 
 state.messenger.addMessageHandler("SHOULD_ADD_RECEIVER", (acc, ...args) => {
@@ -429,13 +410,30 @@ state.messenger.addMessageHandler("RAYTRACER_SHOULD_CLEAR", (acc, ...args) => {
   }
 });
 
+// for the settings drawer
+state.messenger.addMessageHandler("SETTING_CHANGE", (acc, ...args) => {
+  const { setting, value } = args[0];
+  console.log(setting, value);
+  state.renderer.settingChanged(setting, value);
+});
+
+// TODO: figure out what i was going to do this this
+state.messenger.addMessageHandler("NEW", (acc, ...args) => {
+});
+
+
+registerHotKeys(state.messenger);
+
+// the main app
+ReactDOM.render(<App {...state} />, document.getElementById("root"));
+
+// This is to simulate user uploading a mesh file and adding source+receiver
 setTimeout(() => {
 
   const { uuid: sourceid } = state.messenger.postMessage(
     "SHOULD_ADD_SOURCE"
   )[0];
-  (state.containers[sourceid] as Source).position.set(11.5, 19, 1);
-  (state.containers[sourceid] as Source).scale.set(3,3,3);
+
 
   const { uuid: receiverId } = state.messenger.postMessage(
     "SHOULD_ADD_RECEIVER"
@@ -446,7 +444,7 @@ setTimeout(() => {
     model =>
       new Surface(model.name, {
         geometry: model.geometry,
-        acousticMaterial: state.materials[randomInteger(0,state.materials.length-1)]
+        acousticMaterial: state.materials[147]
       })
   );
   const room = new Room("room", {
@@ -457,9 +455,10 @@ setTimeout(() => {
 
   state.messenger.postMessage("ADDED_ROOM", room);
 
+  (state.containers[sourceid] as Source).position.set(2, 2, 1.4);
+  (state.containers[sourceid] as Source).scale.set(3, 3, 3);
 
-
-  (state.containers[receiverId] as Receiver).position.set(3.8, 16.59, 1.3);
+  (state.containers[receiverId] as Receiver).position.set(3.5, 9, 2);
   (state.containers[receiverId] as Receiver).scale.set(5, 5, 5);
 
 
@@ -473,13 +472,3 @@ setTimeout(() => {
     window
   );
 }, 200);
-
-state.messenger.addMessageHandler("SETTING_CHANGE", (acc, ...args) => {
-  const { setting, value } = args[0];
-  console.log(setting, value);
-  state.renderer.settingChanged(setting, value);
-});
-
-registerHotKeys(state.messenger);
-
-ReactDOM.render(<App {...state} />, document.getElementById("root"));

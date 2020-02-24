@@ -360,6 +360,9 @@ export default class Renderer {
 	add(obj: THREE.Object3D) {
 		this.workspaceCursor.add(obj);
 	}
+	remove(obj: THREE.Object3D) {
+		this.workspace.getObjectByProperty('uuid', obj.uuid)?.remove();
+	}
 	
 	addRoom(room: Room) {
 		this.workspaceCursor.add(room);
