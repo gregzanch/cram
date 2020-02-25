@@ -10,7 +10,6 @@ export interface NumberInputProps {
   min?: number;
   max?: number;
   id?: string;
-
   onChange: (e: ObjectPropertyInputEvent) => void;
   verifier?: (val: string | number) => boolean;
 }
@@ -40,7 +39,8 @@ export function NumberInput(props: NumberInputProps) {
     step: props.step,
     min: props.min,
     max: props.max,
-    id: props.id
+    id: props.id,
+    type: "number"
   };
   return <input {..._props} />;
 }

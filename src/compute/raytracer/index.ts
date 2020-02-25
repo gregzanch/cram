@@ -219,6 +219,18 @@ export default class RayTracer extends Solver {
         this.receiverIDs = args[0].map(x => x.id);
       }
     });
+    this.messenger.addMessageHandler("SHOULD_REMOVE_CONTAINER", (acc, ...args) => {
+      const id = args[0];
+      if (id) {
+        console.log(id);
+        if (this.sourceIDs.includes(id)) {
+          this.sourceIDs = this.sourceIDs.filter(x => x != id);
+        }
+        else if (this.receiverIDs.includes(id)) {
+          this.receiverIDs = this.receiverIDs.filter(x => x != id);
+        }
+      }
+    })
     this.step = this.step.bind(this);
   }
   update = () => {};

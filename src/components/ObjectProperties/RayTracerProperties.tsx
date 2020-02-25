@@ -117,7 +117,7 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
         )}
 
         {props.object.hasOwnProperty("updateInterval") && (
-          <GridRow label={"Rate (ms)"}>
+          <GridRow label={"rate (ms)"}>
             <NumberInput
               name="updateInterval"
               value={props.object.updateInterval}
@@ -127,7 +127,7 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
         )}
 
         {props.object.hasOwnProperty("reflectionOrder") && (
-          <GridRow label={"Order"}>
+          <GridRow label={"order"}>
             <NumberInput
               name="reflectionOrder"
               value={props.object.reflectionOrder}
@@ -136,7 +136,7 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
           </GridRow>
         )}
         {props.object.hasOwnProperty("runWithoutReceiver") && (
-          <GridRow label="Ignore Receivers">
+          <GridRow label="stochastic">
             <CheckboxInput
               checkedNode={<div className="checked-icon"></div>}
               uncheckedNode={<div className="unchecked-icon" />}

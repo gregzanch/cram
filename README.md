@@ -5,7 +5,6 @@
 
 ## TODO
 - Clear chart data when clearing from the raytracer properties panel
-- Change the logic for numeric inputs to allow for easy decimal values and negatives
 - Hotkeys for menu items
 - FDTD computation logic (in rust)
 - Calcs for obtaining acoustic parementers from raytracer

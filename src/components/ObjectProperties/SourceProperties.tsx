@@ -39,7 +39,7 @@ export default function SourceProperties(props: SourcePropertiesProps) {
     style: {
 		  width: "30%"
 	  },
-    onChange: props.onPropertyChange
+		onChange: props.onPropertyChange,
 	}
 	
 	const source = props.messenger.postMessage("FETCH_SOURCE", props.object.uuid)[0];
