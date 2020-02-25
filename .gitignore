@@ -1,1 +1,6 @@
 node_modules
+*.lock
+dist
+ir
+3dtextures
+yarn-error.log
