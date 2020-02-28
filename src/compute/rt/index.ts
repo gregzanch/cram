@@ -10,7 +10,7 @@ export class RT60 extends Solver{
   room: Room;
   constructor(props: RT60Props) {
     super(props);
-    this.room = props.room;
+    this.room = props.room; 
     this.kind = "rt60";
   }
   sabine(frequencies: number[] = third_octave) {
@@ -28,7 +28,6 @@ export class RT60 extends Solver{
   arauPuchades() {
     
   }
-  
 }
 
 export default RT60;

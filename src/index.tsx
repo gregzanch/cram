@@ -23,7 +23,7 @@ import { chunk } from "./common/chunk";
 //@ts-ignore
 import triangleroom from "!raw-loader!./res/triangle.stl";
 //@ts-ignore
-import testroom from "!raw-loader!./res/models/rect.obj";
+import testroom from "!raw-loader!./res/models/baps.obj";
 import Solver from "./compute/solver";
 import { FDTD } from "./compute/fdtd";
 import GLFDTD from "./compute/gl-fdtd";
@@ -62,29 +62,6 @@ export interface AcousticMaterial {
   _id: string;
 }
 
-// const options: Fuse.FuseOptions<AcousticMaterial> = {
-//   caseSensitive: false,
-//   keys: [
-//     {
-//       name: "name",
-//       weight: 0.4
-//     },
-//     {
-//       name: "tags",
-//       weight: 0.3
-//     },
-//     {
-//       name: "material",
-//       weight: 0.3
-//     }
-//   ],
-//   shouldSort: true,
-//   threshold: 0.6,
-//   location: 0,
-//   distance: 100,
-//   maxPatternLength: 32,
-//   minMatchCharLength: 1
-// };
 
 expose({ ac, chunk, THREE, EasingFunctions }, window);
 
@@ -394,7 +371,7 @@ state.messenger.addMessageHandler("RAYTRACER_SHOULD_PLAY", (acc, ...args) => {
   if (state.solvers[args[0]] instanceof RayTracer) {
     (state.solvers[args[0]] as RayTracer).isRunning = true;
   }
-  return state.solvers[args[0]].running;
+  return state.solvers[args[0]] && state.solvers[args[0]].running;
 });
 
 state.messenger.addMessageHandler("RAYTRACER_SHOULD_PAUSE", (acc, ...args) => {
@@ -410,6 +387,22 @@ state.messenger.addMessageHandler("RAYTRACER_SHOULD_CLEAR", (acc, ...args) => {
   }
 });
 
+state.messenger.addMessageHandler("FETCH_SURFACE", (acc, ...args) => {
+  const id = args[0];
+  if (id) {
+    const rooms = state.messenger.postMessage("FETCH_ROOMS")[0];
+    if (rooms && rooms.length > 0) {
+      for (let i = 0; i < rooms.length; i++){
+        const room = (rooms[i] as Room);
+        const surface = room.surfaces.getObjectByProperty("uuid", id);
+        if (surface && surface instanceof Surface) {
+          return surface;
+        }
+      }
+    }
+  }
+})
+
 // for the settings drawer
 state.messenger.addMessageHandler("SETTING_CHANGE", (acc, ...args) => {
   const { setting, value } = args[0];
@@ -417,8 +410,13 @@ state.messenger.addMessageHandler("SETTING_CHANGE", (acc, ...args) => {
   state.renderer.settingChanged(setting, value);
 });
 
-// TODO: figure out what i was going to do this this
+// new project
 state.messenger.addMessageHandler("NEW", (acc, ...args) => {
+  const keys = Object.keys(state.containers);
+  keys.forEach(x => {
+    state.messenger.postMessage('SHOULD_REMOVE_CONTAINER', x);
+  });
+  console.log(state.containers);
 });
 
 
@@ -430,7 +428,11 @@ ReactDOM.render(<App {...state} />, document.getElementById("root"));
 // This is to simulate user uploading a mesh file and adding source + receiver
 setTimeout(() => {
 
-  const { uuid: sourceid } = state.messenger.postMessage(
+  const { uuid: sourceidL } = state.messenger.postMessage(
+    "SHOULD_ADD_SOURCE"
+  )[0];
+
+  const { uuid: sourceidR } = state.messenger.postMessage(
     "SHOULD_ADD_SOURCE"
   )[0];
 
@@ -455,11 +457,16 @@ setTimeout(() => {
 
   state.messenger.postMessage("ADDED_ROOM", room);
 
-  (state.containers[sourceid] as Source).position.set(2, 2, 1.4);
-  (state.containers[sourceid] as Source).scale.set(3, 3, 3);
+  (state.containers[sourceidL] as Source).position.set(15, -23, 5);
+  (state.containers[sourceidL] as Source).scale.set(3, 3, 3);
+  (state.containers[sourceidL] as Source).name = "L";
 
-  (state.containers[receiverId] as Receiver).position.set(3.5, 9, 2);
-  (state.containers[receiverId] as Receiver).scale.set(5, 5, 5);
+  (state.containers[sourceidR] as Source).position.set(-15, -23, 5);
+  (state.containers[sourceidR] as Source).scale.set(3, 3, 3);
+  (state.containers[sourceidR] as Source).name = "R";
+
+  (state.containers[receiverId] as Receiver).position.set(0, -4,  2);
+  (state.containers[receiverId] as Receiver).scale.set(8, 8, 8);
 
 
   expose(

@@ -32,12 +32,14 @@ export default function Gutter(props: GutterProps) {
       <Tabs selectedIndex={selectedTabIndex} onSelect={tabIndex => setSelectedTabIndex(tabIndex)}>
         <TabList>
           <Tab disabled></Tab> {/* ignore */}
-          <Tab>Energy Response</Tab>
+          <Tab>Raytracer</Tab>
+          <Tab>RT60</Tab>
         </TabList>
         <TabPanel></TabPanel> {/* ignore */}
         <TabPanel>
           <ChartTab data={props.chartData} />
         </TabPanel>
+        <TabPanel></TabPanel> {/* ignore */}
       </Tabs>
     </div>
   );

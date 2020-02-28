@@ -26,6 +26,7 @@ export interface MaterialDrawerState {
   query: string;
   selected_item: AcousticMaterial;
   bufferLength: number;
+  selected_object: Surface;
 }
 
 export default class MaterialDrawer extends React.Component<MaterialDrawerProps, MaterialDrawerState> {
@@ -36,7 +37,8 @@ export default class MaterialDrawer extends React.Component<MaterialDrawerProps,
     this.state = {
       bufferLength: props.bufferLength || 30,
       query: props.object ? props.object.acousticMaterial.material : "",
-      selected_item: props.object ? props.object.acousticMaterial : {} as AcousticMaterial
+      selected_item: props.object ? props.object.acousticMaterial : {} as AcousticMaterial,
+      selected_object: {} as Surface
     };
     this.handleQueryChange = this.handleQueryChange.bind(this);
     this.handleInput = this.handleInput.bind(this);
@@ -78,7 +80,8 @@ export default class MaterialDrawer extends React.Component<MaterialDrawerProps,
     console.log(e);
     if (e instanceof Surface) {
       this.setState({
-        query: e.acousticMaterial.name
+        query: e.acousticMaterial.name,
+        selected_object: e as Surface
       });
     }
   }
@@ -148,14 +151,16 @@ export default class MaterialDrawer extends React.Component<MaterialDrawerProps,
     return (
       <div className="material_drawer-grid">
         <div className="material_drawer-surface-container">
-          <ObjectView
-            solvers={{}}
-            containers={rooms.reduce((a, b) => {
-              a[b.uuid] = b;
-              return a;
-            }, {} as KeyValuePair<Room>)}
-            onClick={this.handleObjectViewClick}
-          />
+          {rooms && (
+            <ObjectView
+              solvers={{}}
+              containers={rooms.reduce((a, b) => {
+                a[b.uuid] = b;
+                return a;
+              }, {} as KeyValuePair<Room>)}
+              onClick={this.handleObjectViewClick}
+            />
+          )}
         </div>
         <div className="material_drawer-container">
           <div className="material_drawer-searchbar-container">
@@ -210,7 +215,10 @@ export default class MaterialDrawer extends React.Component<MaterialDrawerProps,
                   text={"assign"}
                   icon={"tick"}
                   disabled={!this.state.selected_item || typeof this.state.selected_item._id === "undefined"}
-                  onClick={e => this.props.messenger.postMessage("ASSIGN_MATERIAL", this.state.selected_item)}
+                  onClick={e => {
+                      this.props.messenger.postMessage("ASSIGN_MATERIAL", this.state.selected_item, this.state.selected_object.uuid || false);
+                    }
+                  }
                 />
               </div>
             }

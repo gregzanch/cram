@@ -123,6 +123,7 @@ export default class RayTracer extends Solver {
   allReceiverData!: ReceiverData[];
   hits: THREE.Points;
   pointScale: number;
+  
   constructor(params: RayTracerParams) {
     super(params);
     this.kind = "ray-tracer";
@@ -210,12 +211,13 @@ export default class RayTracer extends Solver {
     this.messenger = params.messenger;
     this.messenger.postMessage("STATS_SETUP", this.stats);
     this.messenger.addMessageHandler("RAYTRACER_SOURCE_CHANGE", (acc, ...args) => {
-      if (args && args[0] && args[0] instanceof Array) {
+      console.log(args && args[0] && args[0] instanceof Array && args[1] && args[1] === this.uuid)
+      if (args && args[0] && args[0] instanceof Array && args[1] && args[1] === this.uuid) {
         this.sourceIDs = args[0].map(x => x.id);
       }
     });
     this.messenger.addMessageHandler("RAYTRACER_RECEIVER_CHANGE", (acc, ...args) => {
-      if (args && args[0] && args[0] instanceof Array) {
+      if (args && args[0] && args[0] instanceof Array && args[1] && args[1] === this.uuid) {
         this.receiverIDs = args[0].map(x => x.id);
       }
     });
@@ -302,11 +304,13 @@ export default class RayTracer extends Solver {
     this.rayPositionIndex = 0;
     this.stats.numRaysShot.value = 0;
     this.stats.numValidRayPaths.value = 0;
-    this.renderer.messenger.postMessage("STATS_UPDATE", this.stats);
+    this.messenger.postMessage("STATS_UPDATE", this.stats);
     this.sourceIDs.forEach(x => {
       (this.containers[x] as Source).numRays = 0;
     });
   }
+  
+  
   appendRay(p1: THREE.Vector3, p2: THREE.Vector3, energy: number = 1.0, angle: number = 1.0) {
 
     // set p1
@@ -336,6 +340,11 @@ export default class RayTracer extends Solver {
     //update version
     this.colorBufferAttribute.version++;
   }
+  
+  constructBSPTree() {
+    
+  }
+  
   traceRay(ro: THREE.Vector3, rd: THREE.Vector3, order: number, energy: number, iter: number = 1, chain: THREE.Intersection[] = [], frequency = 4000) {
 
     // normalize the ray
@@ -430,14 +439,24 @@ export default class RayTracer extends Solver {
   }
   step() {
     for (let i = 0; i < this.sourceIDs.length; i++) {
-      const t = (Math.random() - 0.5) * (this.containers[this.sourceIDs[i]] as Source).theta;
-      const p = (Math.random() - 0.5) * (this.containers[this.sourceIDs[i]] as Source).phi;
-
-      // starting position
+      
+      
+      // random theta within the sources theta limits
+      const theta = 2 * (Math.random()-0.5) * (this.containers[this.sourceIDs[i]] as Source).theta;
+      
+      // random phi within the sources phi limits
+      const phi = 2 * (Math.random()) * (this.containers[this.sourceIDs[i]] as Source).phi;
+      
+      // source position
       const position = (this.containers[this.sourceIDs[i]] as Source).position;
-
+      
+      // source rotation
+      const rotation = (this.containers[this.sourceIDs[i]] as Source).rotation;
+      
       // random direction
       const direction = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
+      // const direction = new THREE.Vector3().setFromSphericalCoords(1, 0, Math.PI);
+      direction.applyEuler(rotation);
 
       // get the path traced by the ray
       const path = this.traceRay(position, direction, this.reflectionOrder, 1.0);
@@ -690,7 +709,7 @@ export default class RayTracer extends Solver {
 
           // if chain has a length of 0... which shouldn't happen
           else {
-            console.log(raypath);
+            // console.log(raypath);
             return 1;
           }
         }

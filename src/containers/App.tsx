@@ -189,8 +189,12 @@ export default class App extends React.Component<AppProps, AppState> {
 		});
 		
 		this.addMessageHandler("ASSIGN_MATERIAL",
-			(acc, material) => {
-			if ((this.state.selectedObject) && (this.state.selectedObject instanceof Surface)) {
+      (acc, material, id) => {
+        if (id) {
+          const surface = this.props.messenger.postMessage("FETCH_SURFACE", id)[0] as Surface;
+          surface.acousticMaterial = material;
+        }
+        else if ((this.state.selectedObject) && (this.state.selectedObject instanceof Surface)) {
 				// this.state.selectedObject.acousticMaterial = material;
 				const { selectedObject } = this.state;
 				selectedObject.acousticMaterial = material;
@@ -200,8 +204,7 @@ export default class App extends React.Component<AppProps, AppState> {
 				})
 			}
 			return ({
-				selectedObject: this.state.selectedObject,
-				materialDrawerOpen: false
+				selectedObject: this.state.selectedObject
 			})
 		});
 		
@@ -230,7 +233,8 @@ export default class App extends React.Component<AppProps, AppState> {
         });
 			}
     );
-    this.addMessageHandler("SHOULD_REMOVE_CONTAINER", (acc, ...args) => {
+    this.addMessageHandler("SHOULD_REMOVE_CONTAINER",
+      (acc, ...args) => {
       if (args[0] && this.state.containers[args[0]]) {
         const containers = { ...this.state.containers };
         delete containers[args[0]];
@@ -281,10 +285,15 @@ export default class App extends React.Component<AppProps, AppState> {
       }
     });
 		this.addMessageHandler("SHOULD_ADD_RT60",
-			(acc, ...args) => {
-				const solvers = { ...this.state.solvers };
-				solvers[acc[0].uuid] = acc[0];
-				return ({ solvers });
+      (acc, ...args) => {
+        if (acc && acc[0]) {
+          const solvers = { ...this.state.solvers };
+          solvers[acc[0].uuid] = acc[0];
+          return ({ solvers });
+        }
+        else {
+          return ({});
+        }
 			}
 		);
 		this.addMessageHandler("SHOULD_ADD_FDTD",
@@ -329,7 +338,7 @@ export default class App extends React.Component<AppProps, AppState> {
 			return({
 				stats: Object.keys(args[0]).map(x => args[0][x]) as Stat[]
 			});
-		});
+    });
 	}
 
 	componentDidMount() {

@@ -20,8 +20,6 @@ export interface RayTracerPropertiesProps {
 	onButtonClick: (e: React.MouseEvent<HTMLElement, MouseEvent>) => void;
 }
 
-
-
 const RayTracerPropertiesContainerStyle: React.CSSProperties = {
 	display: "grid",
 	gridTemplateColumns: "auto auto",
@@ -29,11 +27,6 @@ const RayTracerPropertiesContainerStyle: React.CSSProperties = {
 	gridRowGap: ".25em",
 	gridColumnGap: ".25em"
 };
-
-
-
-
-
 
 export default function RayTracerProperties(props: RayTracerPropertiesProps) {
   const XYZProps = {
@@ -44,17 +37,20 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
   };
 
   const onSourceChange = (e) => {
-    console.log("onSourceChange");
-    props.messenger.postMessage("RAYTRACER_SOURCE_CHANGE", e);
+    console.log(e);
+    props.messenger.postMessage("RAYTRACER_SOURCE_CHANGE", !e ? [] : e, props.object.uuid);
     
   }
 
   const onReceiverChange = e => {
-    console.log("onSourceChange");
-    props.messenger.postMessage("RAYTRACER_RECEIVER_CHANGE", e);
+    console.log(e);
+    props.messenger.postMessage("RAYTRACER_RECEIVER_CHANGE", !e? [] : e, props.object.uuid);
   };
 
-  const sources = props.messenger.postMessage("FETCH_ALL_SOURCES")[0]
+  let sources = props.messenger.postMessage("FETCH_ALL_SOURCES")[0];
+  if (sources.length > 0) {
+    sources = sources.filter(x => props.object.sourceIDs.includes(x.uuid))
+  }
   const sourcesSelectOptions = sources.map(x => {
     return {
       value: x.uuid,
@@ -64,7 +60,10 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
     };
   });
   
-  const receivers = props.messenger.postMessage("FETCH_ALL_RECEIVERS")[0]
+  let receivers = props.messenger.postMessage("FETCH_ALL_RECEIVERS")[0]
+  if (receivers.length > 0) {
+    receivers = receivers.filter(x => props.object.receiverIDs.includes(x.uuid));
+  }
   const receiverSelectOptions = receivers.map(x => {
     return {
       value: x.uuid,

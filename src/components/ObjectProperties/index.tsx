@@ -1,4 +1,4 @@
-import React from "react";
+import React, {useState} from "react";
 import TabUnselectedIcon from '@material-ui/icons/TabUnselected';
 import FDTDProperties, { FDTDPropertiesProps } from './FDTDProperties';
 import SourceProperties, { SourcePropertiesProps } from './SourceProperties';
@@ -23,16 +23,29 @@ export interface ObjectPropertiesProps {
   onButtonClick?: (e: React.MouseEvent<HTMLElement, MouseEvent>) => void;
 }
 
-export default function ObjectProperties(props: ObjectPropertiesProps) {
-  switch (props.object.kind) {
-    case "source":  return <SourceProperties {...props as SourcePropertiesProps}/>
-    case "receiver":  return <ReceiverProperties {...props as ReceiverPropertiesProps}/>
-    case "room":  return <RoomProperties {...props as RoomPropertiesProps}/>
-    case "surface":  return <SurfaceProperties {...props as SurfacePropertiesProps}/>
-    case "fdtd":  return <FDTDProperties {...props as FDTDPropertiesProps}/>
-    case "ray-tracer":  return <RayTracerProperties {...props as RayTracerPropertiesProps}/>
-    case "rt60":  return <RT60Properties {...(props as RT60PropertiesProps)} />;
+export interface ObjectPropertiesState{
+}
+
+export default class ObjectProperties extends React.Component<ObjectPropertiesProps, ObjectPropertiesState>{
+  constructor(props: ObjectPropertiesProps) {
+    super(props);
+    this.state = {
+    }
+  }
+  shouldComponentUpdate(nextProps: Readonly<ObjectPropertiesProps>, nextState: Readonly<ObjectPropertiesState>, nextContext: any) {
+    return true
+  }
+  render() {
+    switch (this.props.object.kind) {
+      case "source": return <SourceProperties {...this.props as SourcePropertiesProps} />;
+      case "receiver": return <ReceiverProperties {...this.props as ReceiverPropertiesProps} />;
+      case "room": return <RoomProperties {...this.props as RoomPropertiesProps} />;
+      case "surface": return <SurfaceProperties {...this.props as SurfacePropertiesProps} />;
+      case "fdtd": return <FDTDProperties {...this.props as FDTDPropertiesProps} />;
+      case "ray-tracer": return <RayTracerProperties {...this.props as RayTracerPropertiesProps} />;
+      case "rt60": return <RT60Properties {...(this.props as RT60PropertiesProps)} />;
   
-    default: return <GenericObjectProperties {...props as GenericObjectPropertiesProps}/>
+      default: return <GenericObjectProperties {...this.props as GenericObjectPropertiesProps} />;
+    }
   }
 }
