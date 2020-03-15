@@ -283,7 +283,7 @@ export default function ObjectView(props) {
               draggable={true}
               nodeId={solver.uuid}
               label={<TreeItemLabel label={solver.name || "untitled" + solver.kind} meta={solver.kind} />}
-              key={solver.name}
+              key={solver.uuid+"-tree-item"}
               onClick={e => props.onClick(solver, e)}
             />
           </ContextMenu>
@@ -297,7 +297,7 @@ export default function ObjectView(props) {
               draggable={true}
               nodeId={solver.uuid}
               label={<TreeItemLabel label={solver.name || "untitled" + solver.kind} meta={solver.kind} />}
-              key={solver.name}
+              key={solver.uuid+"-tree-item"}
               onClick={e => props.onClick(solver, e)}
             />
           </ContextMenu>
@@ -311,7 +311,7 @@ export default function ObjectView(props) {
               draggable={true}
               nodeId={solver.uuid}
               label={<TreeItemLabel label={solver.name || "untitled" + solver.kind} meta={solver.kind} />}
-              key={solver.name}
+              key={solver.uuid+"-tree-item"}
               onClick={e => props.onClick(solver, e)}
             />
           </ContextMenu>
@@ -325,7 +325,7 @@ export default function ObjectView(props) {
               draggable={true}
               nodeId={solver.uuid}
               label={<TreeItemLabel label={solver.name || "untitled" + solver.kind} meta={solver.kind} />}
-              key={solver.name}
+              key={solver.uuid+"-tree-item"}
               onClick={e => props.onClick(solver, e)}
             />
           </ContextMenu>

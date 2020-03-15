@@ -48,9 +48,6 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
   };
 
   let sources = props.messenger.postMessage("FETCH_ALL_SOURCES")[0];
-  if (sources.length > 0) {
-    sources = sources.filter(x => props.object.sourceIDs.includes(x.uuid))
-  }
   const sourcesSelectOptions = sources.map(x => {
     return {
       value: x.uuid,
@@ -59,11 +56,19 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
       id: x.uuid
     };
   });
+  if (sources.length > 0) {
+    sources = sources.filter(x => props.object.sourceIDs.includes(x.uuid))
+  }
+  const sourceSelectedOptions = sources.map(x => {
+     return {
+       value: x.uuid,
+       label: x.name,
+       key: x.uuid,
+       id: x.uuid
+     };
+  })
   
   let receivers = props.messenger.postMessage("FETCH_ALL_RECEIVERS")[0]
-  if (receivers.length > 0) {
-    receivers = receivers.filter(x => props.object.receiverIDs.includes(x.uuid));
-  }
   const receiverSelectOptions = receivers.map(x => {
     return {
       value: x.uuid,
@@ -72,11 +77,18 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
       id: x.uuid
     };
   });    
+  if (receivers.length > 0) {
+    receivers = receivers.filter(x => props.object.receiverIDs.includes(x.uuid));
+  }
+  const receiverSelectedOptions = receivers.map(x => {
+    return {
+      value: x.uuid,
+      label: x.name,
+      key: x.uuid,
+      id: x.uuid
+    };
+  })
    
-  
-  
-
-
   const customStyles = {
     indicatorsContainer: (provided, state) => ({
       ...provided,
@@ -99,9 +111,7 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
       width: "100%"
     })
   };
-
   
-  // console.log(sources, receivers);
   return (
     <div>
       <div style={RayTracerPropertiesContainerStyle}>
@@ -148,9 +158,7 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
         <GridRowSeperator />
         <GridRow label={"run"}>
           <Button
-            name={
-              props.object.isRunning ? "ray-tracer-pause" : "ray-tracer-play"
-            }
+            name={props.object.isRunning ? "ray-tracer-pause" : "ray-tracer-play"}
             icon={props.object.isRunning ? "pause" : "play"}
             onClick={props.onButtonClick}
             minimal
@@ -170,7 +178,7 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
         <GridRow label="sources"></GridRow>
         <GridRow span={2}>
           <Select
-            defaultValue={sourcesSelectOptions}
+            defaultValue={sourceSelectedOptions}
             isMulti
             name="sources"
             options={sourcesSelectOptions}
@@ -185,7 +193,7 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
         <GridRow label="receivers"></GridRow>
         <GridRow span={2}>
           <Select
-            defaultValue={receiverSelectOptions}
+            defaultValue={receiverSelectedOptions}
             isMulti
             name="receivers"
             options={receiverSelectOptions}

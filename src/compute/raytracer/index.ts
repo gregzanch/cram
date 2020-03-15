@@ -47,6 +47,14 @@ export interface EnergyTime {
     value: number;
   }[];
 }
+    // helper type
+export type ChartData = {
+  label: string;
+  data: number[][];
+  x?: number[];
+  y?: number[];
+};
+
 export interface ReceiverData {
   id: string;
   data: EnergyTime[];
@@ -123,6 +131,7 @@ export default class RayTracer extends Solver {
   allReceiverData!: ReceiverData[];
   hits: THREE.Points;
   pointScale: number;
+  chartdata: ChartData[];
   
   constructor(params: RayTracerParams) {
     super(params);
@@ -152,6 +161,7 @@ export default class RayTracer extends Solver {
     this.colorBufferAttribute = new THREE.Float32BufferAttribute(new Float32Array(this.maxrays), 2);
     this.colorBufferAttribute.setUsage(THREE.DynamicDrawUsage);
     this.rayBufferGeometry.setAttribute("color", this.colorBufferAttribute);
+    this.chartdata = [] as ChartData[];
     this.rays = new THREE.LineSegments(
       this.rayBufferGeometry,
       new THREE.LineBasicMaterial({
@@ -245,7 +255,10 @@ export default class RayTracer extends Solver {
     }
   }
   get receivers() {
-    if (this.receiverIDs.length > 0) {
+    if (this.receiverIDs.length > 0 && Object.keys(this.containers).length > 0) {
+      if (this.containers) {
+        console.log(this.containers);
+      }
       return this.receiverIDs.map(x => (this.containers[x] as Receiver).mesh) as THREE.Mesh[];
     }
     else return [];
@@ -290,15 +303,18 @@ export default class RayTracer extends Solver {
       this.stop();
     }
   }
+  
   setDrawStyle(drawStyle: number) {
     (this.hits.material as THREE.ShaderMaterial).uniforms["drawStyle"].value = drawStyle;
     (this.hits.material as THREE.ShaderMaterial).needsUpdate = true;
   }
+  
   setPointScale(scale: number) {
     this.pointScale = scale;
     (this.hits.material as THREE.ShaderMaterial).uniforms["pointScale"].value = this.pointScale;
     (this.hits.material as THREE.ShaderMaterial).needsUpdate = true;
   }
+  
   clearRays() {
     this.rayBufferGeometry.setDrawRange(0, 1);
     this.rayPositionIndex = 0;
@@ -340,10 +356,16 @@ export default class RayTracer extends Solver {
     //update version
     this.colorBufferAttribute.version++;
   }
-  
-  constructBSPTree() {
-    
+
+  inFrontOf(a: THREE.Triangle, b: THREE.Triangle) {
+    const plane = a.getPlane(new THREE.Plane());
+    const pleq = new THREE.Vector4(plane.normal.x, plane.normal.y, plane.normal.z, plane.constant);
+    const avec4 = new THREE.Vector4(b.a.x, b.a.y, b.a.z, 1);
+    const bvec4 = new THREE.Vector4(b.b.x, b.b.y, b.b.z, 1);
+    const cvec4 = new THREE.Vector4(b.c.x, b.c.y, b.c.z, 1);
+    return pleq.dot(avec4) > 0 || pleq.dot(bvec4) > 0 || pleq.dot(cvec4) > 0;
   }
+
   
   traceRay(ro: THREE.Vector3, rd: THREE.Vector3, order: number, energy: number, iter: number = 1, chain: THREE.Intersection[] = [], frequency = 4000) {
 
@@ -517,7 +539,7 @@ export default class RayTracer extends Solver {
             );
           }
           (this.stats.numValidRayPaths.value as number)++;
-          const index = ((path.chain[path.chain.length - 1] as THREE.Intersection).object as Receiver).uuid;
+          const index = ((path.chain[path.chain.length - 1] as THREE.Intersection).object.parent as Receiver).uuid;
           this.paths[index] ? this.paths[index].push(path) : (this.paths[index] = [path]);
         }
       }
@@ -569,6 +591,7 @@ export default class RayTracer extends Solver {
     }
     return path;
   }
+
   calculateWithDiffuse(frequencies: number[] = this.reflectionLossFrequencies) {
     this.allReceiverData = [] as ReceiverData[];
     const keys = Object.keys(this.paths);
@@ -639,30 +662,30 @@ export default class RayTracer extends Solver {
     this.messenger.postMessage("UPDATE_CHART_DATA", chartdata && chartdata[0]);
     return this.allReceiverData;
   }
+  
+  //TODO change this name to something more appropriate
   calculateReflectionLoss(frequencies: number[] = this.reflectionLossFrequencies) {
+    
+    // reset the receiver data 
     this.allReceiverData = [] as ReceiverData[];
-    type chartdataset = {
-      label: string;
-      data: number[][];
-      x?: number[];
-      y?: number[];
-    };
+    
+
 
     // helper function
     const dataset = (label, data) => ({ label, data });
 
-    // for the ir chart
-    const chartdata = [] as chartdataset[];
+    // for the chart
+    const chartdata = [] as ChartData[];
     if (frequencies) {
       for (let i = 0; i < frequencies.length; i++) {
         chartdata.push(dataset(frequencies[i].toString(), []));
       }
     }
+    
+    // pathkeys.length should equal the number of receivers in the scene
     const pathkeys = Object.keys(this.paths);
 
-    // pathkeys.length should equal the number of sources in the scene
-
-    // for each source's path in the total path array
+    // for each receiver's path in the total path array
     for (let i = 0; i < pathkeys.length; i++) {
 
       // init contribution array
@@ -676,48 +699,29 @@ export default class RayTracer extends Solver {
 
         // the individual ray path which holds intersection data
         const raypath = this.paths[pathkeys[i]][j];
-
-        // calculates the reflection loss at a specific frequency
+        
+        /**
+         * calculates the loss due to reflection over the ray's path
+         */
         function reflectionLossFunction(frequency: number): number {
-
-          // chain needs to have last item popped i dont remember why
           const chain = raypath.chain.slice(0, -1);
-
-          // if the chain array has members
           if (chain && chain.length > 0) {
-
-            // the initial magnitude
             let magnitude = 1;
-
-            // for each intersection
             for (let k = 0; k < chain.length; k++) {
-
-              // the intersection
               const intersection = chain[k] as THREE.Intersection;
-
-              // the surface where the interscetion took place
               const surface = intersection.object.parent as Surface;
-
-              // the angle of incidencce. needed to calculate the transfer function
               const angle = intersection["angle"] || 0;
-
-              // accumulate transfer functions of the intersected surface
               magnitude = magnitude * abs(surface.reflectionFunction(frequency, angle));
             }
             return magnitude;
           }
-
-          // if chain has a length of 0... which shouldn't happen
-          else {
-            // console.log(raypath);
-            return 1;
-          }
+          return 1; 
         }
+        
+        
         let refloss;
-
         // if there was a given frequency array
         if (frequencies) {
-
           // map the frequencies to reflection loss
           refloss = frequencies.map(freq => ({
             frequency: freq,
@@ -727,6 +731,7 @@ export default class RayTracer extends Solver {
             chartdata[i].data.push([raypath.time!, reflectionLossFunction(f)]);
           });
         } else {
+          // if no frequencies given, just give back the function that calculates the reflection loss
           refloss = reflectionLossFunction;
         }
         this.allReceiverData[this.allReceiverData.length - 1].data.push({
@@ -734,14 +739,15 @@ export default class RayTracer extends Solver {
           energy: refloss
         });
       }
-      this.allReceiverData[this.allReceiverData.length - 1].data = this.allReceiverData[this.allReceiverData.length - 1].data.sort((a, b) => a.time - b.time);
+      this.allReceiverData[this.allReceiverData.length - 1].data =
+        this.allReceiverData[this.allReceiverData.length - 1].data.sort((a, b) => a.time - b.time);
     }
     for (let i = 0; i < chartdata.length; i++) {
       chartdata[i].data = chartdata[i].data.sort((a, b) => a[0] - b[0]);
       chartdata[i].x = chartdata[i].data.map(x => x[0]);
       chartdata[i].y = chartdata[i].data.map(x => x[1]);
     }
-    this.messenger.postMessage("UPDATE_CHART_DATA", chartdata);
+    this.chartdata = chartdata;
     return [this.allReceiverData, chartdata];
   }
   downloadImpulseResponse(index: number = 0, sample_rate: number = 44100) {
@@ -844,5 +850,11 @@ export default class RayTracer extends Solver {
   }
   get precheck() {
     return this.sourceIDs.length > 0 && typeof this.room !== "undefined";
+  }
+  getReceiverIntersectionPoints(id: string) {
+    if (this.paths && this.paths[id] && this.paths[id].length > 0) {
+      return this.paths[id].map(x => x.chain[x.chain.length - 1].point) as THREE.Vector3[];
+    }
+    else return [] as THREE.Vector3[];
   }
 }

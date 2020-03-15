@@ -18,6 +18,8 @@ export function Lw2Lp(
   );
 }
 
+
+
 /**
  * Convert sound pressure level to sound power level
  * @param Lp sound pressure level

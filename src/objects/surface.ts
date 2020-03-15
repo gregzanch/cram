@@ -272,8 +272,10 @@ export default class Surface extends Container {
 	set displayVertexNormals(displayVertexNormals: boolean) {
 		this.vertexNormals.visible = displayVertexNormals
 	}
-	
 	get geometry() {
 		return this.mesh.geometry;
+	}
+	get faces() {
+		return this._triangles;
 	}
 }

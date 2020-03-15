@@ -30,3 +30,10 @@ body {
   height: 100% !important;
 }
 
+.muted-text{
+    font-size: 10px;
+    color: #D1D2D3;
+    font-style: italic;
+    align-self: center;
+    font-weight: 100;
+}

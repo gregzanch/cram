@@ -1,0 +1,12 @@
+.rt60-result-container{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.rt60-result-frequency{
+  grid-column-start: 1;
+  grid-column-end: 2;
+}
+.rt60-result-time{
+  grid-column-start: 2;
+  grid-column-end: 3;
+}

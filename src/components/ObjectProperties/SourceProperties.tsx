@@ -95,6 +95,11 @@ export default function SourceProperties(props: SourcePropertiesProps) {
             <NumberInput name="phi" value={props.object.phi} {...XYZProps} />
           </GridRow>
         )}
+        {props.object.hasOwnProperty("uuid") && (
+          <GridRow label={"uuid"}>
+            <span className="muted-text">{props.object.uuid}</span>
+          </GridRow>
+        )}
       </div>
     </div>
   );

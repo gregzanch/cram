@@ -837,8 +837,8 @@ export default class App extends React.Component<AppProps, AppState> {
             <PanelContainer className="panel full-bottom gutter-panel">
               <Gutter
                 messenger={this.props.messenger}
-                stats={this.state.stats}
-                chartData={this.state.chartData}
+                solvers={this.state.solvers}
+                key={"gutter-panel"}
               />
             </PanelContainer>
           </SplitterLayout>

@@ -10,6 +10,7 @@ import { Button } from "@blueprintjs/core";
 import Select, { components } from "react-select";
 import Messenger from "../../messenger";
 import * as ac from '../../compute/acoustics';
+import "./RT60Properties.css";
 
 export interface RT60PropertiesProps {
   object: RT60;
@@ -70,7 +71,7 @@ export default function RT60Properties(props: RT60PropertiesProps) {
   };
 
   // console.log(sources, receivers);
-  const sabine = props.object.sabine(ac.whole_octave)
+  const sabine = props.object.sabine(ac.whole_octave);
   return (
     <div>
       <div style={RT60PropertiesContainerStyle}>
@@ -83,13 +84,30 @@ export default function RT60Properties(props: RT60PropertiesProps) {
             />
           </GridRow>
         )}
+        <GridRow label={"sabine"}>
+          <table>
+            <thead>
+              <tr>
+                <th>Frequency</th>
+                <th>Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {
+                sabine[0].map((x,i) => (
+                  <tr key={"sabine-row-"+i}>
+                    <td>{x}</td>
+                    <td>{sabine[1][i].toFixed(2)}</td>
+                  </tr>
+                ))
+              }
+            </tbody>
+         </table>
+        </GridRow>
         <GridRow span={2}>
           <Button
             text="Calulate Response"
-            onClick={e => props.messenger.postMessage(
-              "PLOT_SABINE_RT60",
-              sabine
-            )}
+            onClick={e => props.messenger.postMessage("PLOT_SABINE_RT60", sabine)}
           />
         </GridRow>
       </div>
