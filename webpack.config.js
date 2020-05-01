@@ -48,7 +48,11 @@ module.exports = {
           compact: isEnvProduction
         }
       },
-
+      {
+        test: /\.wasm$/,
+        type: "javascript/auto",
+        loaders: ['wasm-loader']
+      },
       {
         test: /\.css$/i,
         use: ["style-loader", "css-loader"]

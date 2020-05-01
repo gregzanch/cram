@@ -1,0 +1,16 @@
+.container-selected{
+  background-color: #bdbdbd;
+}
+
+.MuiTreeItem-content:hover{
+    /* background-color: #be1a1a; */
+}
+
+.MuiTreeItem-root:focus{
+  /* background-color: #bdbdbd; */
+}
+
+
+.MuiTreeView-root > *:focus{
+  /* background-color: #be1a1a; */
+}

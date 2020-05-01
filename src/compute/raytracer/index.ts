@@ -16,6 +16,11 @@ import sort from "fast-sort";
 import FileSaver from "file-saver";
 import { scatteredEnergy } from "./scattered-energy";
 import PointShader from "./shaders/points";
+
+import wasmInit from "../../as/wasm-init";
+import loader from '@assemblyscript/loader';
+
+
 //@ts-ignore
 THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
 //@ts-ignore
@@ -857,4 +862,54 @@ export default class RayTracer extends Solver {
     }
     else return [] as THREE.Vector3[];
   }
+  
+  
+  testWasm(value: number) {
+   
+   /*
+    const runWasm = async () => {
+      // Instantiate our wasm module
+      // And pass in a wasm module
+      const wasmModule = await wasmInit("wasm/index.wasm", {
+        index: {
+          consoleLog: (value) => console.log(value)
+        }
+      });
+      
+      
+      return wasmModule;
+    };
+    runWasm().then((res) => {
+      const testmodule = res.instance.exports;
+      
+      console.log(res);
+      console.log(testmodule);
+      // const result = testmodule.testFunction(value);
+      // console.log("tested with a value of: ", result);
+    }).catch(console.error);
+    */
+    
+    async function loadWasm() {
+      return await loader.instantiate(fetch("wasm/index.wasm"), {
+        index: {
+          consoleLog: (value) => console.log(value)
+        }
+      });
+    }
+    
+    loadWasm().then(wasm => {
+      console.log(wasm);
+      
+      const result = wasm['testFunction'](value);
+      
+      console.log(result);
+      
+    }).catch(console.error);
+    
+    
+    
+  }
+  
+  
+  
 }

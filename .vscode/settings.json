@@ -9,5 +9,8 @@
     "typescript.format.insertSpaceAfterTypeAssertion": true,
     "typescript.suggest.completeFunctionCalls": true,
     "typescript.format.insertSpaceAfterCommaDelimiter": true,
-    "typescript.format.insertSpaceBeforeAndAfterBinaryOperators": true
+    "typescript.format.insertSpaceBeforeAndAfterBinaryOperators": true,
+    "files.associations": {
+        "*.as.ts": "assemblyscript"
+    }
 }

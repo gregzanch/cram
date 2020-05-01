@@ -1,4 +1,12 @@
 import * as THREE from "three";
+
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass";
+import { OutlinePass } from "three/examples/jsm/postprocessing/OutlinePass";
+import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass";
+import { FXAAShader } from "three/examples/jsm/shaders/FXAAShader";
+import { OrbitControls } from "./OrbitControls";
+
 //@ts-ignore
 // import fs from "!raw-loader!./shaders/beam/shader.frag";
 //@ts-ignore
@@ -6,9 +14,6 @@ import * as THREE from "three";
 // import { AudioRenderer } from './audio';
 import { CameraStore } from "../common/storage-schemas";
 
-const OrbitControls = require("./orbit-controls.js")(THREE);
-const STLLoader = require("three-stl-loader")(THREE);
-const PLYLoader = require("three-ply-loader")(THREE);
 
 import { lerp, lerp3 } from "../common/lerp";
 import EasingFunctions from '../common/easing';
@@ -19,12 +24,8 @@ import speakerModel from "!raw-loader!../res/models/speaker.gltf";
 //@ts-ignore
 import micModel from "!raw-loader!../res/models/mic.gltf";
 
-import whitematcap from './textures/matcap-porcelain-white.jpg';
-
-import Source from "../objects/source";
-import Receiver from "../objects/receiver";
-
-import cubicBezier from '../common/cubic-bezier';
+import whitematcap from '../res/textures/matcap-porcelain-white.jpg';
+import triPattern from '../res/textures/tri_pattern.jpg'
 
 import Container from "../objects/container";
 
@@ -35,7 +36,6 @@ import defaults from './defaults';
 import Axes from './env/axes';
 import Lights from './env/lights';
 import Room from '../objects/room';
-import { FRAME_RATE } from "../constants";
 import Messenger from "../messenger";
 
 
@@ -44,9 +44,26 @@ import PickHelper from './pick-helper';
 
 
 
+export interface OrbitControlMouseConfig {		
+	LEFT: number;
+	MIDDLE: number;
+	RIGHT: number;
+}
 
+export interface MouseConfigSet {
+  Default: OrbitControlMouseConfig;
+  Shift: OrbitControlMouseConfig;
+  Control: OrbitControlMouseConfig;
+  Alt: OrbitControlMouseConfig;
+  Meta: OrbitControlMouseConfig;
+}
 
-
+export interface ModifierKeyState {
+	Shift: number;
+  Control: number;
+  Alt: number;
+  Meta: number;
+}
 
 export interface RendererParams{
 	elt?: HTMLCanvasElement;
@@ -54,6 +71,10 @@ export interface RendererParams{
 }
 
 export default class Renderer {
+	
+	mouseConfigSet!: MouseConfigSet;
+	modifierKeyState!: ModifierKeyState; 
+	
 	elt!: HTMLCanvasElement;
 	renderer!: THREE.Renderer;
 
@@ -92,6 +113,14 @@ export default class Renderer {
 	smoothingCamera!: boolean;
 	messenger: Messenger;
 	pickHelper!: PickHelper;
+	composer!: EffectComposer;
+	outlinePass!: OutlinePass;
+	renderPass!: RenderPass;
+	effectFXAA!: ShaderPass;
+	
+
+
+	
 	constructor(params: RendererParams) {
 		[
 			"init",
@@ -101,6 +130,7 @@ export default class Renderer {
 			"setupTemplates",
 			"setupTextures",
 			"setupRenderer",
+			"setupPostProcessing",
 			"setupSettingHandlers",
 			"setupScene",
 			"smoothCameraTo",
@@ -118,9 +148,15 @@ export default class Renderer {
 	}
 	init(elt: HTMLCanvasElement) {
 
+		this.modifierKeyState = {
+			Shift: 0,
+			Control: 0,
+			Alt: 0,
+			Meta: 0
+		};
+		
 		this.smoothingCamera = false;
 		this.smoothingCameraFunction = undefined;
-		
 		this.elt = elt;
 		this.stack = [] as Array<(...args) => void>;
 		this.env = new Container("env");
@@ -159,20 +195,50 @@ export default class Renderer {
 			end: this.camera.far
 		});
 
-		
+		this.setupPostProcessing();
 
 
 	
-
+		
 		this.setupSettingHandlers();
 		this.setupMessageHandlers();
-
     this.setupTextures();
 		this.setupEventListeners();
 		this.render();
 		// setInterval(this.render, 1000 / 20);
 	}
+	setupPostProcessing() {
 
+		
+		this.composer = new EffectComposer(this.renderer as THREE.WebGLRenderer);
+		
+    this.renderPass = new RenderPass(this.scene, this.camera);
+    this.composer.addPass(this.renderPass);
+
+    this.outlinePass = new OutlinePass(new THREE.Vector2(this.clientWidth, this.clientHeight), this.scene, this.camera);
+    // this.composer.addPass(this.outlinePass);
+
+    var loader = new THREE.TextureLoader();
+
+		loader.load(triPattern, texture => {
+			//@ts-ignore
+			this.outlinePass.patternTexture = texture;
+			this.outlinePass.edgeStrength = 2.0;
+			this.outlinePass.edgeGlow = 1.0;
+			this.outlinePass.edgeThickness = 1.0;
+			this.outlinePass.pulsePeriod = 0.0;
+			this.outlinePass.usePatternTexture = true;
+			this.outlinePass.visibleEdgeColor.set(new THREE.Color("#5477e8"));
+			this.outlinePass.hiddenEdgeColor.set(new THREE.Color("#1a1d2a"));
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+		});
+
+    this.effectFXAA = new ShaderPass(FXAAShader);
+		this.effectFXAA.uniforms["resolution"].value.set(1 / this.clientWidth, 1 / this.clientHeight);
+		// this.composer.addPass(this.effectFXAA);
+		
+	}
 	setupMessageHandlers() {
 		this.messenger.addMessageHandler("RENDERER_SHOULD_CHANGE_BACKGROUND", (acc, ...args) => this.background = args[0])
 		this.messenger.addMessageHandler("RENDERER_SHOULD_CHANGE_FOG_COLOR", (acc, ...args) => this.fogColor = args[0])
@@ -185,7 +251,20 @@ export default class Renderer {
 				object.parent && object.parent.remove(object);
 				// this.scene.remove(object);
 			}
-		})
+		});
+		// this.messenger.addMessageHandler("SET_SELECTION", (acc, ids) => {
+		// 	if (ids && ids.length > 0) {
+		// 		for (let i = 0; i < ids.length; i++){
+		// 			const id = ids[i];
+    //       const object = this.scene.getObjectByProperty("uuid", id);
+    //       if (object) {
+    //         console.log(object);
+    //         object.parent && object.parent.remove(object);
+    //         // this.scene.remove(object);
+    //       }
+		// 		}
+		// 	}
+		// })
 	}
 	setupScene({background}) {
 		this.scene = new THREE.Scene();
@@ -292,9 +371,11 @@ export default class Renderer {
 	}
 	
 	
-	
+
 	
 	setupEventListeners() {
+		
+		// save the state of the camera
 		window.addEventListener("mouseup", e => {
 			if (this.camera instanceof THREE.PerspectiveCamera) {
 				localStorage.setItem(
@@ -303,19 +384,45 @@ export default class Renderer {
 				);
 			}
 		});
-		// this.renderer.domElement.addEventListener('mousedown', e => {
-		// 	const selection = this.pickHelper.pick(e, [this.workspace]);
-		// 	if (selection) {
-		// 		this.select(selection);
-		// 	}
-		// 	// console.log(this.pickHelper);
-		// })
 		
-	}
-	
-	select(object: Container) {
-		this.messenger.postMessage("DESELECT_ALL_OBJECTS");
-		object.select();
+		window.addEventListener("keydown", e => {
+			if (this.modifierKeyState.hasOwnProperty(e.key)) {
+				this.modifierKeyState[e.key] += 1;
+			}
+			if (e.key === "Escape") {
+				this.messenger.postMessage("DESELECT_ALL_OBJECTS");
+			}
+		});
+		
+		window.addEventListener("keyup", e => {
+			if (this.modifierKeyState.hasOwnProperty(e.key)) {
+				this.modifierKeyState[e.key] -= 1;
+
+			}
+		});
+		
+		this.renderer.domElement.addEventListener('mousedown', e => {
+			const selection = this.pickHelper.pick(e, [this.workspace]);
+			
+			if (selection) {
+				if (e.button == 0) {
+					if (e.shiftKey) {
+						this.messenger.postMessage("APPEND_SELECTION", [selection])
+					}
+					else if(!e.altKey){
+						this.messenger.postMessage("SET_SELECTION", [selection]);
+					}
+				}
+				else {
+					
+				}
+			}
+			else {
+
+			}
+			// console.log(this.pickHelper);
+		})
+		
 	}
 
 	resize() {
@@ -323,6 +430,11 @@ export default class Renderer {
 			this.renderer.domElement.parentElement?.clientWidth || 0,
 			this.renderer.domElement.parentElement?.clientHeight || 0
 		);
+		this.composer.setSize(
+			this.renderer.domElement.parentElement?.clientWidth || 0,
+			this.renderer.domElement.parentElement?.clientHeight || 0
+		);
+		this.effectFXAA.uniforms["resolution"].value.set(1 / this.clientWidth, 1 / this.clientHeight);
 	}
 	resizeCanvasToDisplaySize() {
 		const canvas = this.renderer.domElement;
@@ -334,6 +446,7 @@ export default class Renderer {
 		if (canvas.width !== width || canvas.height !== height) {
 			// you must pass false here or three.js sadly fights the browser
 			this.renderer.setSize(width, height, false);
+			this.composer.setSize(width, height);
 				if (this.camera instanceof THREE.OrthographicCamera) {
           this.camera.left = -canvas.width / 2;
           this.camera.right = canvas.width / 2;
@@ -384,9 +497,41 @@ export default class Renderer {
 		this.setupFog({ color: this.fogColor, start: near, end: far });
 	}
 	setControls() {
+		this.mouseConfigSet = {
+      Default: {
+        LEFT: THREE.MOUSE.ROTATE,
+        MIDDLE: THREE.MOUSE.DOLLY,
+        RIGHT: THREE.MOUSE.PAN
+      },
+      Shift: {
+        LEFT: THREE.MOUSE.ROTATE,
+        MIDDLE: THREE.MOUSE.DOLLY,
+        RIGHT: THREE.MOUSE.PAN
+      },
+      Meta: {
+        LEFT: THREE.MOUSE.ROTATE,
+        MIDDLE: THREE.MOUSE.DOLLY,
+        RIGHT: THREE.MOUSE.PAN
+      },
+      Alt: {
+        LEFT: THREE.MOUSE.ROTATE,
+        MIDDLE: THREE.MOUSE.DOLLY,
+        RIGHT: THREE.MOUSE.PAN
+      },
+      Control: {
+        LEFT: THREE.MOUSE.ROTATE,
+        MIDDLE: THREE.MOUSE.DOLLY,
+        RIGHT: THREE.MOUSE.PAN
+      }
+    };
+		
+		
 		this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+		this.controls.mouseButtons = this.mouseConfigSet.Default
+		console.log(this.controls)
     this.controls.update();
 	}
+	
 	setOrtho(on: boolean) {
 		if (on && this.camera instanceof THREE.PerspectiveCamera) {
 			const { x, y, z } = this.camera.position.clone();
@@ -443,7 +588,8 @@ export default class Renderer {
 		this.resizeCanvasToDisplaySize();
 		requestAnimationFrame(this.render);
 		
-		this.renderer.render(this.scene, this.camera);
+		// this.renderer.render(this.scene, this.camera);
+		this.composer.render();
 	}
 	
 	

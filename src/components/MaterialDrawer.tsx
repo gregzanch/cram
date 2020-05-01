@@ -6,11 +6,12 @@ import { uuid } from 'uuidv4';
 import { absorptionGradient } from './AbsorptionGradient';
 import MaterialSliders from './MaterialSliders';
 import { clamp } from '../common/clamp';
-import { Icon, Tag } from '@blueprintjs/core';
+import { Icon, Tag, IToaster } from '@blueprintjs/core';
 import { ButtonGroup, Button } from '@blueprintjs/core';
 import Room from '../objects/room';
 import ObjectView from './ObjectView';
 import { KeyValuePair } from '../common/key-value-pair';
+import Container from '../objects/container';
 
 
 const max = (a: number, b: number) => (a > b ? a : b);
@@ -76,15 +77,32 @@ export default class MaterialDrawer extends React.Component<MaterialDrawerProps,
   handleListItemDoubleClick(item: AcousticMaterial) {
     console.log(item);
   }
-  handleObjectViewClick(e) {
-    console.log(e);
-    if (e instanceof Surface) {
+  handleObjectViewClick(object, e: React.MouseEvent) {
+  if (object instanceof Container && object['kind']!=="room") {
+    if (e.shiftKey) {
+      this.props.messenger.postMessage("APPEND_SELECTION", [object])
+    }
+    else {
+      this.props.messenger.postMessage("SET_SELECTION", [object]);
+    }
+    if (object instanceof Surface) {
+      console.log(object);
       this.setState({
-        query: e.acousticMaterial.name,
-        selected_object: e as Surface
+        query: object.acousticMaterial.name,
+        selected_object: object as Surface
       });
     }
   }
+}
+  // handleObjectViewClick(e) {
+  //   console.log(e);
+  //   if (e instanceof Surface) {
+  //     this.setState({
+  //       query: e.acousticMaterial.name,
+  //       selected_object: e as Surface
+  //     });
+  //   }
+  // }
   render() {
     const filteredItems = this.state.query.length > 0
       ? this.props.messenger.postMessage("SEARCH_ALL_MATERIALS", this.state.query)[0] as AcousticMaterial[]
@@ -216,7 +234,7 @@ export default class MaterialDrawer extends React.Component<MaterialDrawerProps,
                   icon={"tick"}
                   disabled={!this.state.selected_item || typeof this.state.selected_item._id === "undefined"}
                   onClick={e => {
-                      this.props.messenger.postMessage("ASSIGN_MATERIAL", this.state.selected_item, this.state.selected_object.uuid || false);
+                    this.props.messenger.postMessage("ASSIGN_MATERIAL", this.state.selected_item, this.state.selected_object.uuid || false);
                     }
                   }
                 />

@@ -41,7 +41,7 @@ export default class Messenger{
             this.lastMessage = message;
             // console.log(message);
         }
-        // if messgae exists
+        // if message exists
         if (this.dictionary[message]) {
             // accumulates the results of each handler
             let accumulator = [] as any[];

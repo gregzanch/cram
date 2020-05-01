@@ -117,31 +117,19 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
       <div style={RayTracerPropertiesContainerStyle}>
         {props.object.hasOwnProperty("name") && (
           <GridRow label={"name"}>
-            <TextInput
-              name="name"
-              value={props.object.name}
-              onChange={props.onPropertyChange}
-            />
+            <TextInput name="name" value={props.object.name} onChange={props.onPropertyChange} />
           </GridRow>
         )}
 
         {props.object.hasOwnProperty("updateInterval") && (
           <GridRow label={"rate (ms)"}>
-            <NumberInput
-              name="updateInterval"
-              value={props.object.updateInterval}
-              {...XYZProps}
-            />
+            <NumberInput name="updateInterval" value={props.object.updateInterval} {...XYZProps} />
           </GridRow>
         )}
 
         {props.object.hasOwnProperty("reflectionOrder") && (
           <GridRow label={"order"}>
-            <NumberInput
-              name="reflectionOrder"
-              value={props.object.reflectionOrder}
-              {...XYZProps}
-            />
+            <NumberInput name="reflectionOrder" value={props.object.reflectionOrder} {...XYZProps} />
           </GridRow>
         )}
         {props.object.hasOwnProperty("runWithoutReceiver") && (
@@ -166,13 +154,7 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
           />
         </GridRow>
         <GridRow label={"clear"}>
-          <Button
-            name="ray-tracer-clear"
-            icon="cross"
-            onClick={props.onButtonClick}
-            minimal
-            className={"bp3-small-icon-button"}
-          />
+          <Button name="ray-tracer-clear" icon="cross" onClick={props.onButtonClick} minimal className={"bp3-small-icon-button"} />
         </GridRow>
         <GridRowSeperator />
         <GridRow label="sources"></GridRow>
@@ -209,14 +191,11 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
         <GridRow span={2}>
           <Button
             text="Calulate Response"
-            onClick={e =>
-              props.messenger.postMessage(
-                "RAYTRACER_CALCULATE_RESPONSE",
-                props.object.uuid,
-                props.object.reflectionLossFrequencies
-              )
-            }
+            onClick={(e) => props.messenger.postMessage("RAYTRACER_CALCULATE_RESPONSE", props.object.uuid, props.object.reflectionLossFrequencies)}
           />
+        </GridRow>
+        <GridRow span={2}>
+          <Button text="Test WASM" onClick={(e) => props.messenger.postMessage("RAYTRACER_TEST_WASM", props.object.uuid, Math.random())} />
         </GridRow>
       </div>
     </div>

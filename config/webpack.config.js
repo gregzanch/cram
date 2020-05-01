@@ -117,11 +117,7 @@ module.exports = function(webpackEnv) {
     mode: isEnvProduction ? "production" : isEnvDevelopment && "development",
     // Stop compilation early in production
     bail: isEnvProduction,
-    devtool: isEnvProduction
-      ? shouldUseSourceMap
-        ? "source-map"
-        : false
-      : isEnvDevelopment && "cheap-module-source-map",
+    devtool: isEnvProduction ? (shouldUseSourceMap ? "source-map" : false) : isEnvDevelopment && "cheap-module-source-map",
     // These are the "entry points" to our application.
     // This means they will be the "root" imports that are included in JS bundle.
     entry: [
@@ -135,8 +131,7 @@ module.exports = function(webpackEnv) {
       // the line below with these two lines if you prefer the stock client:
       // require.resolve('webpack-dev-server/client') + '?/',
       // require.resolve('webpack/hot/dev-server'),
-      isEnvDevelopment &&
-        require.resolve("react-dev-utils/webpackHotDevClient"),
+      isEnvDevelopment && require.resolve("react-dev-utils/webpackHotDevClient"),
       // Finally, this is your app's code:
       paths.appIndexJs
       // We include the app code last so that if there is a runtime error during
@@ -150,24 +145,16 @@ module.exports = function(webpackEnv) {
       pathinfo: isEnvDevelopment,
       // There will be one main bundle, and one file per asynchronous chunk.
       // In development, it does not produce real files.
-      filename: isEnvProduction
-        ? "static/js/[name].[chunkhash:8].js"
-        : isEnvDevelopment && "static/js/bundle.js",
+      filename: isEnvProduction ? "static/js/[name].[chunkhash:8].js" : isEnvDevelopment && "static/js/bundle.js",
       // There are also additional JS chunk files if you use code splitting.
-      chunkFilename: isEnvProduction
-        ? "static/js/[name].[chunkhash:8].chunk.js"
-        : isEnvDevelopment && "static/js/[name].chunk.js",
+      chunkFilename: isEnvProduction ? "static/js/[name].[chunkhash:8].chunk.js" : isEnvDevelopment && "static/js/[name].chunk.js",
       // We inferred the "public path" (such as / or /my-project) from homepage.
       // We use "/" in development.
       publicPath: publicPath,
       // Point sourcemap entries to original disk location (format as URL on Windows)
       devtoolModuleFilenameTemplate: isEnvProduction
-        ? info =>
-            path
-              .relative(paths.appSrc, info.absoluteResourcePath)
-              .replace(/\\/g, "/")
-        : isEnvDevelopment &&
-          (info => path.resolve(info.absoluteResourcePath).replace(/\\/g, "/"))
+        ? (info) => path.relative(paths.appSrc, info.absoluteResourcePath).replace(/\\/g, "/")
+        : isEnvDevelopment && ((info) => path.resolve(info.absoluteResourcePath).replace(/\\/g, "/"))
     },
     optimization: {
       minimize: isEnvProduction,
@@ -258,9 +245,7 @@ module.exports = function(webpackEnv) {
       // https://github.com/facebook/create-react-app/issues/290
       // `web` extension prefixes have been added for better support
       // for React Native Web.
-      extensions: paths.moduleFileExtensions
-        .map(ext => `.${ext}`)
-        .filter(ext => useTypeScript || !ext.includes("ts")),
+      extensions: paths.moduleFileExtensions.map((ext) => `.${ext}`).filter((ext) => useTypeScript || !ext.includes("ts")),
       alias: {
         // Support React Native Web
         // https://www.smashingmagazine.com/2016/08/a-glimpse-into-the-future-with-react-native-for-web/
@@ -287,12 +272,46 @@ module.exports = function(webpackEnv) {
     },
     module: {
       strictExportPresence: false,
-      rules: [
+      defaultRules: [
         {
-          test: /\.(glsl|vs|fs|vert|frag)$/,
+          type: "javascript/auto",
+          resolve: {}
+        },
+        {
+          test: /\.json$/i,
+          type: "json"
+        }
+      ],
+      rules: [
+        // {
+        //   test: /\.wasm$/,
+        //   type: "javascript/auto",
+        //   use: [
+        //     {
+        //       loader: require.resolve("wasm-loader")
+        //     }
+        //   ]
+        // },
+        {
+          test: /\.st\.ts?$/,
+          loader: require.resolve("assemblyscript-typescript-loader"),
+          include: path.join(paths.appSrc, "as","assembly"),  
+        },
+        {
+          test: /\.wasm$/,
+          use: [
+            {
+              loader: require.resolve("raw-loader")
+            }
+          ],
+          include: path.join(paths.appSrc, "as")
+        },
+        {
+          test: /\.(wasm|glsl|vs|fs|vert|frag)$/,
           exclude: /node_modules/,
-          use: [{
-            loader: require.resolve('raw-loader')
+          use: [
+            {
+              loader: require.resolve("raw-loader")
             }
           ],
           include: paths.appSrc
@@ -343,9 +362,7 @@ module.exports = function(webpackEnv) {
               include: paths.appSrc,
               loader: require.resolve("babel-loader"),
               options: {
-                customize: require.resolve(
-                  "babel-preset-react-app/webpack-overrides"
-                ),
+                customize: require.resolve("babel-preset-react-app/webpack-overrides"),
 
                 plugins: [
                   [
@@ -378,12 +395,7 @@ module.exports = function(webpackEnv) {
                 babelrc: false,
                 configFile: false,
                 compact: false,
-                presets: [
-                  [
-                    require.resolve("babel-preset-react-app/dependencies"),
-                    { helpers: true }
-                  ]
-                ],
+                presets: [[require.resolve("babel-preset-react-app/dependencies"), { helpers: true }]],
                 cacheDirectory: true,
                 cacheCompression: isEnvProduction,
 
@@ -509,9 +521,7 @@ module.exports = function(webpackEnv) {
       ),
       // Inlines the webpack runtime script. This script is too small to warrant
       // a network request.
-      isEnvProduction &&
-        shouldInlineRuntimeChunk &&
-        new InlineChunkHtmlPlugin(HtmlWebpackPlugin, [/runtime~.+[.]js/]),
+      isEnvProduction && shouldInlineRuntimeChunk && new InlineChunkHtmlPlugin(HtmlWebpackPlugin, [/runtime~.+[.]js/]),
       // Makes some environment variables available in index.html.
       // The public URL is available as %PUBLIC_URL% in index.html, e.g.:
       // <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.ico">
@@ -538,8 +548,7 @@ module.exports = function(webpackEnv) {
       // to restart the development server for Webpack to discover it. This plugin
       // makes the discovery automatic so you don't have to restart.
       // See https://github.com/facebook/create-react-app/issues/186
-      isEnvDevelopment &&
-        new WatchMissingNodeModulesPlugin(paths.appNodeModules),
+      isEnvDevelopment && new WatchMissingNodeModulesPlugin(paths.appNodeModules),
       isEnvProduction &&
         new MiniCssExtractPlugin({
           // Options similar to the same options in webpackOptions.output
@@ -593,14 +602,7 @@ module.exports = function(webpackEnv) {
             noEmit: true,
             jsx: "preserve"
           },
-          reportFiles: [
-            "**",
-            "!**/*.json",
-            "!**/__tests__/**",
-            "!**/?(*.)(spec|test).*",
-            "!**/src/setupProxy.*",
-            "!**/src/setupTests.*"
-          ],
+          reportFiles: ["**", "!**/*.json", "!**/__tests__/**", "!**/?(*.)(spec|test).*", "!**/src/setupProxy.*", "!**/src/setupTests.*"],
           watch: paths.appSrc,
           silent: true,
           formatter: typescriptFormatter

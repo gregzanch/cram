@@ -23,7 +23,8 @@ import { chunk } from "./common/chunk";
 //@ts-ignore
 import triangleroom from "!raw-loader!./res/triangle.stl";
 //@ts-ignore
-import testroom from "!raw-loader!./res/models/baps.obj";
+import testroom from "!raw-loader!./res/models/testthing.obj";
+
 import Solver from "./compute/solver";
 import { FDTD } from "./compute/fdtd";
 import GLFDTD from "./compute/gl-fdtd";
@@ -37,6 +38,7 @@ import * as ac from "./compute/acoustics";
 
 import materials from "./db/material.json";
 import {Searcher} from "fast-fuzzy";
+import { IToastProps } from "@blueprintjs/core";
 
 
 
@@ -72,6 +74,7 @@ materials.forEach(x => {
 });
 
 const state = {
+  selectedObjects: [] as Container[],
   materialsIndex,
   materials,
   materialSearcher: new Searcher(
@@ -113,29 +116,28 @@ state.renderer = new Renderer({
   messenger: state.messenger
 });
 
-state.messenger.addMessageHandler("SET_SELECTION", (acc, ...args) => {
-  Object.keys(state.containers).forEach(x => {
-    if ((args[0] as string[]).includes(x)) {
-      state.containers[x].select();
-    }
-    else {
-      state.containers[x].traverse(obj => {
-        if ((args[0] as string[]).includes(obj.uuid)) {
-            obj instanceof Container && (obj as Container).select();  
-        }
-        else {
-            obj instanceof Container && (obj as Container).deselect();
-        }
-      })
-    }
-  });
-  // (args[0] as string[]).forEach(x => {
-  //   const obj = state.renderer.scene.getObjectByProperty('uuid', x);
-  //   if (obj) {
-  //     (obj as Container).select()
-  //   }
-  // })
+state.messenger.addMessageHandler("SET_SELECTION", (acc, objects) => {
+  state.messenger.postMessage("DESELECT_ALL_OBJECTS");
+  state.messenger.postMessage("APPEND_SELECTION", objects);
 });
+
+state.messenger.addMessageHandler("DESELECT_ALL_OBJECTS", (acc, ...args) => {
+  Object.keys(state.containers).forEach((x) => {
+    state.containers[x].deselect();
+  });
+  state.selectedObjects = [] as Container[];
+});
+
+state.messenger.addMessageHandler("APPEND_SELECTION", (acc, objects) => {
+  if (objects instanceof Array) {
+    for (let i = 0; i < objects.length; i++){
+      if (objects[i] instanceof Container) {
+        objects[i].select();
+        state.selectedObjects.push(objects[i]);
+      }
+    }
+  }
+})
 
 state.messenger.addMessageHandler("FETCH_ROOMS", () => {
   const roomkeys = Object.keys(state.containers).filter(x => {
@@ -166,11 +168,7 @@ state.messenger.addMessageHandler("SEARCH_ALL_MATERIALS", (acc, ...args) => {
   return res;
 });
 
-state.messenger.addMessageHandler("DESELECT_ALL_OBJECTS2", (acc, ...args) => {
-  Object.keys(state.containers).forEach(x => {
-    state.containers[x].deselect();
-  });
-});
+
 
 state.messenger.addMessageHandler("SHOULD_ADD_RAYTRACER", (acc, ...args) => {
   const raytracer = new RayTracer({
@@ -243,6 +241,10 @@ state.messenger.addMessageHandler("SHOULD_ADD_FDTD", (acc, ...args) => {
 
 state.messenger.addMessageHandler("RAYTRACER_CALCULATE_RESPONSE", (acc, id, frequencies) => {
   (state.solvers[id] instanceof RayTracer) && (state.solvers[id] as RayTracer).calculateReflectionLoss(frequencies);
+});
+
+state.messenger.addMessageHandler("RAYTRACER_TEST_WASM", (acc, id, value) => {
+  (state.solvers[id] instanceof RayTracer) && (state.solvers[id] as RayTracer).testWasm(value);
 });
 
 state.messenger.addMessageHandler("FETCH_ALL_SOURCES", (acc, ...args) => {
@@ -403,6 +405,32 @@ state.messenger.addMessageHandler("FETCH_SURFACE", (acc, ...args) => {
   }
 })
 
+state.messenger.addMessageHandler("ASSIGN_MATERIAL", (acc, material) => {
+  let surfaceCount = 0;
+  for (let i = 0; i < state.selectedObjects.length; i++){
+    if (state.selectedObjects[i] instanceof Surface) {
+      (state.selectedObjects[i] as Surface).acousticMaterial = material;
+      surfaceCount++;
+    }
+  }
+  if (surfaceCount > 0) {
+    state.messenger.postMessage("SHOW_TOAST", {
+      message: `Assigned material to ${surfaceCount} surface${surfaceCount > 1 ? "s" : ""}.`,
+      intent: "success",
+      timeout: 1750,
+      icon: "tick"
+    } as IToastProps);
+  }
+  else {
+     state.messenger.postMessage("SHOW_TOAST", {
+       message: `No surfaces are selected.`,
+       intent: "warning",
+       timeout: 1750,
+       icon: "issue"
+     } as IToastProps);
+  }
+});
+
 // for the settings drawer
 state.messenger.addMessageHandler("SETTING_CHANGE", (acc, ...args) => {
   const { setting, value } = args[0];
@@ -457,15 +485,15 @@ setTimeout(() => {
 
   state.messenger.postMessage("ADDED_ROOM", room);
 
-  (state.containers[sourceidL] as Source).position.set(15, -23, 5);
+  (state.containers[sourceidL] as Source).position.set(10, 14, 2.5);
   (state.containers[sourceidL] as Source).scale.set(3, 3, 3);
   (state.containers[sourceidL] as Source).name = "L";
 
-  (state.containers[sourceidR] as Source).position.set(-15, -23, 5);
+  (state.containers[sourceidR] as Source).position.set(11, 0, 3);
   (state.containers[sourceidR] as Source).scale.set(3, 3, 3);
   (state.containers[sourceidR] as Source).name = "R";
 
-  (state.containers[receiverId] as Receiver).position.set(0, -4,  2);
+  (state.containers[receiverId] as Receiver).position.set(22, 8,  3);
   (state.containers[receiverId] as Receiver).scale.set(8, 8, 8);
 
 

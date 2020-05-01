@@ -41,6 +41,7 @@
   ],
   "exclude": [
     "node_modules/**",
-    "src/compute/raytracer/lib"
+    "src/compute/raytracer/lib",
+    "src/as/assembly"
   ]
 }

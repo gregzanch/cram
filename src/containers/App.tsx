@@ -1,23 +1,25 @@
 import React from "react";
 import SplitterLayout from "react-splitter-layout";
 import {
-	FocusStyleManager,
-	Navbar,
-	Alignment,
-	Button,
-	Menu,
-	MenuItem,
-	Popover,
-	ButtonGroup,
-	Position,
-	MenuDivider,
-	Drawer,
-	Classes,
-	Colors,
-	AnchorButton,
-	Overlay,
-	Alert,
-	Intent
+  FocusStyleManager,
+  Navbar,
+  Alignment,
+  Button,
+  Menu,
+  MenuItem,
+  Popover,
+  ButtonGroup,
+  Position,
+  MenuDivider,
+  Drawer,
+  Classes,
+  Colors,
+  AnchorButton,
+  Overlay,
+  Alert,
+  Intent,
+  Toaster,
+  IToastProps
 } from "@blueprintjs/core";
 import MenuItemText from '../components/MenuItemText';
 import { ItemListRenderer, IItemListRendererProps } from "@blueprintjs/select";
@@ -56,6 +58,15 @@ import { AcousticMaterial } from "..";
 import { Searcher } from "fast-fuzzy";
 import MaterialDrawer from "../components/MaterialDrawer";
 import { SettingsPanel } from "../components/setting-components/SettingsPanel";
+
+
+
+const AppToaster = Toaster.create({
+  className: "app-toaster",
+  position: Position.TOP
+});
+
+
 FocusStyleManager.onlyShowFocusOnTabs();
 
 
@@ -75,7 +86,8 @@ export interface AppProps {
 interface AppState {
 	importDialogVisible: boolean;
 	containers: KeyValuePair<Container>;
-	selectedObject: Container;
+  selectedObject: Container;
+  
 	settingsDrawerVisible: boolean;
 	settings: KeyValuePair<any>;
 	mode: EditorMode;
@@ -162,7 +174,51 @@ export default class App extends React.Component<AppProps, AppState> {
 			}, cb || (()=> {}))
 		})
 	}
-	setupMessageHandlers() {
+  setupMessageHandlers() {
+    
+    this.addMessageHandler("DESELECT_ALL_OBJECTS", () => {
+      return {
+        selectedObject: {} as Container,
+        lastUpdateReason: "DESELECT_ALL_OBJECTS"
+      }
+    });
+    
+    this.addMessageHandler("SET_SELECTION", (acc, objects) => {
+      if (objects instanceof Array) {
+        return {
+          selectedObject: objects[objects.length - 1],
+          lastUpdateReason: "SET_SELECTION"
+        };
+      }
+      else return {}
+    })
+    
+    this.addMessageHandler("APPEND_SELECTION", (acc, objects) => {
+      if (objects instanceof Array) {
+        return {
+          selectedObject: objects[objects.length - 1],
+          lastUpdateReason: "APPEND_SELECTION"
+        };
+      } else return {};
+    })
+    
+    this.addMessageHandler("SET_OBJECT_VIEW", (acc, object) => {
+      if (!object.uuid) {
+        return {}
+      }
+      else {
+        return {
+          selectedObject: object,
+          lastUpdateReason: "SET_OBJECT_VIEW"
+        };
+      }
+    });
+        
+    this.addMessageHandler("SHOW_TOAST", (acc, toastProps: IToastProps) => {
+      AppToaster.show(toastProps);
+      return {};
+    });
+    
 		this.addMessageHandler("SHOW_NEW_WARNING",
 			() => {
 				return ({
@@ -187,26 +243,27 @@ export default class App extends React.Component<AppProps, AppState> {
 				materialDrawerOpen: true
 			});
 		});
-		
-		this.addMessageHandler("ASSIGN_MATERIAL",
-      (acc, material, id) => {
-        if (id) {
-          const surface = this.props.messenger.postMessage("FETCH_SURFACE", id)[0] as Surface;
-          surface.acousticMaterial = material;
-        }
-        else if ((this.state.selectedObject) && (this.state.selectedObject instanceof Surface)) {
-				// this.state.selectedObject.acousticMaterial = material;
-				const { selectedObject } = this.state;
-				selectedObject.acousticMaterial = material;
-				return ({
-					selectedObject,
-					materialDrawerOpen: false
-				})
-			}
-			return ({
-				selectedObject: this.state.selectedObject
-			})
-		});
+    
+
+		// this.addMessageHandler("ASSIGN_MATERIAL",
+    //   (acc, material, id) => {
+    //     if (id) {
+    //       const surface = this.props.messenger.postMessage("FETCH_SURFACE", id)[0] as Surface;
+    //       surface.acousticMaterial = material;
+    //     }
+    //     else if ((this.state.selectedObject) && (this.state.selectedObject instanceof Surface)) {
+		// 		// this.state.selectedObject.acousticMaterial = material;
+		// 		const { selectedObject } = this.state;
+		// 		selectedObject.acousticMaterial = material;
+		// 		return ({
+		// 			selectedObject,
+		// 			materialDrawerOpen: false
+		// 		})
+		// 	}
+		// 	return ({
+		// 		selectedObject: this.state.selectedObject
+		// 	})
+		// });
 		
 		this.addMessageHandler("TOGGLE_MATERIAL_SEARCH",
 			(acc, ...args) => {
@@ -233,6 +290,7 @@ export default class App extends React.Component<AppProps, AppState> {
         });
 			}
     );
+    
     this.addMessageHandler("SHOULD_REMOVE_CONTAINER",
       (acc, ...args) => {
       if (args[0] && this.state.containers[args[0]]) {
@@ -368,19 +426,18 @@ export default class App extends React.Component<AppProps, AppState> {
     });
 	}
 
-	handleObjectViewClick(object, e: React.MouseEvent) {
-		this.setState({
-			selectedObject: object,
-			lastUpdateReason: "handleObjectViewClick"
-		}, () => {
-				if (
-					this.state.selectedObject instanceof Surface ||
-					this.state.selectedObject instanceof Receiver ||
-					this.state.selectedObject instanceof Source
-				) {
-					this.props.messenger.postMessage("SET_SELECTION", [this.state.selectedObject.uuid]);
-				}
-		});
+  handleObjectViewClick(object, e: React.MouseEvent) {
+    if (object instanceof Container && object['kind']!=="room") {
+      if (e.shiftKey) {
+        this.props.messenger.postMessage("APPEND_SELECTION", [object])
+      }
+      else {
+        this.props.messenger.postMessage("SET_SELECTION", [object]);
+      }
+    }
+    else if (object instanceof Solver) {
+      this.props.messenger.postMessage("SET_OBJECT_VIEW", object)
+    }
   }
   handleObjectViewDelete(object: Container | Solver) {
     if (object instanceof Container) {
@@ -579,7 +636,9 @@ export default class App extends React.Component<AppProps, AppState> {
                       className={"main-nav_bar-left_menu-button"}
                     />
                     <Menu>
-                      <MenuItem text="Dock" icon="small-tick"></MenuItem>
+                      <MenuItem text="Toast" onClick={(e: React.MouseEvent) => {
+                        AppToaster.show({ message: "Toasted." });
+                      }}></MenuItem>
                     </Menu>
                   </Popover>
                   <Popover

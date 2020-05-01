@@ -21,6 +21,9 @@ import { Icon } from "@fortawesome/fontawesome-svg-core";
 import MicIcon from "@material-ui/icons/Mic";
 import ContextMenu from "./ContextMenu";
 
+import "./ObjectView.css";
+
+
 function NodesIcon(props) {
   return (
     <SvgIcon {...props}>
@@ -137,7 +140,7 @@ export default function ObjectView(props) {
         key: container.uuid,
         nodeId: container.uuid
       };
-      const className = (container as Container).selected ? "" : "";
+      const className = (container as Container).selected ? "container-selected" : "";
       const draggable = true;
       const key = container.uuid;
       const nodeId = container.uuid;
