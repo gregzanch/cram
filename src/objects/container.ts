@@ -3,10 +3,20 @@ import Receiver from "./receiver";
 import Surface from "./surface";
 import Room from "./room";
 import Source from "./source";
+import { KeyValuePair } from "../common/key-value-pair";
 
 type UserData = {
 	[key: string]: any;
 };
+
+export interface ContainerSaveObject {
+	name: string;
+  visible: boolean;
+  position: number[];
+  scale: number[];
+  rotation: number[];
+  uuid: string;
+}
 
 export interface ContainerProps {
 	userData?: UserData;
@@ -19,7 +29,9 @@ export default class Container extends THREE.Group {
 	selected: boolean;
 	select!: () => void;
 	deselect!: () => void;
-	
+	renderCallback!: (time?: number) => void;
+	save: () => ContainerSaveObject;
+	restore: (state: ContainerSaveObject) => void;
 	constructor(name: string, props?: ContainerProps) {
 		super();
 		this.name = name;
@@ -46,7 +58,32 @@ export default class Container extends THREE.Group {
 			// 		}
 			// });
 			// this.selected = false;
-		 };
+		};
+		this.renderCallback = () => { };
+		this.save = () => {
+      const name = this.name;
+      const visible = this.visible;
+      const position = this.position.toArray();
+      const scale = this.scale.toArray();
+      const rotation = this.rotation.toArray();
+      const uuid = this.uuid;
+      return {
+        name,
+        visible,
+        position,
+        scale,
+        rotation,
+        uuid
+      };
+    };
+		this.restore = (state: ContainerSaveObject) => { 
+			this.name = state.name;
+			this.visible = state.visible;
+			this.position.set(state.position[0], state.position[1], state.position[2]);
+			this.scale.set(state.scale[0], state.scale[1], state.scale[2]);
+			this.rotation.set(state.rotation[0], state.rotation[1], state.rotation[2]);
+			this.uuid = state.uuid;
+		};
 	}
 
 	get x() {

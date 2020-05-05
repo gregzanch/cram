@@ -5,6 +5,7 @@ import CheckboxInput from "../CheckboxInput";
 import Source from '../../objects/source';
 import GridRow from '../GridRow';
 import Messenger from "../../messenger";
+import ColorInput from "../ColorInput";
 
 export interface SourcePropertiesProps {
   object: Source;
@@ -71,9 +72,9 @@ export default function SourceProperties(props: SourcePropertiesProps) {
 
         {props.object.hasOwnProperty("scale") && (
           <GridRow label={"scale"}>
-            <NumberInput name="scalex" value={props.object.scale.x} {...XYZProps} />
-            <NumberInput name="scaley" value={props.object.scale.y} {...XYZProps} />
-            <NumberInput name="scalez" value={props.object.scale.z} {...XYZProps} />
+            <NumberInput name="scalex" value={props.object.scale.x} {...XYZProps} min={10e-10} />
+            <NumberInput name="scaley" value={props.object.scale.y} {...XYZProps} min={10e-10} />
+            <NumberInput name="scalez" value={props.object.scale.z} {...XYZProps} min={10e-10} />
           </GridRow>
         )}
 
@@ -85,7 +86,7 @@ export default function SourceProperties(props: SourcePropertiesProps) {
           </GridRow>
         )}
 
-        {props.object.hasOwnProperty("theta") && (
+        {/* {props.object.hasOwnProperty("theta") && (
           <GridRow label={"theta"}>
             <NumberInput name="theta" value={props.object.theta} {...XYZProps} />
           </GridRow>
@@ -93,6 +94,23 @@ export default function SourceProperties(props: SourcePropertiesProps) {
         {props.object.hasOwnProperty("phi") && (
           <GridRow label={"phi"}>
             <NumberInput name="phi" value={props.object.phi} {...XYZProps} />
+          </GridRow>
+        )} */}
+        {props.object.hasOwnProperty("mesh") && (
+          <GridRow label={"color"}>
+            <ColorInput
+              name="color"
+              value={props.object.getColorAsString()}
+              onChange={(e) => {
+                props.onPropertyChange({
+                  value: e.currentTarget.value,
+                  name: e.currentTarget.name,
+                  id: e.currentTarget.id,
+                  type: e.currentTarget.type,
+                  checked: undefined
+                });
+              }}
+            />
           </GridRow>
         )}
         {props.object.hasOwnProperty("uuid") && (

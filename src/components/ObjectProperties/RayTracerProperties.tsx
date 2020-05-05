@@ -132,8 +132,33 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
             <NumberInput name="reflectionOrder" value={props.object.reflectionOrder} {...XYZProps} />
           </GridRow>
         )}
+
+        {props.object.hasOwnProperty("passes") && (
+          <GridRow label={"passes"}>
+            <NumberInput name="passes" value={props.object.passes} {...XYZProps} min={1} step={1} />
+          </GridRow>
+        )}
+
+        {props.object.hasOwnProperty("_pointSize") && (
+          <GridRow label={"point size"}>
+            <NumberInput name="pointSize" value={props.object.pointSize} {...XYZProps} min={1} step={1} />
+          </GridRow>
+        )}
+
+        {props.object.hasOwnProperty("_raysVisible") && (
+          <GridRow label="show rays">
+            <CheckboxInput
+              checkedNode={<div className="checked-icon"></div>}
+              uncheckedNode={<div className="unchecked-icon" />}
+              name={"raysVisible"}
+              onChange={props.onPropertyChange}
+              checked={props.object.raysVisible}
+            />
+          </GridRow>
+        )}
+
         {props.object.hasOwnProperty("runWithoutReceiver") && (
-          <GridRow label="stochastic">
+          <GridRow label="ignore receivers">
             <CheckboxInput
               checkedNode={<div className="checked-icon"></div>}
               uncheckedNode={<div className="unchecked-icon" />}

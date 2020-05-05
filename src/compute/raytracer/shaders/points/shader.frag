@@ -1,5 +1,6 @@
 varying vec2 vColor;
 uniform float drawStyle;
+uniform int inverted;
 vec3 hsl2rgb(vec3 c)
 {
     vec3 rgb = clamp( abs(mod(c.x*6.0+vec3(0.0,4.0,2.0),6.0)-3.0)-1.0, 0.0, 1.0 );
@@ -41,16 +42,22 @@ vec3 rgb2hsl( vec3 c ){
 }
 
 void main() {
-  vec4 color = vec4(0.0);
+  vec3 color = vec3(0.0);
+	float alpha = vColor.x;
   if(drawStyle == 0.0){
     vec3 col = hsl2rgb(vec3(vColor.x/10.0,0.8, vColor.x));
-    color = vec4( col, vColor.x );
+    color = col;
+		alpha = vColor.x;
   }
   else if(drawStyle == 1.0){
     vec3 col = hsl2rgb(vec3(vColor.y,vColor.x,vColor.y));
     vec3 col2 = vec3(vColor.x,vColor.x,1.0-vColor.y);
-    color = vec4( col*col2, vColor.x );
+    color = col*col2;
+		alpha = vColor.x;
   }
-  gl_FragColor = color;
+	if(inverted != 0){
+		color = vec3(1.0) - color;
+	}
+  gl_FragColor = vec4(color, alpha);
   
 }

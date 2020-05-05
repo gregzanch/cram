@@ -14,16 +14,16 @@ export default class Messenger{
         this.messageListeners = {};
         this.lastMessage = "";
     }
-    addMessageHandler(message: string, handler: EventHandler): string {
+    addMessageHandler(message: string, handler: EventHandler): string[] {
         const id = uuid();
         if (!this.dictionary[message]) {
             this.dictionary[message] = {
                 [id]: handler
             }
-            return id;
+            return [message, id];
         } else {
             this.dictionary[message][id] = handler;
-            return id;
+            return [message, id];
         }
     }
     removeMessage(message: string) {

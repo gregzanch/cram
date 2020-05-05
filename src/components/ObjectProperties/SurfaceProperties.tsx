@@ -98,91 +98,43 @@ export default function SurfaceProperties(props: SurfacePropertiesProps) {
       <div style={SurfacePropertiesContainerStyle}>
         {props.object.hasOwnProperty("name") && (
           <GridRow label={"name"}>
-            <TextInput
-              name="name"
-              value={props.object.name}
-              onChange={props.onPropertyChange}
-            />
+            <TextInput name="name" value={props.object.name} onChange={props.onPropertyChange} />
           </GridRow>
         )}
 
         {props.object.hasOwnProperty("visible") && (
           <GridRow label={"visible"}>
-            <CheckboxInput
-              name="visible"
-              checked={props.object.visible}
-              onChange={props.onPropertyChange}
-            />
+            <CheckboxInput name="visible" checked={props.object.visible} onChange={props.onPropertyChange} />
           </GridRow>
         )}
 
         {props.object.hasOwnProperty("_displayVertexNormals") && (
           <GridRow label={"vertex normals"}>
-            <CheckboxInput
-              name="displayVertexNormals"
-              checked={props.object.displayVertexNormals}
-              onChange={props.onPropertyChange}
-            />
+            <CheckboxInput name="displayVertexNormals" checked={props.object.displayVertexNormals} onChange={props.onPropertyChange} />
           </GridRow>
         )}
 
         {props.object.hasOwnProperty("position") && (
           <GridRow label={"position"}>
-            <NumberInput
-              name="x"
-              value={props.object.position.x}
-              {...XYZProps}
-            />
-            <NumberInput
-              name="y"
-              value={props.object.position.y}
-              {...XYZProps}
-            />
-            <NumberInput
-              name="z"
-              value={props.object.position.z}
-              {...XYZProps}
-            />
+            <NumberInput name="x" value={props.object.position.x} {...XYZProps} />
+            <NumberInput name="y" value={props.object.position.y} {...XYZProps} />
+            <NumberInput name="z" value={props.object.position.z} {...XYZProps} />
           </GridRow>
         )}
 
         {props.object.hasOwnProperty("scale") && (
           <GridRow label={"scale"}>
-            <NumberInput
-              name="scalex"
-              value={props.object.scale.x}
-              {...XYZProps}
-            />
-            <NumberInput
-              name="scaley"
-              value={props.object.scale.y}
-              {...XYZProps}
-            />
-            <NumberInput
-              name="scalez"
-              value={props.object.scale.z}
-              {...XYZProps}
-            />
+            <NumberInput name="scalex" value={props.object.scale.x} min={10e-10} {...XYZProps} />
+            <NumberInput name="scaley" value={props.object.scale.y} min={10e-10} {...XYZProps} />
+            <NumberInput name="scalez" value={props.object.scale.z} min={10e-10} {...XYZProps} />
           </GridRow>
         )}
 
         {props.object.hasOwnProperty("rotation") && (
           <GridRow label={"rotation"}>
-            <NumberInput
-              name="rotationx"
-              value={props.object.rotation.x}
-              {...XYZProps}
-            />
-            <NumberInput
-              name="rotationy"
-              value={props.object.rotation.y}
-              {...XYZProps}
-            />
-            <NumberInput
-              name="rotationz"
-              value={props.object.rotation.z}
-              {...XYZProps}
-            />
+            <NumberInput name="rotationx" value={props.object.rotation.x} {...XYZProps} />
+            <NumberInput name="rotationy" value={props.object.rotation.y} {...XYZProps} />
+            <NumberInput name="rotationz" value={props.object.rotation.z} {...XYZProps} />
           </GridRow>
         )}
         <GridRowSeperator marginBottom={".125em"} />
@@ -210,12 +162,7 @@ export default function SurfaceProperties(props: SurfacePropertiesProps) {
               >
                 {props.object.acousticMaterial.name}
               </Tag>
-              <Button
-                icon="edit"
-                minimal
-                small
-                onClick={e=>props.messenger.postMessage("OPEN_MATERIAL_SEARCH",props.object)}
-              />
+              <Button icon="edit" minimal small onClick={(e) => props.messenger.postMessage("OPEN_MATERIAL_SEARCH", props.object)} />
             </>
           )}
         </GridRow>

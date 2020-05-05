@@ -104,12 +104,6 @@ export default function RT60Properties(props: RT60PropertiesProps) {
             </tbody>
          </table>
         </GridRow>
-        <GridRow span={2}>
-          <Button
-            text="Calulate Response"
-            onClick={e => props.messenger.postMessage("PLOT_SABINE_RT60", sabine)}
-          />
-        </GridRow>
       </div>
     </div>
   );

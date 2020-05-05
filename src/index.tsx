@@ -40,7 +40,11 @@ import materials from "./db/material.json";
 import {Searcher} from "fast-fuzzy";
 import { IToastProps } from "@blueprintjs/core";
 
-
+// import { CSG, CAG } from '@jscad/csg';
+// //@ts-ignore
+// window.CSG = CSG;
+// //@ts-ignore
+// window.CAG = CAG;
 
 // import Fuse from "fuse.js";
 export interface AcousticMaterial {
@@ -74,6 +78,7 @@ materials.forEach(x => {
 });
 
 const state = {
+  time: 0,
   selectedObjects: [] as Container[],
   materialsIndex,
   materials,
@@ -175,8 +180,10 @@ state.messenger.addMessageHandler("SHOULD_ADD_RAYTRACER", (acc, ...args) => {
     messenger: state.messenger,
     name: "ray-tracer",
     containers: state.containers,
-    reflectionOrder: 500,
+    reflectionOrder: 6,
     updateInterval: 5,
+    passes: 500,
+    pointSize: 2,
     renderer: state.renderer
   });
   state.solvers[raytracer.uuid] = raytracer;
@@ -185,7 +192,10 @@ state.messenger.addMessageHandler("SHOULD_ADD_RAYTRACER", (acc, ...args) => {
 });
 
 state.messenger.addMessageHandler("SHOULD_REMOVE_SOLVER", (acc, id) => {
- if (state.solvers && state.solvers[id]) {
+  if (state.solvers && state.solvers[id]) {
+    if (state.solvers[id].kind === "ray-tracer") {
+      (state.solvers[id] as RayTracer).removeMessageHandlers();
+    }
    delete state.solvers[id];
  }
 });
@@ -298,8 +308,8 @@ state.messenger.addMessageHandler("SHOULD_REMOVE_CONTAINER", (acc, id) => {
           return a;
         }, [] as string[]);
       } break;
-      
     }
+    state.selectedObjects = state.selectedObjects.filter((x) => x.uuid !== id);
     state.renderer.remove(state.containers[id]);
     delete state.containers[id];
   }
@@ -350,8 +360,14 @@ state.messenger.addMessageHandler("APP_MOUNTED", (acc, ...args) => {
 });
 
 state.messenger.addMessageHandler("RENDERER_UPDATED", (acc, ...args) => {
+  state.time += 0.01666666667;
   if (state.simulation.length > 0) {
     state.solvers[state.simulation].update();
+  }
+  if (state.selectedObjects.length > 0) {
+    state.selectedObjects.forEach(x => {
+      x.renderCallback(state.time);
+    })
   }
 });
 
@@ -440,15 +456,21 @@ state.messenger.addMessageHandler("SETTING_CHANGE", (acc, ...args) => {
 
 // new project
 state.messenger.addMessageHandler("NEW", (acc, ...args) => {
-  const keys = Object.keys(state.containers);
-  keys.forEach(x => {
+  Object.keys(state.solvers).forEach(x => {
+    state.messenger.postMessage("SHOULD_REMOVE_SOLVER", x);
+  })
+  Object.keys(state.containers).forEach(x => {
     state.messenger.postMessage('SHOULD_REMOVE_CONTAINER', x);
   });
-  console.log(state.containers);
+  state.messenger.postMessage("DESELECT_ALL_OBJECTS");
+  
 });
 
 
 registerHotKeys(state.messenger);
+
+// TODO remove this
+expose({ r: state.renderer }, window);
 
 // the main app
 ReactDOM.render(<App {...state} />, document.getElementById("root"));
@@ -485,15 +507,15 @@ setTimeout(() => {
 
   state.messenger.postMessage("ADDED_ROOM", room);
 
-  (state.containers[sourceidL] as Source).position.set(10, 14, 2.5);
+  (state.containers[sourceidL] as Source).position.set(28.5, 13, 3);
   (state.containers[sourceidL] as Source).scale.set(3, 3, 3);
   (state.containers[sourceidL] as Source).name = "L";
 
-  (state.containers[sourceidR] as Source).position.set(11, 0, 3);
+  (state.containers[sourceidR] as Source).position.set(28.5, 2, 3);
   (state.containers[sourceidR] as Source).scale.set(3, 3, 3);
   (state.containers[sourceidR] as Source).name = "R";
 
-  (state.containers[receiverId] as Receiver).position.set(22, 8,  3);
+  (state.containers[receiverId] as Receiver).position.set(12, 7.5,  4);
   (state.containers[receiverId] as Receiver).scale.set(8, 8, 8);
 
 

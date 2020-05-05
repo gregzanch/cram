@@ -68,9 +68,9 @@ export default function ReceiverProperties(props: ReceiverPropertiesProps) {
 
         {props.object.hasOwnProperty("scale") && (
           <GridRow label={"scale"}>
-            <NumberInput name="scalex" value={props.object.scale.x} {...XYZProps} />
-            <NumberInput name="scaley" value={props.object.scale.y} {...XYZProps} />
-            <NumberInput name="scalez" value={props.object.scale.z} {...XYZProps} />
+            <NumberInput name="scalex" value={props.object.scale.x} min={10e-10} {...XYZProps} />
+            <NumberInput name="scaley" value={props.object.scale.y} min={10e-10} {...XYZProps} />
+            <NumberInput name="scalez" value={props.object.scale.z} min={10e-10} {...XYZProps} />
           </GridRow>
         )}
 
@@ -86,8 +86,8 @@ export default function ReceiverProperties(props: ReceiverPropertiesProps) {
           <GridRow label={"color"}>
             <ColorInput
               name="color"
-              value={props.object.color}
-              onChange={e => {
+              value={props.object.getColorAsString()}
+              onChange={(e) => {
                 props.onPropertyChange({
                   value: e.currentTarget.value,
                   name: e.currentTarget.name,

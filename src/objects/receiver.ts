@@ -1,20 +1,29 @@
 
 import * as THREE from "three";
-import Container, { ContainerProps } from "./container";
-import { MATCAP_PORCELAIN_WHITE, MATCAP_RAZIN } from './asset-store';
+import Container, { ContainerProps, ContainerSaveObject } from "./container";
+import chroma from "chroma-js";
+import { MATCAP_PORCELAIN_WHITE, MATCAP_UNDER_SHADOW } from "./asset-store";
 
 // import { vs, fs } from '../render/shaders/glow';
+
+
+export interface ReceiverSaveObject extends ContainerSaveObject {
+  color: number;
+}
 
 export interface ReceiverProps extends ContainerProps{
     
 }
 
 const defaults = {
-  color: 0xdd6f6f
+  color: 0xdd6f6f,
+  selectedColor: 0x9fcbff
 };
 
 export default class Receiver extends Container{
   mesh: THREE.Mesh;
+  selectedMaterial: THREE.MeshMatcapMaterial;
+  normalMaterial: THREE.MeshMatcapMaterial;
   constructor(name: string, props?: ReceiverProps) {
     super(name);
     this.kind = "receiver";
@@ -31,29 +40,84 @@ export default class Receiver extends Container{
 //       blending: THREE.AdditiveBlending,
 //       transparent: true
 // });
+     this.selectedMaterial = new THREE.MeshMatcapMaterial({
+       color: defaults.color,
+       matcap: MATCAP_UNDER_SHADOW
+     });
+
+     this.normalMaterial = new THREE.MeshMatcapMaterial({
+       color: defaults.color,
+       matcap: MATCAP_PORCELAIN_WHITE
+     });
     this.mesh = new THREE.Mesh(
       new THREE.SphereGeometry(0.1, 32, 16),
-      new THREE.MeshMatcapMaterial({
-        color: defaults.color,
-        matcap: MATCAP_PORCELAIN_WHITE,
-      })
+      this.normalMaterial
     );
     this.mesh.userData['kind'] = 'receiver';
     this.add(this.mesh);
     this.select = () => {
-      this.selected = true;
-      // this.mesh.
-      console.log("receiver selected");
+      if (!this.selected) {
+        this.selected = true;
+        let brighterColor = chroma((this.mesh.material as THREE.MeshMatcapMaterial).color.getHex()).brighten(1).num();
+        this.selectedMaterial.color.setHex(brighterColor);
+        this.mesh.material = this.selectedMaterial;
+      }
     };
     this.deselect = () => {
-      this.selected = false;
+      if (this.selected) {
+        this.selected = false;
+        this.mesh.material = this.normalMaterial;
+      }
+    };
+    this.renderCallback = (time?: number) => {};
+    this.save = () => {
+      const name = this.name;
+      const visible = this.visible;
+      const position = this.position.toArray();
+      const scale = this.scale.toArray();
+      const rotation = this.rotation.toArray();
+      const color = this.getColorAsNumber();
+      const uuid = this.uuid;
+      return {
+        name,
+        visible,
+        position,
+        scale,
+        rotation,
+        color,
+        uuid
+      };
+    };
+    this.restore = (state: ReceiverSaveObject) => {
+      this.name = state.name;
+      this.visible = state.visible;
+      this.position.set(state.position[0], state.position[1], state.position[2]);
+      this.scale.set(state.scale[0], state.scale[1], state.scale[2]);
+      this.rotation.set(state.rotation[0], state.rotation[1], state.rotation[2]);
+      this.color = state.color;
+      this.uuid = state.uuid;
     };
   }
-  get color() {
-      return String.fromCharCode(35)+(this.mesh.material as THREE.MeshBasicMaterial).color.getHexString();
+  getColorAsNumber() {
+    return (this.mesh.material as THREE.MeshBasicMaterial).color.getHex();
   }
-  set color(col: string) {
-      (this.mesh.material as THREE.MeshBasicMaterial).color.setStyle(col)
+  getColorAsString() {
+    return String.fromCharCode(35) + (this.mesh.material as THREE.MeshBasicMaterial).color.getHexString();
+  }
+  get color(){
+    return String.fromCharCode(35)+(this.mesh.material as THREE.MeshBasicMaterial).color.getHexString();
+  }
+  set color(col: string | number) {
+    if (typeof col === "string") {
+      (this.mesh.material as THREE.MeshMatcapMaterial).color.setStyle(col);
+      (this.normalMaterial as THREE.MeshMatcapMaterial).color.setStyle(col);
+      (this.selectedMaterial as THREE.MeshMatcapMaterial).color.setStyle(col);
+    }
+    else {
+      (this.mesh.material as THREE.MeshMatcapMaterial).color.setHex(col);
+      (this.normalMaterial as THREE.MeshMatcapMaterial).color.setHex(col);
+      (this.selectedMaterial as THREE.MeshMatcapMaterial).color.setHex(col);
+    }
   }
 
 }

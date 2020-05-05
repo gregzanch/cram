@@ -176,6 +176,13 @@ export default class App extends React.Component<AppProps, AppState> {
 	}
   setupMessageHandlers() {
     
+    this.addMessageHandler("NEW", () => {
+      return {
+        selectedObject: {} as Container,
+        containers: {} as KeyValuePair<Container>,
+        lastUpdateReason: "NEW"
+      }
+    });
     this.addMessageHandler("DESELECT_ALL_OBJECTS", () => {
       return {
         selectedObject: {} as Container,
@@ -295,8 +302,10 @@ export default class App extends React.Component<AppProps, AppState> {
       (acc, ...args) => {
       if (args[0] && this.state.containers[args[0]]) {
         const containers = { ...this.state.containers };
+        const selectedObject = this.state.selectedObject;
         delete containers[args[0]];
         return {
+          selectedObject: selectedObject && selectedObject.uuid === args[0] ? {} as Container : selectedObject,
           containers,
           lastUpdateReason: "SHOULD_REMOVE_CONTAINER"
         }
@@ -332,8 +341,10 @@ export default class App extends React.Component<AppProps, AppState> {
     this.addMessageHandler("SHOULD_REMOVE_SOLVER", (acc, ...args) => {
       if (args[0] && this.state.solvers[args[0]]) {
         const solvers = { ...this.state.solvers };
+        const selectedObject = this.state.selectedObject;
         delete solvers[args[0]];
         return {
+          selectedObject: selectedObject && selectedObject.uuid === args[0] ? ({} as Container) : selectedObject,
           solvers,
           lastUpdateReason: "SHOULD_REMOVE_SOLVER"
         };
@@ -627,7 +638,7 @@ export default class App extends React.Component<AppProps, AppState> {
                       <MenuItem text="Paste" disabled></MenuItem>
                     </Menu>
                   </Popover>
-                  <Popover
+                  {/* <Popover
                     minimal={true}
                     transitionDuration={50}
                     position={Position.BOTTOM_LEFT}>
@@ -640,7 +651,7 @@ export default class App extends React.Component<AppProps, AppState> {
                         AppToaster.show({ message: "Toasted." });
                       }}></MenuItem>
                     </Menu>
-                  </Popover>
+                  </Popover> */}
                   <Popover
                     minimal={true}
                     transitionDuration={50}
@@ -659,7 +670,6 @@ export default class App extends React.Component<AppProps, AppState> {
                             }}>
                             <div>Source</div>
                             <div style={{ color: Colors.LIGHT_GRAY1 }}>
-                              {Characters.COMMAND}
                             </div>
                           </div>
                         }
@@ -684,7 +694,6 @@ export default class App extends React.Component<AppProps, AppState> {
                             }}>
                             <div>Ray Tracer</div>
                             <div style={{ color: Colors.LIGHT_GRAY1 }}>
-                              {Characters.COMMAND}
                             </div>
                           </div>
                         }
@@ -704,10 +713,10 @@ export default class App extends React.Component<AppProps, AppState> {
                             }}>
                             <div>FDTD</div>
                             <div style={{ color: Colors.LIGHT_GRAY1 }}>
-                              {Characters.COMMAND}
                             </div>
                           </div>
                         }
+                        disabled
                         onClick={() =>
                           this.props.messenger.postMessage("SHOULD_ADD_FDTD")
                         }
@@ -721,7 +730,6 @@ export default class App extends React.Component<AppProps, AppState> {
                             }}>
                             <div>RT60</div>
                             <div style={{ color: Colors.LIGHT_GRAY1 }}>
-                              {Characters.COMMAND}
                             </div>
                           </div>
                         }
@@ -743,6 +751,7 @@ export default class App extends React.Component<AppProps, AppState> {
                 icon="cog"
                 minimal={true}
                 className={"main-nav_bar-right_menu-button"}
+                disabled
                 onClick={this.handleSettingsButtonClick}></Button>
             </Navbar.Group>
           </Navbar>
