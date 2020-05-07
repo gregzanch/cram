@@ -366,6 +366,11 @@ export default class Renderer {
 				} else {
 				}
 			} else {
+				if (e.button == 0) {
+					if (!e.shiftKey && !e.altKey) {
+						this.messenger.postMessage("DESELECT_ALL_OBJECTS");
+					}
+				}
 			}
 			// console.log(this.pickHelper);
 		});
@@ -419,14 +424,19 @@ export default class Renderer {
 	setOrtho(on: boolean) {
 		const near = this.camera.near;
 		const far = this.camera.far;
-		const fov = this.camera instanceof THREE.PerspectiveCamera && this.camera.fov || 45;
+		const fov = this.camera instanceof THREE.PerspectiveCamera && this.camera.fov || this.fov;
+		const filmWidth = (this.camera instanceof THREE.PerspectiveCamera && this.camera.getFilmWidth()) || 35;
+		const filmHeight = (this.camera instanceof THREE.PerspectiveCamera && this.camera.getFilmHeight()) || 35/this.aspect;
 		const target = this.controls.target.toArray();
 		if (on) {
-			const { left, right, top, bottom } = this.getCenteredCanvasBounds();
+			// const { left, right, top, bottom } = this.getCenteredCanvasBounds();
 			// const top = far * Math.tan((Math.PI / 360) * this.aspect * fov);
-			// const bottom = -top;
 			// const right = far * Math.tan((Math.PI / 360) * fov);
-			// const left = -right;
+			
+			const top = filmHeight / 2;
+			const right = filmWidth / 2;
+			const bottom = -top;
+			const left = -right;
 			let camera = new THREE.OrthographicCamera(left, right, top, bottom, near, far);
 			// camera.zoom = 8.1;
 			this.camera = camera;
@@ -467,6 +477,47 @@ export default class Renderer {
 		}
 		
 		this.pickHelper = new PickHelper(this.scene, this._camera, this.renderer.domElement);
+	}
+	
+	get zoom() {
+		return (this.camera && this.camera.zoom) || 1;
+	}
+	
+	set zoom(zoom: number) {
+		this._camera.zoom = zoom;
+		this.camera.updateProjectionMatrix();
+	}
+	
+	get isOrtho() {
+		return this.camera instanceof THREE.OrthographicCamera;
+	}
+	
+	set isOrtho(ortho: boolean) {
+		if (ortho != this.isOrtho) {
+			this.messenger.postMessage("TOGGLE_CAMERA_ORTHO");
+		}
+	}
+	
+	get background() {
+		return (this.scene.background as THREE.Color).getHexString();
+	}
+	set background(color: string) {
+		(this.scene.background as THREE.Color).setStyle(color);
+	}
+	get fogColor() {
+		return (this.scene.fog && this.scene.fog.color && this.scene.fog.color.getHexString()) || "#000000";
+	}
+	set fogColor(color: string) {
+		this.scene.fog?.color.setStyle(color);
+	}
+	get fov() {
+		return this.camera instanceof THREE.PerspectiveCamera ? this.camera.fov : this._fov;
+	}
+	set fov(fov: number) {
+		this._fov = fov;
+		if (this.camera instanceof THREE.PerspectiveCamera) {
+			this.camera.fov = fov;
+		}
 	}
 	
 	
@@ -615,27 +666,7 @@ export default class Renderer {
 	}
 	
 	
-	get background() {
-		return (this.scene.background as THREE.Color).getHexString();
-	}
-	set background(color: string) {
-		(this.scene.background as THREE.Color).setStyle(color);
-	}
-	get fogColor() {
-		return (this.scene.fog && this.scene.fog.color && this.scene.fog.color.getHexString()) || "#000000";
-	}
-	set fogColor(color: string) {
-		this.scene.fog?.color.setStyle(color);
-	}
-	get fov() {
-		return this.camera instanceof THREE.PerspectiveCamera ? this.camera.fov : this._fov;
-	}
-	set fov(fov: number) {
-		this._fov = fov;
-		if (this.camera instanceof THREE.PerspectiveCamera) {
-			this.camera.fov = fov;
-		}
-	}
+	
 	
 	
 }

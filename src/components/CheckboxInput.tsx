@@ -2,6 +2,7 @@ import React from "react";
 import VisibilityIcon from '@material-ui/icons/Visibility';
 import VisibilityOffIcon from '@material-ui/icons/VisibilityOff';
 import { ObjectPropertyInputEvent } from "./NumberInput";
+import "./CheckboxInput.css";
 
 export interface CheckboxInputProps {
 	name: string;
@@ -30,7 +31,7 @@ export function CheckboxInput(props: CheckboxInputProps) {
 				name={props.name}
 				checked={props.checked}
 			/>
-			{props.checked ? (props.checkedNode || <VisibilityIcon fontSize="small" className="checkbox-checkmark"/>) : (props.uncheckedNode || <VisibilityOffIcon fontSize="small" className="checkbox-checkmark"/>)}
+			{/* {props.checked ? (props.checkedNode || <VisibilityIcon fontSize="small" className="checkbox-checkmark"/>) : (props.uncheckedNode || <VisibilityOffIcon fontSize="small" className="checkbox-checkmark"/>)} */}
 		</label> 
 	)
 }

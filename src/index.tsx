@@ -183,7 +183,7 @@ state.messenger.addMessageHandler("SEARCH_ALL_MATERIALS", (acc, ...args) => {
 state.messenger.addMessageHandler("SHOULD_ADD_RAYTRACER", (acc, ...args) => {
   const raytracer = new RayTracer({
     messenger: state.messenger,
-    name: "ray-tracer",
+    name: "Ray Tracer",
     containers: state.containers,
     reflectionOrder: 6,
     updateInterval: 5,
