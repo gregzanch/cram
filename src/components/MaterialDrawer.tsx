@@ -13,9 +13,11 @@ import ObjectView from './ObjectView';
 import { KeyValuePair } from '../common/key-value-pair';
 import Container from '../objects/container';
 
+import "./MaterialDrawer.css";
 
 const max = (a: number, b: number) => (a > b ? a : b);
 const min = (a: number, b: number) => (a < b ? a : b);
+const none = <></>;
 
 export interface MaterialDrawerProps {
   object?: Surface;
@@ -159,12 +161,37 @@ export default class MaterialDrawer extends React.Component<MaterialDrawerProps,
       }
       else return <div></div>;
     }
-    const absorptionKeys =
-      this.state.selected_item &&
-      this.state.selected_item.absorption &&
-      Object.keys(this.state.selected_item.absorption);
+
     
     const rooms = this.props.messenger.postMessage("FETCH_ROOMS")[0];
+    
+    
+    
+    const absorption = this.state.selected_item._id && Object.keys(this.state.selected_item.absorption).map((x) => {
+      return (
+        <div key={uuid()}>
+          <div className="material_drawer-display-material_absorption-header">{x}Hz</div>
+          <div className="material_drawer-display-material_absorption-value">{this.state.selected_item.absorption[x]}</div>
+        </div>
+      );
+    })
+    const materialProperties = this.state.selected_item._id && (
+      <>
+        <div className={"material_drawer-display-material_name"}>
+          <span>
+            <span>{this.state.selected_item.name}</span>
+          </span>
+        </div>
+        <div className={"material_drawer-display-material_material"}>
+          <span>{this.state.selected_item.material}</span>
+          <span className="muted-text" style={{ textAlign: "right" }}>
+            {this.state.selected_item._id}
+          </span>
+        </div>
+        <div className={"material_drawer-display-material_id"}></div>
+        <div className={"material_drawer-display-material_absorption"}>{absorption}</div>
+      </>
+    );
     
     return (
       <div className="material_drawer-grid">
@@ -199,7 +226,7 @@ export default class MaterialDrawer extends React.Component<MaterialDrawerProps,
           <div>
             <a
               className="show-more"
-              onClick={e =>
+              onClick={(e) =>
                 this.setState({
                   bufferLength: clamp(15 + this.state.bufferLength, 1, filteredItems.length)
                 })
@@ -208,38 +235,18 @@ export default class MaterialDrawer extends React.Component<MaterialDrawerProps,
             </a>
           </div>
           <div className={"material_drawer-display-container"}>
-            <div className={"material_drawer-display-material_name"}>
-              {this.state.selected_item && this.state.selected_item.name && <span>{this.state.selected_item.name}</span>}
+            {materialProperties}
+            <div className={"material_drawer-display-assign_button"}>
+              <Button
+                intent="success"
+                text="assign"
+                icon="tick"
+                disabled={!this.state.selected_item || typeof this.state.selected_item._id === "undefined"}
+                onClick={(e) => {
+                  this.props.messenger.postMessage("ASSIGN_MATERIAL", this.state.selected_item, this.state.selected_object.uuid || false);
+                }}
+              />
             </div>
-            <div className={"material_drawer-display-material_material"}>
-              {this.state.selected_item && this.state.selected_item.material && <em>{this.state.selected_item.material}</em>}
-            </div>
-            <div className={"material_drawer-display-material_absorption"}>
-              {this.state.selected_item &&
-                this.state.selected_item.absorption &&
-                absorptionKeys.map(x => {
-                  return (
-                    <div key={uuid()}>
-                      <div className="material_drawer-display-material_absorption-header">{x}Hz</div>
-                      <div className="material_drawer-display-material_absorption-value">{this.state.selected_item.absorption[x]}</div>
-                    </div>
-                  );
-                })}
-            </div>
-            {
-              <div className={"material_drawer-display-assign_button"}>
-                <Button
-                  intent="success"
-                  text={"assign"}
-                  icon={"tick"}
-                  disabled={!this.state.selected_item || typeof this.state.selected_item._id === "undefined"}
-                  onClick={e => {
-                    this.props.messenger.postMessage("ASSIGN_MATERIAL", this.state.selected_item, this.state.selected_object.uuid || false);
-                    }
-                  }
-                />
-              </div>
-            }
           </div>
         </div>
       </div>

@@ -4,6 +4,8 @@ import "@blueprintjs/core/lib/css/blueprint.css";
 import "@blueprintjs/table/lib/css/table.css";
 import "@blueprintjs/icons/lib/css/blueprint-icons.css";
 
+import "./global.css";
+
 import "./split-container.css";
 import "./styles.css";
 import "./panel.css";
@@ -22,4 +24,3 @@ import "./gutter.css";
 import "./small-button.css";
 import "./suggestions.css";
 import "./orient.css";
-import "./material-drawer.css";

@@ -1,19 +1,23 @@
+
+body{
+  --main-nav_bar__height: 25px;
+}
 .main-nav_bar{
-  height: 30px;
+  height: var(--main-nav_bar__height);
 }
 .main-nav_bar-logo_text{
   font-size: 12pt;
   vertical-align: text-top;
   margin: 0 0 .25em;
-  height: 30px;
+  height: var(--main-nav_bar__height);
 }
 .main-nav_bar-left_group, .main-nav_bar-right_group{
-  height: 30px;
+  height: var(--main-nav_bar__height);
   font-size: 12pt;
   
 }
 .main-nav_bar-left_menu,.main-nav_bar-right_menu{
-  height: 30px;
+  height: var(--main-nav_bar__height);
   font-size: 12pt;
   padding: 0 5px;
 }

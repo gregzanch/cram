@@ -14,9 +14,11 @@ import { OrbitControls } from "./OrbitControls";
 // import { AudioRenderer } from './audio';
 import { CameraStore } from "../common/storage-schemas";
 
+import Timer from '../common/timer';
 
 import { lerp, lerp3 } from "../common/lerp";
 import EasingFunctions from '../common/easing';
+import cubicBezier from '../common/cubic-bezier';
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 
 //@ts-ignore
@@ -43,6 +45,32 @@ import PickHelper from './pick-helper';
 
 
 
+export interface SmoothCameraParams {
+  /**
+   * Where the camera will end up
+   */
+  position: THREE.Vector3;
+
+  /**
+   * Where to look at while moving
+   */
+  target?: THREE.Vector3;
+
+  /**
+   * time in ms
+   */
+  duration?: number;
+
+  /**
+   * easing function which acts similar to a css function
+   */
+	easingFunction?: (t: number) => number;
+	
+	/**
+	 * callback
+	 */
+  onFinish?: (...args) => void;
+}
 
 
 
@@ -109,9 +137,10 @@ export default class Renderer {
 	workspaceCursor!: THREE.Object3D;
 	fog!: THREE.FogExp2 | THREE.Fog;
 
+	_fov!: number;
 
   textures!: KeyValuePair<THREE.Texture>
-	smoothingCameraFunction!: any;
+	smoothingCameraCallback!: any;
 	smoothingCamera!: boolean;
 	messenger: Messenger;
 	pickHelper!: PickHelper;
@@ -129,6 +158,7 @@ export default class Renderer {
 			"render",
 			"smoothCameraTo",
 			"setOrtho",
+			"storeCameraState"
 		].forEach(method => {
 			this[method] = this[method].bind(this);
 		});
@@ -150,7 +180,7 @@ export default class Renderer {
 		};
 		
 		this.smoothingCamera = false;
-		this.smoothingCameraFunction = undefined;
+		this.smoothingCameraCallback = undefined;
 		this.elt = elt;
 		this.stack = [] as Array<(...args) => void>;
 		this.env = new Container("env");
@@ -190,139 +220,192 @@ export default class Renderer {
 		this.renderer.setPixelRatio(pixelRatio);
 		
 		
-
-			const fov = 45;
-			const aspect = this.aspect;
-			const near = 0.01;
-			const far = 500;
-			const up = [0, 0, 1];
+		this._fov = 45;
+		const aspect = this.aspect;
+		const near = 0.01;
+		const far = 500;
+		const up = [0, 0, 1];
 			
-			this._camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-			this._camera.up.set(up[0], up[1], up[2]);
+		this._camera = new THREE.PerspectiveCamera(this._fov, aspect, near, far);
+		this._camera.layers.enableAll();
+		this._camera.up.set(up[0], up[1], up[2]);
 
-			const storedState = JSON.parse(localStorage.getItem("camera") || defaults.camera) as CameraStore;
+		
 
-			if (storedState) {
-				if (storedState.object) {
-					this._camera.position.set(storedState.object.matrix[12], storedState.object.matrix[13], storedState.object.matrix[14]);
-					if (this._camera instanceof THREE.PerspectiveCamera) {
-						this._camera.fov = storedState.object.fov;
-						this._camera.aspect = storedState.object.aspect;
-					}
-				}
+
+		this.mouseConfigSet = {
+			Default: {
+				LEFT: THREE.MOUSE.ROTATE,
+				MIDDLE: THREE.MOUSE.DOLLY,
+				RIGHT: THREE.MOUSE.PAN
+			},
+			Shift: {
+				LEFT: THREE.MOUSE.ROTATE,
+				MIDDLE: THREE.MOUSE.DOLLY,
+				RIGHT: THREE.MOUSE.PAN
+			},
+			Meta: {
+				LEFT: THREE.MOUSE.ROTATE,
+				MIDDLE: THREE.MOUSE.DOLLY,
+				RIGHT: THREE.MOUSE.PAN
+			},
+			Alt: {
+				LEFT: THREE.MOUSE.ROTATE,
+				MIDDLE: THREE.MOUSE.DOLLY,
+				RIGHT: THREE.MOUSE.PAN
+			},
+			Control: {
+				LEFT: THREE.MOUSE.ROTATE,
+				MIDDLE: THREE.MOUSE.DOLLY,
+				RIGHT: THREE.MOUSE.PAN
 			}
+		};
 
-			this.mouseConfigSet = {
-				Default: {
-					LEFT: THREE.MOUSE.ROTATE,
-					MIDDLE: THREE.MOUSE.DOLLY,
-					RIGHT: THREE.MOUSE.PAN
-				},
-				Shift: {
-					LEFT: THREE.MOUSE.ROTATE,
-					MIDDLE: THREE.MOUSE.DOLLY,
-					RIGHT: THREE.MOUSE.PAN
-				},
-				Meta: {
-					LEFT: THREE.MOUSE.ROTATE,
-					MIDDLE: THREE.MOUSE.DOLLY,
-					RIGHT: THREE.MOUSE.PAN
-				},
-				Alt: {
-					LEFT: THREE.MOUSE.ROTATE,
-					MIDDLE: THREE.MOUSE.DOLLY,
-					RIGHT: THREE.MOUSE.PAN
-				},
-				Control: {
-					LEFT: THREE.MOUSE.ROTATE,
-					MIDDLE: THREE.MOUSE.DOLLY,
-					RIGHT: THREE.MOUSE.PAN
-				}
-			};
-
-			this.controls = new OrbitControls(this._camera, this.renderer.domElement);
-			this.controls.mouseButtons = this.mouseConfigSet.Default;
-			this.controls.screenSpacePanning = true;
-			// console.log(this.controls)
+		this.controls = new OrbitControls(this._camera, this.renderer.domElement);
+		this.controls.mouseButtons = this.mouseConfigSet.Default;
+		this.controls.screenSpacePanning = true;
+		// console.log(this.controls)
+		
 
 	
-		
-			this.pickHelper = new PickHelper(this.scene, this._camera, this.renderer.domElement);
-		
-			this.fog = new THREE.Fog(background, far - 200, far);
-			this.scene.fog = this.fog;
-
-			this.composer = new EffectComposer(this.renderer as THREE.WebGLRenderer);
-
-			this.renderPass = new RenderPass(this.scene, this._camera);
-			this.composer.addPass(this.renderPass);
-
-		
-			this.settingHandlers = {};
-			this.settingHandlers.lightHelpersVisible = (val: boolean) => {
-				console.log(val);
-				this.lights.setHelpersVisible(val);
-			};
+		this.pickHelper = new PickHelper(this.scene, this._camera, this.renderer.domElement);
 	
-			this.messenger.addMessageHandler("RENDERER_SHOULD_CHANGE_BACKGROUND", (acc, ...args) => (this.background = args[0]));
-			this.messenger.addMessageHandler("RENDERER_SHOULD_CHANGE_FOG_COLOR", (acc, ...args) => (this.fogColor = args[0]));
-			this.messenger.addMessageHandler("TOGGLE_CAMERA_ORTHO", (acc, ...args) => this.setOrtho(this.camera instanceof THREE.PerspectiveCamera));
-			this.messenger.addMessageHandler("SHOULD_REMOVE_CONTAINER", (acc, ...args) => {
-				const id = args[0];
-				const object = this.scene.getObjectByProperty("uuid", id);
-				if (object) {
-					console.log(object);
-					object.parent && object.parent.remove(object);
-					// this.scene.remove(object);
-				}
-			});
+		this.fog = new THREE.Fog(background, far - 200, far);
+		this.scene.fog = this.fog;
+
+		this.composer = new EffectComposer(this.renderer as THREE.WebGLRenderer);
+
+		this.renderPass = new RenderPass(this.scene, this._camera);
+		this.composer.addPass(this.renderPass);
+
+	
+		this.settingHandlers = {};
+		this.settingHandlers.lightHelpersVisible = (val: boolean) => {
+			console.log(val);
+			this.lights.setHelpersVisible(val);
+		};
+
+		this.messenger.addMessageHandler("RENDERER_SHOULD_CHANGE_BACKGROUND", (acc, ...args) => (this.background = args[0]));
+		this.messenger.addMessageHandler("RENDERER_SHOULD_CHANGE_FOG_COLOR", (acc, ...args) => (this.fogColor = args[0]));
+		this.messenger.addMessageHandler("TOGGLE_CAMERA_ORTHO", (acc, ...args) => {
+			this.setOrtho(this.camera instanceof THREE.PerspectiveCamera);
+			this.storeCameraState();
+		});
+		this.messenger.addMessageHandler("SHOULD_REMOVE_CONTAINER", (acc, ...args) => {
+			const id = args[0];
+			const object = this.scene.getObjectByProperty("uuid", id);
+			if (object) {
+				console.log(object);
+				object.parent && object.parent.remove(object);
+				// this.scene.remove(object);
+			}
+		});
 		
+		this.messenger.addMessageHandler("LOOK_ALONG_AXIS", (acc, ...args) => {
+			const axis = args[0];
+
+			const onFinish = () => {
+        if (this.camera instanceof THREE.PerspectiveCamera) {
+          this.messenger.postMessage("TOGGLE_CAMERA_ORTHO");
+        }
+			};
+			const dist = this.camera.position.distanceTo(this.controls.target);
+			
+			const duration = 1000;
+			const target = new THREE.Vector3(0,0,0);
+			const easingFunction = EasingFunctions.linear;
+			
+			const adds = {
+        "+x": new THREE.Vector3(dist, 0, 0),
+        "-x": new THREE.Vector3(-dist, 0, 0),
+        "+y": new THREE.Vector3(0, dist, 0),
+        "-y": new THREE.Vector3(0, -dist, 0),
+        "+z": new THREE.Vector3(0, 0, dist),
+        "-z": new THREE.Vector3(0, 0, -dist)
+			};
+			if (!adds[axis]) {
+				console.warn("invalid args");
+      	return;
+      }
+			// const position = this.controls.target.clone() as THREE.Vector3;
+			const position = adds[axis];
+      this.smoothCameraTo({ position, target, duration, onFinish, easingFunction });
+			
+		})
+	
 
 
-			// save the state of the camera
-			window.addEventListener("mouseup", (e) => {
-				if (this.camera instanceof THREE.PerspectiveCamera) {
-					localStorage.setItem("camera", JSON.stringify(this.camera.toJSON()));
-				}
-			});
+		// save the state of the camera
+		window.addEventListener("mouseup", this.storeCameraState);
 
-			window.addEventListener("keydown", (e) => {
-				if (this.modifierKeyState.hasOwnProperty(e.key)) {
-					this.modifierKeyState[e.key] += 1;
-				}
-				if (e.key === "Escape") {
-					this.messenger.postMessage("DESELECT_ALL_OBJECTS");
-				}
-			});
+		window.addEventListener("keydown", (e) => {
+			if (this.modifierKeyState.hasOwnProperty(e.key)) {
+				this.modifierKeyState[e.key] += 1;
+			}
+			if (e.key === "Escape") {
+				this.messenger.postMessage("DESELECT_ALL_OBJECTS");
+			}
+		});
 
-			window.addEventListener("keyup", (e) => {
-				if (this.modifierKeyState.hasOwnProperty(e.key)) {
-					this.modifierKeyState[e.key] -= 1;
-				}
-			});
+		window.addEventListener("keyup", (e) => {
+			if (this.modifierKeyState.hasOwnProperty(e.key)) {
+				this.modifierKeyState[e.key] -= 1;
+			}
+		});
 
-			this.renderer.domElement.addEventListener("mousedown", (e) => {
-				const selection = this.pickHelper.pick(e, [this.workspace]);
+		this.renderer.domElement.addEventListener("mousedown", (e) => {
+			const selection = this.pickHelper.pick(e, [this.workspace]);
 
-				if (selection) {
-					if (e.button == 0) {
-						if (e.shiftKey) {
-							this.messenger.postMessage("APPEND_SELECTION", [selection]);
-						} else if (!e.altKey) {
-							this.messenger.postMessage("SET_SELECTION", [selection]);
-						}
-					} else {
+			if (selection) {
+				if (e.button == 0) {
+					if (e.shiftKey) {
+						this.messenger.postMessage("APPEND_SELECTION", [selection]);
+					} else if (!e.altKey) {
+						this.messenger.postMessage("SET_SELECTION", [selection]);
 					}
 				} else {
 				}
-				// console.log(this.pickHelper);
-			});
-			
-			this.render();
-			this.composer.render();
+			} else {
+			}
+			// console.log(this.pickHelper);
+		});
+		
+		this.render();
+		// this.composer.render();
+		
+		const storedState = JSON.parse(localStorage.getItem("camera") || defaults.camera) as CameraStore;
+		
+		if (storedState) {
+			if (storedState.object) {
+        this.camera.position.fromArray(storedState.object.pos);
+        this.camera.quaternion.fromArray(storedState.object.quat);
+				this.camera.near = storedState.object.near;
+				this.camera.far = storedState.object.far;
+				if (storedState.object.type === "PerspectiveCamera") {
+					this.camera = new THREE.PerspectiveCamera((this.camera as THREE.PerspectiveCamera).fov, aspect, this.camera.near, this.camera.far);
+					this.camera.zoom = storedState.object.zoom;
+				}
+				else if (storedState.object.type === "OrthographicCamera") {
+					this.camera = new THREE.OrthographicCamera(storedState.object.left!, storedState.object.right!, storedState.object.top!, storedState.object.bottom!, this.camera.near, this.camera.far);
+					this.camera.zoom = storedState.object.zoom;
+				}
+				this.controls.target.fromArray(storedState.object.target || [0, 0, 0]);
+				// this.camera.layers.enableAll();
+				// this.camera.up.set(0,0,1);
+      }
+    }
 
-			// setInterval(this.render, 1000 / 20);
+		// setInterval(this.render, 1000 / 20);
 
+	}
+	
+	storeCameraState() {
+		const obj = this.camera.toJSON();
+    obj.object.quat = this.camera.quaternion.toArray();
+		obj.object.pos = this.camera.position.toArray();
+		obj.object.zoom = this.camera.zoom;
+		obj.object.target = this.controls.target.toArray();
+    localStorage.setItem("camera", JSON.stringify(obj));
 	}
 	
 	resetControls() {
@@ -331,23 +414,29 @@ export default class Renderer {
     this.controls.mouseButtons = this.mouseConfigSet.Default;
     this.controls.screenSpacePanning = true;
     // console.log(this.controls)
-
 	}
 	
 	setOrtho(on: boolean) {
 		const near = this.camera.near;
 		const far = this.camera.far;
-		const fov = 45;
+		const fov = this.camera instanceof THREE.PerspectiveCamera && this.camera.fov || 45;
+		const target = this.controls.target.toArray();
 		if (on) {
 			const { left, right, top, bottom } = this.getCenteredCanvasBounds();
+			// const top = far * Math.tan((Math.PI / 360) * this.aspect * fov);
+			// const bottom = -top;
+			// const right = far * Math.tan((Math.PI / 360) * fov);
+			// const left = -right;
 			let camera = new THREE.OrthographicCamera(left, right, top, bottom, near, far);
-			camera.zoom = 8.1;
+			// camera.zoom = 8.1;
 			this.camera = camera;
-
+			this.camera.layers.enableAll();
 		}
 		else {
 			this.camera = new THREE.PerspectiveCamera(fov, this.aspect, near, far);
+			this.camera.layers.enableAll();
 		}
+		this.controls.target.fromArray(target);
 		// this.resizeCanvasToDisplaySize(true);
 		// this.camera.position.set(pos.x, pos.y, pos.z);
 		// this.camera.applyQuaternion(quat);
@@ -488,35 +577,32 @@ export default class Renderer {
 			return [this.orthoCamera.top, this.orthoCamera.bottom, this.orthoCamera.left, this.orthoCamera.right];
 		}
 	}
-	
-	smoothCameraTo(
-		position: THREE.Vector3,
-		target?: THREE.Vector3,
-		duration?: number,
-		curve?: (t: number) => number
-	) {
-		const origin = this.camera.getWorldPosition(new THREE.Vector3());
-		const timer = new Ticker("inc");
-		const _curve = curve || EasingFunctions.linear;
-		const _duration = (duration || 1000);
+
+	smoothCameraTo(params: SmoothCameraParams) {
+		const originalPosition = this.camera.position.clone();
+		const originalTarget = this.controls.target.clone();
+		const target = params.target || originalTarget.clone();
+		const timer = new Timer(params.duration || 1000, (_timer) => {
+			this.smoothingCamera = false;
+			console.log('finished');
+			if (params.onFinish) {
+				params.onFinish(_timer);
+			}
+		});
+		const curveFunction = params.easingFunction || EasingFunctions.linear;
 		this.smoothingCamera = true;
-		this.smoothingCameraFunction = () => {
-			timer.tick();
-			if (timer.ticks > _duration) {
-        this.smoothingCamera = false;
-        return;
-      }
-			const pos = lerp3(
-        origin,
-        position,
-        _curve(timer.ticks / _duration)
-      );
+		this.smoothingCameraCallback = () => {
+			const progress = curveFunction(timer.tick());
+			const pos = lerp3(originalPosition, params.position, curveFunction(progress));
+			const tar = lerp3(originalTarget, target, curveFunction(progress));
 			this.camera.position.set(pos.x, pos.y, pos.z);
-			target && this.camera.lookAt(target);
+			this.camera.lookAt(tar);
+			this.controls.target.set(tar.x, tar.y, tar.z);
 		};
+		timer.start();
 	}
 	update() {
-		this.smoothingCamera && this.smoothingCameraFunction();
+		this.smoothingCamera && this.smoothingCameraCallback();
 		this.messenger.postMessage("RENDERER_UPDATED");
 	}
 	render() {
@@ -541,34 +627,15 @@ export default class Renderer {
 	set fogColor(color: string) {
 		this.scene.fog?.color.setStyle(color);
 	}
-	
-	
-}
-
-
-export interface SmoothCameraParams {
-	position: THREE.Vector3;
-	target?: THREE.Vector3;
-	duration: number;
-	curve?: (t: number) => number;
-}
-
-export class Ticker{
-	ticks: number;
-	kind: "inc" | "dec";
-	inc: boolean;
-	tick: (() => number);
-	constructor(kind: "inc" | "dec", ticks?: number) {
-		this.kind = kind;
-		this.inc = this.kind === "inc";
-		this.ticks = ticks || 0;	
-		this.tick = this.inc
-			? function () {
-				return this.ticks++;
-			}
-			: function () {
-				return this.ticks--;
-			}
+	get fov() {
+		return this.camera instanceof THREE.PerspectiveCamera ? this.camera.fov : this._fov;
 	}
+	set fov(fov: number) {
+		this._fov = fov;
+		if (this.camera instanceof THREE.PerspectiveCamera) {
+			this.camera.fov = fov;
+		}
+	}
+	
+	
 }
-

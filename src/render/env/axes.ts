@@ -50,8 +50,10 @@ export default class Axes extends Container {
 				visible: (props && props.Zaxis) || false
 			})
 		);
-    
-    this.add(this.Xaxis, this.Yaxis, this.Zaxis);
+		
+		this.renderOrder = -1;
+		this.add(this.Xaxis, this.Yaxis, this.Zaxis);
+		
   }
   makeLine(start: THREE.Vector3, end: THREE.Vector3) {
     const geometry = new THREE.Geometry();

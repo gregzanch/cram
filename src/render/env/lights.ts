@@ -7,7 +7,9 @@ export default class Lights extends Container{
 		this.add(new Container("ambientLights"));
     this.add(new Container("geometryLights"));
     this.add(new Container("helpers"));
-    this.ambientLights.add(new THREE.AmbientLight(0xffffff, 1))
+    let ambientLight = new THREE.AmbientLight(0xffffff, 1);
+    ambientLight.layers.enableAll();
+    this.ambientLights.add(ambientLight)
     
     const color = 0xffffff;
     const intensity = 1;

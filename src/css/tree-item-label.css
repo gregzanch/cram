@@ -5,9 +5,9 @@
 
 .tree-item-label-label {
 	text-transform: none;
-	line-height: 1.28581;
+	/* line-height: 1.28581; */
 	letter-spacing: 0;
-	font-size: 10pt;
+	font-size: 9pt;
 	font-weight: 300;
 	color: #182026;
 	font-family: "Lato";
@@ -17,7 +17,7 @@
 .tree-item-label-meta {
 	text-transform: capitalize;
 	font-style: italic;
-	line-height: 1.28581;
+	/* line-height: 1.28581; */
 	letter-spacing: 0;
 	font-size: 9pt;
 	font-weight: 300;
@@ -28,13 +28,25 @@
 .tree-item-label-icon{
 	margin-right: .25em;
 	margin-left: -.25em;
+	display: flex;
+  align-items: center;
 }
 .tree-view-root{	
 	height: 264;
 	flex-grow: 1;
 }
 
+.MuiSvgIcon-root.MuiSvgIcon-fontSizeInherit {
+	font-size: 14px;
+}
 
+.MuiTreeItem-iconContainer{
+	width: unset;
+}
+
+.MuiTreeItem-group{
+	margin-left: 14px !important;
+}
 
 .tree-item-selected{
 	background-color: #bdbdbd;

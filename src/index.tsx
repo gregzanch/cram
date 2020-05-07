@@ -1,5 +1,5 @@
 import React from "react";
-import ReactDOM, { render } from "react-dom";
+import ReactDOM from "react-dom";
 
 import App from "./containers/App";
 import browserReport from "./common/browser-report";
@@ -37,14 +37,19 @@ import RT60 from './compute/rt';
 import * as ac from "./compute/acoustics";
 
 import materials from "./db/material.json";
-import {Searcher} from "fast-fuzzy";
+import { Searcher } from "fast-fuzzy";
 import { IToastProps } from "@blueprintjs/core";
 
-// import { CSG, CAG } from '@jscad/csg';
-// //@ts-ignore
+import { CSG, CAG } from '@jscad/csg';
+import cubicBezier from "./common/cubic-bezier";
+
+import Timer from './common/timer';
+//@ts-ignore
 // window.CSG = CSG;
-// //@ts-ignore
+//@ts-ignore
 // window.CAG = CAG;
+
+expose({ CSG, CAG, cubicBezier, Timer, ac, chunk, THREE, EasingFunctions });
 
 // import Fuse from "fuse.js";
 export interface AcousticMaterial {
@@ -69,7 +74,7 @@ export interface AcousticMaterial {
 }
 
 
-expose({ ac, chunk, THREE, EasingFunctions }, window);
+
 
 const materialsIndex = {} as KeyValuePair<AcousticMaterial>;
 
@@ -336,21 +341,29 @@ state.messenger.addMessageHandler("IMPORT_FILE", (acc, ...args) => {
   files.forEach(async (file: File) => {
     if (allowed[fileType(file.name)]) {
       const objectURL = URL.createObjectURL(file);
-      const result = await (await fetch(objectURL)).text();
-      const models = importHandlers.obj(result);
-      const surfaces = models.map(
-        model => new Surface(model.name, {
-          geometry: model.geometry,
-          acousticMaterial: state.materials[0]
-        })
-      );
-      const room = new Room("new room", {
-        surfaces
-      });
-      state.containers[room.uuid] = room;
-      state.room = room.uuid;
-      state.renderer.addRoom(room);
-      state.messenger.postMessage("ADDED_ROOM", room);
+      switch (fileType(file.name)) {
+        case 'obj': {
+          const result = await(await fetch(objectURL)).text();
+          const models = importHandlers.obj(result);
+          const surfaces = models.map(
+            (model) =>
+              new Surface(model.name, {
+                geometry: model.geometry,
+                acousticMaterial: state.materials[0]
+              })
+          );
+          const room = new Room("new room", {
+            surfaces,
+            originalFileName: file.name,
+            originalFileData: result
+          });
+          state.containers[room.uuid] = room;
+          state.room = room.uuid;
+          state.renderer.addRoom(room);
+          state.messenger.postMessage("ADDED_ROOM", room);
+        } break
+        default: break
+      }
     }
   });
 });
@@ -469,8 +482,12 @@ state.messenger.addMessageHandler("NEW", (acc, ...args) => {
 
 registerHotKeys(state.messenger);
 
-// TODO remove this
+// remove this for prod
 expose({ r: state.renderer }, window);
+
+state.messenger.addMessageHandler("GET_RENDERER", (acc, ...args) => {
+  return state.renderer;
+})
 
 // the main app
 ReactDOM.render(<App {...state} />, document.getElementById("root"));
@@ -493,14 +510,16 @@ setTimeout(() => {
   const models = importHandlers.obj(testroom);
 
   const surfaces = models.map(
-    model =>
+    (model) =>
       new Surface(model.name, {
         geometry: model.geometry,
-        acousticMaterial: state.materials[147]
+        acousticMaterial: state.materialsIndex["rhFUnadRAxTJgCU7"]
       })
   );
   const room = new Room("room", {
-    surfaces
+    surfaces,
+    originalFileData: testroom,
+    originalFileName: "testthing.obj"
   });
   state.containers[room.uuid] = room;
   state.renderer.addRoom(room);

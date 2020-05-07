@@ -5,6 +5,8 @@ export interface CameraStoreMeta {
 }
 
 export interface ObjectStore {
+  pos: number[];
+  quat: number[];
   uuid: string;
   type: string;
   layers: number;
@@ -14,9 +16,14 @@ export interface ObjectStore {
   near: number;
   far: number;
   focus: number;
+  target: number[];
   aspect: number;
   filmGauge: number;
   filmOffset: number;
+  top?: number;
+  bottom?: number;
+  left?: number;
+  right?: number;
 }
 
 export interface CameraStore {

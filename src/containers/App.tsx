@@ -50,7 +50,7 @@ import SettingsDrawerCheckBox from "../components/setting-components/SettingsDra
 import Solver from "../compute/solver";
 import RayTracer from "../compute/raytracer";
 
-import Gutter from '../components/Gutter';
+import Gutter from '../components/Gutter/Gutter';
 import { Stat } from "../components/Gutter/Stats";
 import { ObjectPropertyInputEvent } from "../components/NumberInput";
 import Surface from "../objects/surface";
@@ -76,7 +76,7 @@ export interface AppProps {
 	messenger: Messenger;
 	containers: KeyValuePair<Container>;
 	settings: KeyValuePair<any>;
-	browser: Report;
+  browser: Report;
 }
 
 
@@ -623,7 +623,7 @@ export default class App extends React.Component<AppProps, AppState> {
                   </Popover>
                   <Popover
                     minimal={true}
-                    transitionDuration={50}
+                    transitionDuration={10}
                     position={Position.BOTTOM_LEFT}>
                     <Button
                       text="Edit"
@@ -638,23 +638,9 @@ export default class App extends React.Component<AppProps, AppState> {
                       <MenuItem text="Paste" disabled></MenuItem>
                     </Menu>
                   </Popover>
-                  {/* <Popover
-                    minimal={true}
-                    transitionDuration={50}
-                    position={Position.BOTTOM_LEFT}>
-                    <Button
-                      text="View"
-                      className={"main-nav_bar-left_menu-button"}
-                    />
-                    <Menu>
-                      <MenuItem text="Toast" onClick={(e: React.MouseEvent) => {
-                        AppToaster.show({ message: "Toasted." });
-                      }}></MenuItem>
-                    </Menu>
-                  </Popover> */}
                   <Popover
                     minimal={true}
-                    transitionDuration={50}
+                    transitionDuration={10}
                     position={Position.BOTTOM_LEFT}>
                     <Button
                       text="Add"
@@ -737,7 +723,6 @@ export default class App extends React.Component<AppProps, AppState> {
                           this.props.messenger.postMessage("SHOULD_ADD_RT60")
                         }
                       />
-                      {/* </Menu> */}
                     </Menu>
                   </Popover>
                 </ButtonGroup>
@@ -854,24 +839,55 @@ export default class App extends React.Component<AppProps, AppState> {
         <SplitterLayout
           secondaryMinSize={5}
           primaryMinSize={50}
-          secondaryInitialSize={300}
+          secondaryInitialSize={200}
           primaryIndex={1}
           customClassName="modified-splitter-layout">
-          <SplitterLayout
-            vertical={true}
-            primaryMinSize={10}
-            secondaryMinSize={10}
-            secondaryInitialSize={70}
-            percentage={true}>
-            <PanelContainer>
-              <ObjectView
+          
+          {/* object view */}
+          <PanelContainer>
+            <ObjectView
                 containers={this.state.containers}
                 solvers={this.state.solvers}
                 onClick={this.handleObjectViewClick}
                 onDelete={this.handleObjectViewDelete}
-              />
-            </PanelContainer>
-            <PanelContainer className="panel full-bottom">
+            />
+          </PanelContainer>
+          
+
+          
+          {/* center and right */}
+          <SplitterLayout
+            secondaryMinSize={0}
+            primaryMinSize={60}
+            percentage={true}
+            secondaryInitialSize={10}
+            primaryIndex={0}>
+            
+            {/* webgl canvas & gutter*/}
+            <SplitterLayout
+              vertical={true}
+              primaryMinSize={40}
+              secondaryMinSize={1}
+              secondaryInitialSize={20}
+              percentage={true}
+              customClassName="canvas-gutter"
+              onSecondaryPaneSizeChange={(value: number) => { }}>
+              
+              <div className="webgl-canvas">
+                <canvas id="renderer-canvas" ref={this.canvas} />
+              </div>
+              
+              <PanelContainer className="panel full-bottom gutter-panel">
+                <Gutter
+                  messenger={this.props.messenger}
+                  solvers={this.state.solvers}
+                  key={"gutter-panel"}
+                />
+              </PanelContainer>
+              
+            </SplitterLayout>
+            
+            <PanelContainer>
               {(() => {
                 if (Object.keys(this.state.selectedObject).length > 0) {
                   return (
@@ -891,24 +907,7 @@ export default class App extends React.Component<AppProps, AppState> {
                 }
               })()}
             </PanelContainer>
-          </SplitterLayout>
-          <SplitterLayout
-            vertical={true}
-            primaryMinSize={100}
-            secondaryMinSize={5}
-            secondaryInitialSize={200}
-            customClassName="canvas-gutter"
-            onSecondaryPaneSizeChange={(value: number) => {}}>
-            <div className="webgl-canvas">
-              <canvas id="renderer-canvas" ref={this.canvas} />
-            </div>
-            <PanelContainer className="panel full-bottom gutter-panel">
-              <Gutter
-                messenger={this.props.messenger}
-                solvers={this.state.solvers}
-                key={"gutter-panel"}
-              />
-            </PanelContainer>
+            
           </SplitterLayout>
         </SplitterLayout>
       </div>

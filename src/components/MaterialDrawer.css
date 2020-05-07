@@ -137,6 +137,8 @@
 }
 .material_drawer-display-material_material{
   font-size: 11px;
+  display: flex;
+  justify-content: space-between;
 }
 .material_drawer-display-material_absorption{
   display: grid;

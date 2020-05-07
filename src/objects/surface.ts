@@ -1,13 +1,10 @@
 import * as THREE from "three";
 import Container, { ContainerProps } from "./container";
 import {chunk} from '../common/chunk';
-import hash from 'object-hash';
 import { KeyValuePair } from "../common/key-value-pair";
-import Renderer from "../render/renderer";
 import interpolateAlpha from '../compute/acoustics/interpolate-alpha';
 import reflectionCoefficient from '../compute/acoustics/reflection-coefficient';
 import { AcousticMaterial } from "..";
-import sprite from '../res/sprites/kramer.png';
 import { BRDF } from '../compute/raytracer/brdf';
 
 
@@ -27,54 +24,50 @@ const defaults = {
 
 			`,
       fragmentShader: glsl`
-						uniform float time;
+				uniform float time;
 
-			varying vec2 vUv;
+				varying vec2 vUv;
 
-			void main( void ) {
+				void main( void ) {
 
-				vec2 position = - 1.0 + 2.0 * vUv;
+					vec2 position = - 1.0 + 2.0 * vUv;
 
-				float red = abs( sin( position.x * position.y + time / 5.0 ) );
-				float green = abs( sin( position.x * position.y + time / 4.0 ) );
-				float blue = abs( sin( position.x * position.y + time / 3.0 ) );
-				gl_FragColor = vec4( red, green, blue, 1.0 );
+					float red = abs( sin( position.x * position.y + time / 5.0 ) );
+					float green = abs( sin( position.x * position.y + time / 4.0 ) );
+					float blue = abs( sin( position.x * position.y + time / 3.0 ) );
+					gl_FragColor = vec4( red, green, blue, 1.0 );
 
-			}
+				}
 			`,
 
-			depthTest: true,
-						
+      depthTest: true,
+
       uniforms: {
         time: { value: 10.0 }
       },
       visible: true,
       side: THREE.FrontSide
     }),
-    selected: new THREE.MeshPhysicalMaterial({
-      color: new THREE.Color(1, 1, 1),
-      emissiveIntensity: 2,
-      emissive: new THREE.Color(1, 1, 0),
+    selected: new THREE.MeshLambertMaterial({
+      color: new THREE.Color(0xb3d7ff),
+      // emissiveIntensity: 2,
+      // emissive: new THREE.Color(1, 1, 0),
       transparent: true,
       opacity: 0.5,
       side: THREE.DoubleSide,
-      metalness: 0.05,
       reflectivity: 0.15,
-      roughness: 0.3,
       depthWrite: true,
       depthTest: false
     }),
 
-    mesh: new THREE.MeshPhysicalMaterial({
+    mesh: new THREE.MeshLambertMaterial({
       transparent: true,
       opacity: 0.1,
       side: THREE.DoubleSide,
-      emissive: new THREE.Color(0xffffff),
-      emissiveIntensity: 0,
-      metalness: 0.05,
+      // emissive: new THREE.Color(0xffffff),
+      // emissiveIntensity: 0,
       reflectivity: 0.15,
-      roughness: 0.3,
-      color: 0xaaaaaa,
+      color: new THREE.Color(0xaaaaaa),
       depthWrite: true,
       depthTest: false
     }),
@@ -85,7 +78,7 @@ const defaults = {
       color: 0x2c2d2d
     }),
     line: new THREE.LineBasicMaterial({
-      color: 0xaaaaaa
+      color: 0x999999
     })
   },
   displayInternalEdges: false,
@@ -120,8 +113,8 @@ export default class Surface extends Container {
 	_displayVertexNormals: boolean;
 	vertexNormals: THREE.VertexNormalsHelper;
 	_triangles: THREE.Triangle[];
-	selectedMaterial: THREE.MeshPhysicalMaterial;
-	normalMaterial: THREE.MeshPhysicalMaterial;
+	selectedMaterial: THREE.MeshLambertMaterial;
+	normalMaterial: THREE.MeshLambertMaterial;
 	normalColor: THREE.Color;
 	shaderMaterial: THREE.ShaderMaterial;
 	
@@ -143,9 +136,14 @@ export default class Surface extends Container {
 		this._displayVertexNormals = props._displayVertexNormals || defaults._displayVertexNormals;
 		this.shaderMaterial = defaults.materials.shader;
 		this.wire = new THREE.Mesh(props.geometry, defaults.materials.wire);
+		let parent = this.parent;
+		while (parent) {
+			parent = parent.parent;
+		}
 		this.mesh = new THREE.Mesh(props.geometry, defaults.materials.mesh);
 		this.mesh.geometry.computeBoundingBox();
 		this.mesh.geometry.computeBoundingSphere();
+		
 		// this.mesh.geometry.computeVertexNormals();
 		const tempmesh = new THREE.Mesh(props.geometry.clone(), undefined);
 		tempmesh.geometry.computeVertexNormals()
@@ -197,6 +195,7 @@ export default class Surface extends Container {
 		
 		this.add(this.mesh);
 		this.mesh.visible = this.fillSurface;
+		// (parent! as THREE.Scene).add(this.mesh);
 		this.add(this.wire);
 		this.wire.visible = this.displayInternalEdges;
 		this.add(this.edges);
@@ -221,8 +220,8 @@ export default class Surface extends Container {
 		this.select = () => {
 			this.selected = true;
 			(this.mesh
-				.material as THREE.MeshPhysicalMaterial | THREE.ShaderMaterial) = this.selectedMaterial;
-			(this.mesh.material as THREE.MeshPhysicalMaterial).needsUpdate = true;
+				.material as THREE.MeshLambertMaterial | THREE.ShaderMaterial) = this.selectedMaterial;
+			(this.mesh.material as THREE.MeshLambertMaterial).needsUpdate = true;
 			// setInterval(() => {
 			// 	//@ts-ignore
 			// 	(this.mesh.material as THREE.ShaderMaterial).uniforms["time"] += 1;
@@ -231,8 +230,8 @@ export default class Surface extends Container {
 		this.deselect = () => {
 			this.selected = false;
 			(this.mesh
-				.material as THREE.MeshPhysicalMaterial) = this.normalMaterial;
-			(this.mesh.material as THREE.MeshPhysicalMaterial).needsUpdate = true;
+				.material as THREE.MeshLambertMaterial) = this.normalMaterial;
+			(this.mesh.material as THREE.MeshLambertMaterial).needsUpdate = true;
 		};
 		this.getArea();
 	}

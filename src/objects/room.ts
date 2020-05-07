@@ -7,6 +7,8 @@ export interface RoomProps extends ContainerProps {
 	surfaces: Surface[];
 	// surfaceEdges: Surface[];
 	showBoundingBox?: boolean;
+	originalFileName?: string;
+	originalFileData?: string;
 }
 
 export default class Room extends Container {
@@ -15,8 +17,12 @@ export default class Room extends Container {
 	surfaces: Container;
 	_fdtdmeshid!: number;
 	volume: number;
+	originalFileName?: string;
+	originalFileData?: string;
 	constructor(name: string, props: RoomProps) {
 		super(name);
+		this.originalFileName = props.originalFileName;
+		this.originalFileData = props.originalFileData;
 		this.kind = "room";
 		this.surfaces = new Container("surfaces");
 		props.surfaces.forEach(surface => {

@@ -201,11 +201,12 @@ export default class RayTracer extends Solver {
         transparent: true,
         opacity: 0.2,
         premultipliedAlpha: true,
-        blending: THREE.NormalBlending
-
+        blending: THREE.NormalBlending,
+        depthFunc: THREE.AlwaysDepth
         // depthTest: false
       })
     );
+    this.rays.renderOrder = -0.5;
     this.rays.frustumCulled = false;
     this.renderer.scene.add(this.rays);
     var shaderMaterial = new THREE.ShaderMaterial({
@@ -677,8 +678,6 @@ export default class RayTracer extends Solver {
         this.calculateTotalPathTime(p);
       });
     });
-
-    // console.log(this.paths);
   }
   calculateResponse(frequencies: number[] = this.reflectionLossFrequencies) {
     this.paths;

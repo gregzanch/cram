@@ -6,6 +6,7 @@ import triPattern from "../res/textures/tri_pattern.jpg"
 import matcapOverexposedOutline from "../res/matcaps/overexposed-outline.png";
 import matcapOutline from "../res/matcaps/outline.png";
 import matcapUnderShadow from "../res/matcaps/undershadow.png";
+import checker from '../res/textures/checker.png';
 
 const loader = new THREE.TextureLoader();
 export const MATCAP_PORCELAIN_WHITE = loader.load(matcapPorcelainWhite);
@@ -14,3 +15,4 @@ export const MATCAP_OVEREXPOSED_OUTLINE = loader.load(matcapOverexposedOutline);
 export const MATCAP_RAZIN = loader.load(matcapRazin);
 export const MATCAP_UNDER_SHADOW = loader.load(matcapUnderShadow);
 export const TEXTURE_TRI_PATTERN = loader.load(triPattern);
+export const TEXTURE_CHECKER = loader.load(checker);
