@@ -56,11 +56,6 @@ export default function RoomProperties(props: RoomPropertiesProps) {
             <CheckboxInput name="visible" checked={props.object.visible} onChange={props.onPropertyChange} />
           </GridRow>
         )}
-        {props.object.boundingBoxHelper.hasOwnProperty("visible") && (
-          <GridRow label={"bounding box"}>
-            <CheckboxInput name="showBoundingBox" checked={props.object.boundingBoxHelper.visible} onChange={props.onPropertyChange} />
-          </GridRow>
-        )}
 
         {props.object.hasOwnProperty("position") && (
           <GridRow label={"position"}>

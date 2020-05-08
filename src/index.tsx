@@ -192,7 +192,7 @@ state.messenger.addMessageHandler("SHOULD_ADD_RAYTRACER", (acc, ...args) => {
     renderer: state.renderer
   });
   state.solvers[raytracer.uuid] = raytracer;
-  raytracer.runWithoutReceiver = false;
+  raytracer.runningWithoutReceivers = false;
   return raytracer;
 });
 

@@ -63,7 +63,8 @@ import { SettingsPanel } from "../components/setting-components/SettingsPanel";
 
 const AppToaster = Toaster.create({
   className: "app-toaster",
-  position: Position.TOP
+  position: Position.TOP,
+  
 });
 
 
@@ -459,27 +460,7 @@ export default class App extends React.Component<AppProps, AppState> {
     }
   }
 	handleObjectPropertyButtonClick(e: React.MouseEvent<HTMLInputElement, MouseEvent>) {
-		const { selectedObject } = this.state;
-		if (selectedObject instanceof RayTracer) {
-			switch (e.currentTarget.name) {
-				case "ray-tracer-play":
-					this.props.messenger.postMessage("RAYTRACER_SHOULD_PLAY", selectedObject.uuid);
-					break;
-				case "ray-tracer-pause":
-					this.props.messenger.postMessage("RAYTRACER_SHOULD_PAUSE", selectedObject.uuid);
-					break;
-				case "ray-tracer-clear":
-					this.props.messenger.postMessage("RAYTRACER_SHOULD_CLEAR", selectedObject.uuid);
-					break;
-				default: break;
-			}
-		}
-		this.setState({
-			selectedObject,
-			lastUpdateReason: "handleObjectPropertyButtonClick"
-		}, () => {
-			// console.log(this.state.selectedObject);
-		});
+
 	}
 	handleObjectPropertyValueChangeAsNumber(
 		id: string,
@@ -858,9 +839,9 @@ export default class App extends React.Component<AppProps, AppState> {
           {/* center and right */}
           <SplitterLayout
             secondaryMinSize={0}
-            primaryMinSize={60}
+            primaryMinSize={50}
             percentage={true}
-            secondaryInitialSize={10}
+            secondaryInitialSize={35}
             primaryIndex={0}>
             
             {/* webgl canvas & gutter*/}
@@ -868,7 +849,7 @@ export default class App extends React.Component<AppProps, AppState> {
               vertical={true}
               primaryMinSize={40}
               secondaryMinSize={1}
-              secondaryInitialSize={20}
+              secondaryInitialSize={40}
               percentage={true}
               customClassName="canvas-gutter"
               onSecondaryPaneSizeChange={(value: number) => { }}>

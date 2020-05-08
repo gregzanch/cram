@@ -86,9 +86,9 @@ export interface RayTracerParams {
   passes?: number;
   pointSize?: number;
   reflectionOrder?: number;
-  _isRunning?: boolean;
+  isRunning?: boolean;
   messenger: Messenger;
-  runWithoutReceiver?: boolean;
+  runningWithoutReceivers?: boolean;
   raysVisible?: boolean;
   invertedDrawStyle?: boolean;
 }
@@ -101,8 +101,8 @@ export const defaults = {
   receiverIDs: [] as string[],
   updateInterval: 20,
   reflectionOrder: 200,
-  _isRunning: false,
-  runWithoutReceiver: false,
+  isRunning: false,
+  runningWithoutReceivers: false,
   passes: 1,
   pointSize: 2,
   raysVisible: true,
@@ -145,7 +145,7 @@ export default class RayTracer extends Solver {
   messageHandlerIDs: string[][];
   statsUpdatePeriod: number;
   lastTime: number;
-  runWithoutReceiver: boolean;
+  _runningWithoutReceivers: boolean;
   reflectionLossFrequencies: number[];
   allReceiverData!: ReceiverData[];
   hits: THREE.Points;
@@ -167,8 +167,8 @@ export default class RayTracer extends Solver {
     this.receiverIDs = params.receiverIDs || defaults.receiverIDs;
     this.updateInterval = params.updateInterval || defaults.updateInterval;
     this.reflectionOrder = params.reflectionOrder || defaults.reflectionOrder;
-    this._isRunning = params._isRunning || defaults._isRunning;
-    this.runWithoutReceiver = params.runWithoutReceiver || defaults.runWithoutReceiver;
+    this._isRunning = params.isRunning || defaults.isRunning;
+    this._runningWithoutReceivers = params.runningWithoutReceivers || defaults.runningWithoutReceivers;
     this.renderer = params.renderer;
     this.reflectionLossFrequencies = [4000];
     this.intervals = [];
@@ -185,7 +185,7 @@ export default class RayTracer extends Solver {
     this.passes = params.passes || defaults.passes;
     this.raycaster = new THREE.Raycaster();
     this.rayBufferGeometry = new THREE.BufferGeometry();
-    this.maxrays = 1e6 - 1;
+    this.maxrays = 1e7 - 1;
     this.rayBufferAttribute = new THREE.Float32BufferAttribute(new Float32Array(this.maxrays), 3);
     this.rayBufferAttribute.setUsage(THREE.DynamicDrawUsage);
     this.rayBufferGeometry.setAttribute("position", this.rayBufferAttribute);
@@ -240,7 +240,7 @@ export default class RayTracer extends Solver {
     // raycaster.intersectObjects([mesh]);
     this.intersections = [] as THREE.Intersection[];
     this.findIDs();
-    this.intersectableObjects = this.mapIntersectableObjects();
+    this.intersectableObjects = [] as Array<THREE.Mesh | THREE.Object3D | Container>;
     this.paths = {} as KeyValuePair<RayPath[]>;
     this.stats = {
       numRaysShot: {
@@ -309,16 +309,23 @@ export default class RayTracer extends Solver {
   addSource(source: Source) {
     this.containers[source.uuid] = source;
     this.findIDs();
-    this.intersectableObjects = this.mapIntersectableObjects();
+    this.mapIntersectableObjects();
   }
   addReceiver(rec: Receiver) {
     this.containers[rec.uuid] = rec;
     this.findIDs();
-    this.intersectableObjects = this.mapIntersectableObjects();
+    this.mapIntersectableObjects();
   }
+  
   mapIntersectableObjects() {
-    return this.room.surfaces.children.map((x: Surface) => x.mesh).concat(this.receivers);
+    if (this.runningWithoutReceivers) {
+      this.intersectableObjects = this.room.surfaces.children.map((x: Surface) => x.mesh);
+    }
+    else {
+      this.intersectableObjects = this.room.surfaces.children.map((x: Surface) => x.mesh).concat(this.receivers);
+    }
   }
+  
   findIDs() {
     this.sourceIDs = [];
     this.receiverIDs = [];
@@ -334,6 +341,7 @@ export default class RayTracer extends Solver {
         this.surfaceIDs.push(key);
       }
     }
+    this.mapIntersectableObjects();
   }
   get isRunning() {
     return this.running;
@@ -380,6 +388,16 @@ export default class RayTracer extends Solver {
     }
   }
   
+  get runningWithoutReceivers() {
+    return this._runningWithoutReceivers;
+  }
+  
+  set runningWithoutReceivers(runningWithoutReceivers: boolean) {
+    this.mapIntersectableObjects();
+    this._runningWithoutReceivers = runningWithoutReceivers;
+  }
+  
+  
   setDrawStyle(drawStyle: number) {
     (this.hits.material as THREE.ShaderMaterial).uniforms["drawStyle"].value = drawStyle;
     (this.hits.material as THREE.ShaderMaterial).needsUpdate = true;
@@ -403,6 +421,7 @@ export default class RayTracer extends Solver {
       (this.containers[x] as Source).numRays = 0;
     });
     this.paths = {} as KeyValuePair<RayPath[]>;
+    this.mapIntersectableObjects();
   }
   
   
@@ -572,7 +591,7 @@ export default class RayTracer extends Solver {
       if (path) {
 
         //  ignoring receiver intersections
-        if (this.runWithoutReceiver) {
+        if (this._runningWithoutReceivers) {
 
           // add the first ray onto the buffer
           this.appendRay(position, (path.chain[0] as THREE.Intersection).point, path.chain[0].energy || 1.0, path.chain[0].angle);
@@ -642,14 +661,7 @@ export default class RayTracer extends Solver {
     // }
   }
   start() {
-
-    // this.raycaster.ray.origin = this.sources[0].position;
-
-    // this.raycaster.ray.direction = new THREE.Vector3(Math.random(), Math.random(), Math.random());
-
-    // this.intersections = [] as THREE.Intersection[];
-
-    // this.raycaster.intersectObjects([this.surfaces], true, this.intersections);
+    this.mapIntersectableObjects();
     this.__start_time = Date.now();
     this.__num_checked_paths=0;
     this.startAllMonteCarlo();
@@ -657,10 +669,9 @@ export default class RayTracer extends Solver {
   stop() {
     this.__calc_time = Date.now() - this.__start_time;
     this.intervals.forEach(interval => {
-
-      // console.log(this.intervals[key]);
       window.clearInterval(interval);
     });
+    this.intervals = [] as NodeJS.Timeout[];
     Object.keys(this.paths).forEach(key => {
       const calc_time = this.__calc_time / 1000;
       const num_valid_rays = this.paths[key].length;
@@ -678,6 +689,7 @@ export default class RayTracer extends Solver {
         this.calculateTotalPathTime(p);
       });
     });
+    this.mapIntersectableObjects();
   }
   calculateResponse(frequencies: number[] = this.reflectionLossFrequencies) {
     this.paths;

@@ -36,6 +36,9 @@ export default class Gutter extends React.Component<GutterProps, GutterState>{
       selectedTabIndex: 1
     }
     this.handleTabChange = this.handleTabChange.bind(this);
+    
+    // this.props.messenger.addMessageHandler("SHOULD_REMOVE_CONTAINER", ()=>this.forceUpdate());
+    
   } 
   handleTabChange(tabIndex: number) {
     this.setState({

@@ -277,4 +277,10 @@ export default class Surface extends Container {
 	get faces() {
 		return this._triangles;
 	}
+	get wireframeVisible() {
+		return this.wire.visible;
+	}
+	set wireframeVisible(visible: boolean) {
+		this.wire.visible = visible;
+	}
 }

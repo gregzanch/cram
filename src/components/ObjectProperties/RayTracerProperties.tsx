@@ -157,14 +157,14 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
           </GridRow>
         )}
 
-        {props.object.hasOwnProperty("runWithoutReceiver") && (
+        {props.object.hasOwnProperty("_runningWithoutReceivers") && (
           <GridRow label="ignore receivers">
             <CheckboxInput
               checkedNode={<div className="checked-icon"></div>}
               uncheckedNode={<div className="unchecked-icon" />}
-              name={"runWithoutReceiver"}
+              name={"runningWithoutReceivers"}
               onChange={props.onPropertyChange}
-              checked={props.object.runWithoutReceiver}
+              checked={props.object.runningWithoutReceivers}
             />
           </GridRow>
         )}
