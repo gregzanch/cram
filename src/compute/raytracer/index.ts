@@ -185,7 +185,7 @@ export default class RayTracer extends Solver {
     this.passes = params.passes || defaults.passes;
     this.raycaster = new THREE.Raycaster();
     this.rayBufferGeometry = new THREE.BufferGeometry();
-    this.maxrays = 1e7 - 1;
+    this.maxrays = 1e6 - 1;
     this.rayBufferAttribute = new THREE.Float32BufferAttribute(new Float32Array(this.maxrays), 3);
     this.rayBufferAttribute.setUsage(THREE.DynamicDrawUsage);
     this.rayBufferGeometry.setAttribute("position", this.rayBufferAttribute);
@@ -291,9 +291,6 @@ export default class RayTracer extends Solver {
   }
   get receivers() {
     if (this.receiverIDs.length > 0 && Object.keys(this.containers).length > 0) {
-      if (this.containers) {
-        console.log(this.containers);
-      }
       return this.receiverIDs.map(x => (this.containers[x] as Receiver).mesh) as THREE.Mesh[];
     }
     else return [];
@@ -363,6 +360,7 @@ export default class RayTracer extends Solver {
       this._raysVisible = visible;
       this.rays.visible = visible;
     }
+    this.renderer.needsToRender = true;
   }
   
   get invertedDrawStyle() {
@@ -374,6 +372,7 @@ export default class RayTracer extends Solver {
       (this.hits.material as THREE.ShaderMaterial).uniforms["inverted"].value = Number(inverted);
       (this.hits.material as THREE.ShaderMaterial).needsUpdate = true;
     }
+    this.renderer.needsToRender = true;
   }
   
   get pointSize() {
@@ -386,6 +385,7 @@ export default class RayTracer extends Solver {
       (this.hits.material as THREE.ShaderMaterial).uniforms["pointScale"].value = this._pointSize;
       (this.hits.material as THREE.ShaderMaterial).needsUpdate = true;
     }
+    this.renderer.needsToRender = true;
   }
   
   get runningWithoutReceivers() {
@@ -401,6 +401,7 @@ export default class RayTracer extends Solver {
   setDrawStyle(drawStyle: number) {
     (this.hits.material as THREE.ShaderMaterial).uniforms["drawStyle"].value = drawStyle;
     (this.hits.material as THREE.ShaderMaterial).needsUpdate = true;
+    this.renderer.needsToRender = true;
   }
   
 
@@ -409,9 +410,15 @@ export default class RayTracer extends Solver {
     this._pointSize = scale;
     (this.hits.material as THREE.ShaderMaterial).uniforms["pointScale"].value = this._pointSize;
     (this.hits.material as THREE.ShaderMaterial).needsUpdate = true;
+    this.renderer.needsToRender = true;
   }
   
   clearRays() {
+    if (this.room) {
+      for (let i = 0; i < this.room.surfaces.children.length; i++) {
+        (this.room.surfaces.children[i] as Surface).resetHits();
+      }
+    } 
     this.rayBufferGeometry.setDrawRange(0, 1);
     this.rayPositionIndex = 0;
     this.stats.numRaysShot.value = 0;
@@ -422,6 +429,7 @@ export default class RayTracer extends Solver {
     });
     this.paths = {} as KeyValuePair<RayPath[]>;
     this.mapIntersectableObjects();
+    this.renderer.needsToRender = true;
   }
   
   
@@ -511,7 +519,9 @@ export default class RayTracer extends Solver {
           energy,
           source
         } as RayPath;
-      } else {
+      }
+      
+      else {
 
         // find the incident angle
         const angle =
@@ -527,6 +537,10 @@ export default class RayTracer extends Solver {
           angle,
           ...intersections[0]
         } as THREE.Intersection);
+        
+        if (intersections[0].object.parent instanceof Surface) {
+          intersections[0].object.parent.numHits += 1;
+        }
 
         // get the normal direction of the intersection
         const normal = intersections[0].face && intersections[0].face.normal.normalize();
@@ -546,7 +560,7 @@ export default class RayTracer extends Solver {
         const reflectionloss = energy * abs((intersections[0].object.parent as Surface).reflectionFunction(frequency, angle!));
 
         // end condition
-        if (rr && normal && reflectionloss > 1 / 2 ** 16 && iter < order) {
+        if (rr && normal && (reflectionloss > 1 / 2 ** 16) && (iter < order)) {
 
           // recurse
           return this.traceRay(intersections[0].point.clone().addScaledVector(normal.clone(), 0.01), rr, order, reflectionloss, source, iter + 1, chain);
@@ -560,6 +574,7 @@ export default class RayTracer extends Solver {
       for (let i = 0; i < this.passes; i++) {
         this.step();
       }
+      this.renderer.needsToRender = true;
     }, this.updateInterval));
   }
   step() {
@@ -650,6 +665,9 @@ export default class RayTracer extends Solver {
       (this.stats.numRaysShot.value as number)++;
     }
 
+    
+    this.messenger.postMessage("RAYTRACER_RESULTS_SHOULD_UPDATE");
+    
     // const t = Date.now();
 
     // if (t - this.lastTime >= this.statsUpdatePeriod) {

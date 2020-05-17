@@ -21,6 +21,7 @@ export interface ObjectPropertiesProps {
 	onPropertyValueChangeAsNumber: (id: string, prop: string, valueAsNumber: number) => void;
   onPropertyValueChangeAsString: (id: string, prop: string, valueAsString: string) => void;
   onButtonClick?: (e: React.MouseEvent<HTMLElement, MouseEvent>) => void;
+  showingResults?: boolean;
 }
 
 export interface ObjectPropertiesState{

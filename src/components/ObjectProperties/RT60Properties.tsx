@@ -71,7 +71,7 @@ export default function RT60Properties(props: RT60PropertiesProps) {
   };
 
   // console.log(sources, receivers);
-  const sabine = props.object.sabine(ac.whole_octave);
+  // const sabine = props.object.sabine(ac.whole_octave);
   return (
     <div>
       <div style={RT60PropertiesContainerStyle}>
@@ -84,7 +84,7 @@ export default function RT60Properties(props: RT60PropertiesProps) {
             />
           </GridRow>
         )}
-        <GridRow label={"sabine"}>
+        {/* <GridRow label={"sabine"}>
           <table>
             <thead>
               <tr>
@@ -103,7 +103,7 @@ export default function RT60Properties(props: RT60PropertiesProps) {
               }
             </tbody>
          </table>
-        </GridRow>
+        </GridRow> */}
       </div>
     </div>
   );

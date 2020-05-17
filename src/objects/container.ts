@@ -14,7 +14,7 @@ export interface ContainerSaveObject {
   visible: boolean;
   position: number[];
   scale: number[];
-  rotation: number[];
+  rotation: Array<string|number>;
   uuid: string;
 }
 
@@ -65,7 +65,7 @@ export default class Container extends THREE.Group {
       const visible = this.visible;
       const position = this.position.toArray();
       const scale = this.scale.toArray();
-      const rotation = this.rotation.toArray();
+      const rotation = this.rotation.toArray() as Array<string|number>;
       const uuid = this.uuid;
       return {
         name,
@@ -77,11 +77,11 @@ export default class Container extends THREE.Group {
       };
     };
 		this.restore = (state: ContainerSaveObject) => { 
-			this.name = state.name;
+			this.name = state.name || "surface";
 			this.visible = state.visible;
 			this.position.set(state.position[0], state.position[1], state.position[2]);
 			this.scale.set(state.scale[0], state.scale[1], state.scale[2]);
-			this.rotation.set(state.rotation[0], state.rotation[1], state.rotation[2]);
+			this.rotation.set(Number(state.rotation[0]), Number(state.rotation[1]), Number(state.rotation[2]), String(state.rotation[3]));
 			this.uuid = state.uuid;
 		};
 	}

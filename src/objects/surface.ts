@@ -119,6 +119,7 @@ export default class Surface extends Container {
 	shaderMaterial: THREE.ShaderMaterial;
 	
 	// for acoustics
+	numHits!: number;
 	absorption!: number[];
 	absorptionFunction: (freq: number) => number;
 	reflection!: number[];
@@ -136,6 +137,7 @@ export default class Surface extends Container {
 		this._displayVertexNormals = props._displayVertexNormals || defaults._displayVertexNormals;
 		this.shaderMaterial = defaults.materials.shader;
 		this.wire = new THREE.Mesh(props.geometry, defaults.materials.wire);
+		this.numHits = 0;
 		let parent = this.parent;
 		while (parent) {
 			parent = parent.parent;
@@ -254,6 +256,9 @@ export default class Surface extends Container {
         })
       );
     }
+	}
+	resetHits() {
+		this.numHits = 0;
 	}
 	getArea() {
 		this.area = 0;

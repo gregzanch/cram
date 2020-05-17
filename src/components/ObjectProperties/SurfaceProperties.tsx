@@ -144,21 +144,18 @@ export default function SurfaceProperties(props: SurfacePropertiesProps) {
           </GridRow>
         )}
         <GridRowSeperator marginBottom={".125em"} />
+
+        {props.object.hasOwnProperty("numHits") && (
+          <GridRow label={"hit count"}>
+            <span>{props.object.numHits}</span>
+          </GridRow>
+        )}
+        <GridRowSeperator marginBottom={".125em"} />
         <GridRow
           label="material"
           style={{
             display: "unset"
           }}>
-          {/* <AutoCompleteTextInput
-						getSuggestions={async (value: string) => {
-							return await getMaterialSuggestions(value);
-						}}
-						getSuggestionValue={(suggestion => suggestion.name)}
-						renderSuggestion={suggestion => (
-							<div className="material-suggestion">{suggestion.material}</div>
-						)}
-						onChange={(value: string) => console.log(value)}
-					/> */}
           {props.object instanceof Surface && (props.object as Surface) && (
             // (<Button text={props.object.acousticMaterial.name} minimal={true} />)
             <>
@@ -172,6 +169,8 @@ export default function SurfaceProperties(props: SurfacePropertiesProps) {
             </>
           )}
         </GridRow>
+
+        <GridRowSeperator marginBottom={".125em"} />
         {props.object.hasOwnProperty("uuid") && (
           <GridRow label={"uuid"}>
             <span className="muted-text">{props.object.uuid}</span>

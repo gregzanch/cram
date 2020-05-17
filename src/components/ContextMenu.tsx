@@ -20,6 +20,7 @@ export class ContextMenu extends React.Component<ContextMenuProps, {}> {
         return (
             <Menu>
                 <MenuItem onClick={this.props.handleMenuItemClick} text="Delete" />
+                <MenuItem onClick={this.props.handleMenuItemClick} text="Log to Console" />
             </Menu>
         );
     }

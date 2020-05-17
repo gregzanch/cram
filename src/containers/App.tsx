@@ -19,7 +19,7 @@ import {
   Alert,
   Intent,
   Toaster,
-  IToastProps
+  IToastProps,
 } from "@blueprintjs/core";
 import MenuItemText from '../components/MenuItemText';
 import { ItemListRenderer, IItemListRendererProps } from "@blueprintjs/select";
@@ -38,7 +38,7 @@ import Receiver from "../objects/receiver";
 import Source from "../objects/source";
 import { KeyValuePair } from "../common/key-value-pair";
 import SettingsDrawer from "../components/SettingsDrawer";
-import { Setting } from "../common/setting";
+import { Setting } from "../setting";
 import { Report } from "../common/browser-report";
 
 import "../css";
@@ -58,7 +58,10 @@ import { AcousticMaterial } from "..";
 import { Searcher } from "fast-fuzzy";
 import MaterialDrawer from "../components/MaterialDrawer";
 import { SettingsPanel } from "../components/setting-components/SettingsPanel";
-
+import Results from "../components/Gutter/Results";
+import { Tab, Tabs, TabList, TabPanel } from "react-tabs";
+import properCase from "../common/proper-case";
+import { ApplicationSettings } from "../default-settings";
 
 
 const AppToaster = Toaster.create({
@@ -74,9 +77,9 @@ FocusStyleManager.onlyShowFocusOnTabs();
 
 
 export interface AppProps {
-	messenger: Messenger;
-	containers: KeyValuePair<Container>;
-	settings: KeyValuePair<any>;
+  messenger: Messenger;
+  containers: KeyValuePair<Container>;
+  settings: ApplicationSettings;
   browser: Report;
 }
 
@@ -90,7 +93,7 @@ interface AppState {
   selectedObject: Container;
   
 	settingsDrawerVisible: boolean;
-	settings: KeyValuePair<any>;
+	settings: ApplicationSettings;
 	mode: EditorMode;
 	// process: Process;
 	solvers: KeyValuePair<Solver>;
@@ -106,17 +109,23 @@ interface AppState {
 	}[];
 	materialDrawerOpen: boolean;
 	terminalOpen: boolean;
-	newWarningVisible: boolean;
+  newWarningVisible: boolean;
+  isGutterSplit: boolean;
+  canUndo: boolean;
+  canRedo: boolean;
+  selectedSettingsDrawerTab: number;
 }
 
 export default class App extends React.Component<AppProps, AppState> {
 	state: AppState;
-	canvas: React.RefObject<HTMLCanvasElement>;
+  canvas: React.RefObject<HTMLCanvasElement>;
+  canvasOverlay: React.RefObject<HTMLDivElement>;
 	statsCanvas: React.RefObject<HTMLCanvasElement>;
 	prog: any;
 	constructor(props: AppProps) {
 		super(props);
-		this.state = {
+    this.state = {
+      isGutterSplit: false,
 			terminalOpen: false,
 			newWarningVisible: false,
 			materialDrawerOpen: false,
@@ -132,17 +141,21 @@ export default class App extends React.Component<AppProps, AppState> {
       tool: "SELECT",
       darkmode: false,
       stats: [] as Stat[],
+      canUndo: false,
+      canRedo: false,
 			chartData: [{
 				label: "a",
 				x: [0],
 				y: [0]
-			}]
+      }],
+      selectedSettingsDrawerTab: 1
       // process: new Process({name: "base", steps: [] as Task[]})
     };
 		this.setupMessageHandlers = this.setupMessageHandlers.bind(this);
 		this.setupMessageHandlers();
 
-		this.canvas = React.createRef<HTMLCanvasElement>();
+    this.canvas = React.createRef<HTMLCanvasElement>();
+    this.canvasOverlay = React.createRef<HTMLDivElement>();
 		this.statsCanvas = React.createRef<HTMLCanvasElement>();
 		this.showImportDialog = this.showImportDialog.bind(this);
 		this.handleImportDialogClose = this.handleImportDialogClose.bind(this);
@@ -164,7 +177,8 @@ export default class App extends React.Component<AppProps, AppState> {
 		this.handleMaterialBarItemSelect = this.handleMaterialBarItemSelect.bind(this);
 		this.handleSettingChange = this.handleSettingChange.bind(this);
 		this.handleObjectPropertyButtonClick = this.handleObjectPropertyButtonClick.bind(this);
-		this.addMessageHandler = this.addMessageHandler.bind(this);
+    this.addMessageHandler = this.addMessageHandler.bind(this);
+    this.handleSettingsTabChange = this.handleSettingsTabChange.bind(this);
 	}
 	addMessageHandler(message: string, handler: (acc, ...args) => KeyValuePair<any>, cb?: ()=>void) {
 		this.props.messenger.addMessageHandler(message, (acc, ...args) => {
@@ -177,6 +191,21 @@ export default class App extends React.Component<AppProps, AppState> {
 	}
   setupMessageHandlers() {
     
+    
+    this.addMessageHandler("UNDO", (acc, ...args) => {
+      const [canUndo, canRedo] = acc[0];
+      return {
+        canUndo,
+        canRedo
+      }
+    })
+    this.addMessageHandler("REDO", (acc, ...args) => {
+      const [canUndo, canRedo] = acc[0];
+      return {
+        canUndo,
+        canRedo
+      }
+    })
     this.addMessageHandler("NEW", () => {
       return {
         selectedObject: {} as Container,
@@ -558,75 +587,66 @@ export default class App extends React.Component<AppProps, AppState> {
 			})}
 			</div>
 		)
-	};
+  };
+  
+  handleSettingsTabChange(index: number) {
+    this.setState({
+      selectedSettingsDrawerTab: index
+    });
+  }
 	
 	render() {
 		return (
       <div>
         <div>
           <Navbar className="main-nav_bar">
-            <Navbar.Group
-              align={Alignment.LEFT}
-              className="main-nav_bar-left_group">
-              <Navbar.Group className="main-nav_bar-logo_text">
-                cram.ui
-              </Navbar.Group>
+            <Navbar.Group align={Alignment.LEFT} className="main-nav_bar-left_group">
+              <Navbar.Group className="main-nav_bar-logo_text">cram.ui</Navbar.Group>
               <Navbar.Divider />
               <Menu className="main-nav_bar-left_menu">
                 <ButtonGroup minimal={true}>
-                  <Popover
-                    minimal={true}
-                    transitionDuration={20}
-                    position={Position.BOTTOM_LEFT}
-                    className="main-nav_bar-left_menu-popover-file">
-                    <Button
-                      text="File"
-                      className={"main-nav_bar-left_menu-button"}
-                    />
+                  {/* FILE */}
+                  <Popover minimal={true} transitionDuration={10} position={Position.BOTTOM_LEFT} className="main-nav_bar-left_menu-popover-file">
+                    <Button text="File" className={"main-nav_bar-left_menu-button"} />
                     <Menu>
                       <MenuItem
-                        text={
-                          <MenuItemText
-                            text="New"
-                            hotkey={Characters.SHIFT + "N"}
-                          />
-                        }
-                        onClick={e =>
-                          this.setState({ newWarningVisible: true })
-                        }
+                        text={<MenuItemText text="New" hotkey={Characters.SHIFT + "N"} />}
+                        onClick={(e) => this.setState({ newWarningVisible: true })}
                       />
                       <MenuItem text="Save" disabled></MenuItem>
                       <MenuDivider />
-                      <MenuItem
-                        text="Import"
-                        onClick={this.showImportDialog}></MenuItem>
+                      <MenuItem text="Import" onClick={this.showImportDialog}></MenuItem>
                     </Menu>
                   </Popover>
-                  <Popover
-                    minimal={true}
-                    transitionDuration={10}
-                    position={Position.BOTTOM_LEFT}>
-                    <Button
-                      text="Edit"
-                      className={"main-nav_bar-left_menu-button"}
-                    />
+
+                  {/* EDIT */}
+                  <Popover minimal={true} transitionDuration={10} position={Position.BOTTOM_LEFT}>
+                    <Button text="Edit" className={"main-nav_bar-left_menu-button"} />
                     <Menu>
-                      <MenuItem text="Undo" disabled></MenuItem>
-                      <MenuItem text="Redo" disabled></MenuItem>
+                      <MenuItem
+                        text={<MenuItemText text="Undo" hotkey={Characters.COMMAND + "Z"} />}
+                        onClick={(e) => {
+                          this.props.messenger.postMessage("UNDO");
+                        }}
+                        disabled={!this.state.canUndo}
+                      />
+                      <MenuItem
+                        text={<MenuItemText text="Redo" hotkey={Characters.SHIFT + Characters.COMMAND + "Z"} />}
+                        onClick={(e) => {
+                          this.props.messenger.postMessage("REDO");
+                        }}
+                        disabled={!this.state.canRedo}
+                      />
                       <MenuDivider />
                       <MenuItem text="Cut" disabled></MenuItem>
                       <MenuItem text="Copy" disabled></MenuItem>
                       <MenuItem text="Paste" disabled></MenuItem>
                     </Menu>
                   </Popover>
-                  <Popover
-                    minimal={true}
-                    transitionDuration={10}
-                    position={Position.BOTTOM_LEFT}>
-                    <Button
-                      text="Add"
-                      className={"main-nav_bar-left_menu-button"}
-                    />
+
+                  {/* ADD */}
+                  <Popover minimal={true} transitionDuration={10} position={Position.BOTTOM_LEFT}>
+                    <Button text="Add" className={"main-nav_bar-left_menu-button"} />
                     <Menu>
                       <MenuItem
                         text={
@@ -636,21 +656,12 @@ export default class App extends React.Component<AppProps, AppState> {
                               justifyContent: "space-between"
                             }}>
                             <div>Source</div>
-                            <div style={{ color: Colors.LIGHT_GRAY1 }}>
-                            </div>
+                            <div style={{ color: Colors.LIGHT_GRAY1 }}></div>
                           </div>
                         }
-                        onClick={() =>
-                          this.props.messenger.postMessage("SHOULD_ADD_SOURCE")
-                        }
+                        onClick={() => this.props.messenger.postMessage("SHOULD_ADD_SOURCE")}
                       />
-                      <MenuItem
-                        text="Receiver"
-                        onClick={() =>
-                          this.props.messenger.postMessage(
-                            "SHOULD_ADD_RECEIVER"
-                          )
-                        }></MenuItem>
+                      <MenuItem text="Receiver" onClick={() => this.props.messenger.postMessage("SHOULD_ADD_RECEIVER")}></MenuItem>
                       <MenuDivider />
                       <MenuItem
                         text={
@@ -660,15 +671,10 @@ export default class App extends React.Component<AppProps, AppState> {
                               justifyContent: "space-between"
                             }}>
                             <div>Ray Tracer</div>
-                            <div style={{ color: Colors.LIGHT_GRAY1 }}>
-                            </div>
+                            <div style={{ color: Colors.LIGHT_GRAY1 }}></div>
                           </div>
                         }
-                        onClick={() =>
-                          this.props.messenger.postMessage(
-                            "SHOULD_ADD_RAYTRACER"
-                          )
-                        }
+                        onClick={() => this.props.messenger.postMessage("SHOULD_ADD_RAYTRACER")}
                       />
 
                       <MenuItem
@@ -678,15 +684,11 @@ export default class App extends React.Component<AppProps, AppState> {
                               display: "flex",
                               justifyContent: "space-between"
                             }}>
-                            <div>FDTD</div>
-                            <div style={{ color: Colors.LIGHT_GRAY1 }}>
-                            </div>
+                            <div>2D-FDTD</div>
+                            <div style={{ color: Colors.LIGHT_GRAY1 }}></div>
                           </div>
                         }
-                        disabled
-                        onClick={() =>
-                          this.props.messenger.postMessage("SHOULD_ADD_FDTD")
-                        }
+                        onClick={() => this.props.messenger.postMessage("SHOULD_ADD_FDTD_2D")}
                       />
                       <MenuItem
                         text={
@@ -696,12 +698,33 @@ export default class App extends React.Component<AppProps, AppState> {
                               justifyContent: "space-between"
                             }}>
                             <div>RT60</div>
-                            <div style={{ color: Colors.LIGHT_GRAY1 }}>
-                            </div>
+                            <div style={{ color: Colors.LIGHT_GRAY1 }}></div>
+                          </div>
+                        }
+                        onClick={() => this.props.messenger.postMessage("SHOULD_ADD_RT60")}
+                      />
+                    </Menu>
+                  </Popover>
+
+                  {/* VIEW */}
+                  <Popover minimal={true} transitionDuration={10} position={Position.BOTTOM_LEFT}>
+                    <Button text="View" className={"main-nav_bar-left_menu-button"} />
+                    <Menu>
+                      <MenuItem
+                        text={
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between"
+                            }}>
+                            <div style={{ color: Colors.LIGHT_GRAY1 }}>{this.state.isGutterSplit ? "✓" : ""}</div>
+                            <div>Split Gutter</div>
                           </div>
                         }
                         onClick={() =>
-                          this.props.messenger.postMessage("SHOULD_ADD_RT60")
+                          this.setState({
+                            isGutterSplit: !this.state.isGutterSplit
+                          })
                         }
                       />
                     </Menu>
@@ -709,16 +732,8 @@ export default class App extends React.Component<AppProps, AppState> {
                 </ButtonGroup>
               </Menu>
             </Navbar.Group>
-            <Navbar.Group
-              align={Alignment.RIGHT}
-							className="main-nav_bar-right_group"
-						>
-              <Button
-                icon="cog"
-                minimal={true}
-                className={"main-nav_bar-right_menu-button"}
-                disabled
-                onClick={this.handleSettingsButtonClick}></Button>
+            <Navbar.Group align={Alignment.RIGHT} className="main-nav_bar-right_group">
+              <Button icon="cog" minimal={true} className={"main-nav_bar-right_menu-button"} onClick={this.handleSettingsButtonClick}></Button>
             </Navbar.Group>
           </Navbar>
         </div>
@@ -730,13 +745,13 @@ export default class App extends React.Component<AppProps, AppState> {
           cancelButtonText="No, cancel"
           confirmButtonText="Yes, start over"
           intent={Intent.DANGER}
-          onConfirm={e => {
+          onConfirm={(e) => {
             this.props.messenger.postMessage("NEW");
             this.setState({
               newWarningVisible: false
             });
           }}
-          onCancel={e => {
+          onCancel={(e) => {
             this.setState({
               newWarningVisible: false
             });
@@ -751,29 +766,23 @@ export default class App extends React.Component<AppProps, AppState> {
             this.setState({
               settings: this.props.messenger.postMessage("SUBMIT_ALL_SETTINGS")[0]
             });
-          }}
-        >
-          <SettingsPanel messenger={this.props.messenger}/>
-          <input
-            name="background"
-            type="color"
-            onChange={e =>
-              this.props.messenger.postMessage(
-                "RENDERER_SHOULD_CHANGE_BACKGROUND",
-                e.currentTarget.value
-              )
-            }
-          />
-          <input
-            name="fogColor"
-            type="color"
-            onChange={e =>
-              this.props.messenger.postMessage(
-                "RENDERER_SHOULD_CHANGE_FOG_COLOR",
-                e.currentTarget.value
-              )
-            }
-          />
+          }}>
+          <Tabs selectedIndex={this.state.selectedSettingsDrawerTab} onSelect={this.handleSettingsTabChange}>
+            <TabList>
+              <Tab disabled />
+              {Object.keys(this.state.settings).map((key) => {
+                return <Tab key={"settings-tabname-" + key}>{properCase(key)}</Tab>;
+              })}
+            </TabList>
+            <TabPanel />
+            {Object.keys(this.state.settings).map((key) => {
+              return (
+                <TabPanel key={"settings-tabpanel-"+key}>
+                  <SettingsPanel messenger={this.props.messenger} category={key} />
+                </TabPanel>
+              );
+            })}
+          </Tabs>
         </SettingsDrawer>
 
         <Drawer
@@ -790,18 +799,12 @@ export default class App extends React.Component<AppProps, AppState> {
           isOpen={this.state.materialDrawerOpen}>
           <MaterialDrawer
             messenger={this.props.messenger}
-            object={
-              this.state.selectedObject &&
-              this.state.selectedObject instanceof Surface
-                ? this.state.selectedObject
-                : undefined
-            }
+            object={this.state.selectedObject && this.state.selectedObject instanceof Surface ? this.state.selectedObject : undefined}
           />
         </Drawer>
 
-
         <ImportDialog
-          onImport={file => {
+          onImport={(file) => {
             this.props.messenger.postMessage("IMPORT_FILE", file);
             this.handleImportDialogClose();
           }}
@@ -813,61 +816,43 @@ export default class App extends React.Component<AppProps, AppState> {
           usePortal={true}
           data={{ themeName: "dark" }}
           onClose={this.handleImportDialogClose}
-          onDrop={file => {
+          onDrop={(file) => {
             this.props.messenger.postMessage("IMPORT_FILE", file);
           }}
         />
-        <SplitterLayout
-          secondaryMinSize={5}
-          primaryMinSize={50}
-          secondaryInitialSize={200}
-          primaryIndex={1}
-          customClassName="modified-splitter-layout">
-          
+
+        <SplitterLayout secondaryMinSize={5} primaryMinSize={50} secondaryInitialSize={200} primaryIndex={1} customClassName="modified-splitter-layout">
           {/* object view */}
           <PanelContainer>
             <ObjectView
-                containers={this.state.containers}
-                solvers={this.state.solvers}
-                onClick={this.handleObjectViewClick}
-                onDelete={this.handleObjectViewDelete}
+              containers={this.state.containers}
+              solvers={this.state.solvers}
+              onClick={this.handleObjectViewClick}
+              onDelete={this.handleObjectViewDelete}
             />
           </PanelContainer>
-          
 
-          
           {/* center and right */}
-          <SplitterLayout
-            secondaryMinSize={0}
-            primaryMinSize={50}
-            percentage={true}
-            secondaryInitialSize={35}
-            primaryIndex={0}>
-            
+          <SplitterLayout secondaryMinSize={0} primaryMinSize={50} secondaryInitialSize={250} primaryIndex={0}>
             {/* webgl canvas & gutter*/}
-            <SplitterLayout
-              vertical={true}
-              primaryMinSize={40}
-              secondaryMinSize={1}
-              secondaryInitialSize={40}
-              percentage={true}
-              customClassName="canvas-gutter"
-              onSecondaryPaneSizeChange={(value: number) => { }}>
-              
+            <SplitterLayout vertical={true} primaryMinSize={40} secondaryMinSize={1} secondaryInitialSize={300} customClassName="canvas-gutter">
               <div className="webgl-canvas">
+                <div id="canvas_overlay" ref={this.canvasOverlay}></div>
                 <canvas id="renderer-canvas" ref={this.canvas} />
               </div>
-              
-              <PanelContainer className="panel full-bottom gutter-panel">
-                <Gutter
-                  messenger={this.props.messenger}
-                  solvers={this.state.solvers}
-                  key={"gutter-panel"}
-                />
-              </PanelContainer>
-              
+
+              <SplitterLayout primaryIndex={0}>
+                <PanelContainer className="panel full-bottom gutter-panel">
+                  <Gutter messenger={this.props.messenger} solvers={this.state.solvers} key={"gutter-panel"} />
+                </PanelContainer>
+                {this.state.isGutterSplit ? (
+                  <PanelContainer className="panel full-bottom gutter-panel">
+                    <Results messenger={this.props.messenger} solvers={this.state.solvers} key={"results-panel"} />
+                  </PanelContainer>
+                ) : null}
+              </SplitterLayout>
             </SplitterLayout>
-            
+
             <PanelContainer>
               {(() => {
                 if (Object.keys(this.state.selectedObject).length > 0) {
@@ -876,19 +861,14 @@ export default class App extends React.Component<AppProps, AppState> {
                       messenger={this.props.messenger}
                       object={this.state.selectedObject}
                       onPropertyChange={this.handleObjectPropertyChange}
-                      onPropertyValueChangeAsNumber={
-                        this.handleObjectPropertyValueChangeAsNumber
-                      }
-                      onPropertyValueChangeAsString={
-                        this.handleObjectPropertyValueChangeAsString
-                      }
+                      onPropertyValueChangeAsNumber={this.handleObjectPropertyValueChangeAsNumber}
+                      onPropertyValueChangeAsString={this.handleObjectPropertyValueChangeAsString}
                       onButtonClick={this.handleObjectPropertyButtonClick}
                     />
                   );
                 }
               })()}
             </PanelContainer>
-            
           </SplitterLayout>
         </SplitterLayout>
       </div>

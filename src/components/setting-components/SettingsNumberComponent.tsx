@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Setting } from "../../common/setting";
+import { Setting } from "../../setting";
 
 import "./SettingsNumberComponent.css";
 

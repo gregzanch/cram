@@ -7,6 +7,7 @@ import { ParametersPanel } from './ParametersPanel';
 import MaterialsPanel from './MaterialsPanel';
 import { ChartTab } from './ChartTab';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
+import ContextMenu from "../ContextMenu";
 import { SvgIcon } from '@material-ui/core';
 import MoreVert from '@material-ui/icons/MoreVert';
 import CloseIcon from '@material-ui/icons/Close';
@@ -27,19 +28,31 @@ export interface GutterProps {
 
 export interface GutterState {
   selectedTabIndex: number;
+  tabNames: string[];
 }
 
+type ClickEvent = React.MouseEvent<HTMLElement, MouseEvent>;
+
+
 export default class Gutter extends React.Component<GutterProps, GutterState>{
+  updateHandlerIDs: string[][];
   constructor(props: GutterProps) {
     super(props);
     this.state = {
-      selectedTabIndex: 1
-    }
+      selectedTabIndex: 1,
+      tabNames: Object.keys(props.solvers).map((x) => props.solvers[x].name)
+    };
     this.handleTabChange = this.handleTabChange.bind(this);
-    
-    // this.props.messenger.addMessageHandler("SHOULD_REMOVE_CONTAINER", ()=>this.forceUpdate());
+    this.updateHandlerIDs = [] as string[][];
+    this.updateHandlerIDs.push(this.props.messenger.addMessageHandler("SHOULD_REMOVE_CONTAINER", () => this.forceUpdate()));
+    this.updateHandlerIDs.push(this.props.messenger.addMessageHandler("GUTTER_SHOULD_UPDATE", () => this.forceUpdate()));
     
   } 
+  componentWillUnmount() {
+    for (let i = 0; i < this.updateHandlerIDs.length; i++){
+      this.props.messenger.removeMessageHandler(this.updateHandlerIDs[i][0], this.updateHandlerIDs[i][1]);
+    }
+  }
   handleTabChange(tabIndex: number) {
     this.setState({
       selectedTabIndex: tabIndex
@@ -57,18 +70,29 @@ export default class Gutter extends React.Component<GutterProps, GutterState>{
         <Tabs selectedIndex={this.state.selectedTabIndex} onSelect={this.handleTabChange}>
           <TabList>
             <Tab disabled />
-              <Tab key={"gutter-tabname-" + keys.length}>
-                Renderer
+            <Tab key={"gutter-tabname-" + keys.length}>Renderer</Tab>
+            {keys.map((x, i) => (
+              <Tab key={"gutter-tabname-" + i}>
+                <ContextMenu
+                  handleMenuItemClick={(e) => {
+                    if (e.target.textContent) {
+                      switch (e.target.textContent) {
+                        case "Delete": {
+                            this.props.messenger.postMessage("SHOULD_REMOVE_SOLVER", x);
+                        } break;
+                        case "Log to Console": {
+                          console.log(this.props.solvers[x]);
+                        } break;
+                        default:
+                          break;
+                      }
+                    }
+                  }}
+                  key={x + "-context-menu"}>
+                  <div className="tab-text-container">{this.props.solvers[x].name}</div>
+                </ContextMenu>
               </Tab>
-            {keys.map((x, i) => {
-              return (
-                <Tab key={"gutter-tabname-" + i}>
-                  <div className="tab-text-container">
-                    {this.props.solvers[x].name}
-                  </div>
-                </Tab>
-              );
-            })}
+            ))}
           </TabList>
           <TabPanel />
           <TabPanel key={"gutter-tabpanel-" + keys.length}>
@@ -79,20 +103,17 @@ export default class Gutter extends React.Component<GutterProps, GutterState>{
               case "ray-tracer":
                 return (
                   <TabPanel key={"gutter-tabpanel-" + i}>
-                    <RayTracerTab
-                      solver={this.props.solvers[x] as RayTracer}
-                      messenger={this.props.messenger}
-                    />
+                    <RayTracerTab solver={this.props.solvers[x] as RayTracer} messenger={this.props.messenger} />
                   </TabPanel>
                 );
               case "rt60":
                 return (
                   <TabPanel key={"gutter-tabpanel-" + i}>
-                    <RT60Tab solver={this.props.solvers[x] as RT60} />
+                    <RT60Tab solver={this.props.solvers[x] as RT60} messenger={this.props.messenger} />
                   </TabPanel>
                 );
               default:
-                return <TabPanel key={"gutter-tabpanel-" + i} />;
+                return <></>;
             }
           })}
         </Tabs>

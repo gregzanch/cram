@@ -1,7 +1,7 @@
 import React from "react";
 
 import { Drawer, Position, InputGroup, Button } from "@blueprintjs/core";
-import { Setting } from "../common/setting";
+import { Setting } from "../setting";
 
 import { KeyValuePair } from "../common/key-value-pair";
 

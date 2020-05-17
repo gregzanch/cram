@@ -66,9 +66,12 @@ type ClickEvent = React.MouseEvent<HTMLElement, MouseEvent>;
         handleMenuItemClick: (e) => {
           if (e.target.textContent) {
             switch (e.target.textContent) {
-              case "Delete":
+              case "Delete": {
                 props.onDelete(container);
-                break;
+              } break;
+              case "Log to Console": {
+                console.log(container);
+              } break;
               default:
                 break;
             }

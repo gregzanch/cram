@@ -13,6 +13,8 @@ export default function RendererTab(props: RendererTabProps) {
   const [fov, setFov] = useState(renderer.fov as number|string);
   const [zoom, setZoom] = useState(renderer.zoom as number | string);
   const [isOrtho, setIsOrtho] = useState(renderer.isOrtho);
+  const [gridVisible, setGridVisible] = useState(renderer.gridVisible);
+  const [axesVisible, setAxesVisible] = useState(renderer.axesVisible);
   return (
     <div>
       {/* <SliderInput id="fov" value={renderer.fov} onChange={(e: React.FormEvent<HTMLInputElement>)=>{renderer.fov = e.currentTarget.valueAsNumber}} min={1} max={90} step={0.001} /> */}
@@ -77,10 +79,13 @@ export default function RendererTab(props: RendererTabProps) {
         />
       </div>
       <div className="ortho-button">
-        <button onClick={e => {
-          setIsOrtho(!isOrtho);
-          props.messenger.postMessage("TOGGLE_CAMERA_ORTHO");
-        }}>{isOrtho?"Perspective":"Orthographic"}</button>
+        <button
+          onClick={(e) => {
+            setIsOrtho(!isOrtho);
+            props.messenger.postMessage("TOGGLE_CAMERA_ORTHO");
+          }}>
+          {isOrtho ? "Perspective" : "Orthographic"}
+        </button>
       </div>
       <div className="orientation-buttons">
         <button onClick={(e) => props.messenger.postMessage("LOOK_ALONG_AXIS", "+x")}>+X</button>
@@ -89,6 +94,30 @@ export default function RendererTab(props: RendererTabProps) {
         <button onClick={(e) => props.messenger.postMessage("LOOK_ALONG_AXIS", "-y")}>-Y</button>
         <button onClick={(e) => props.messenger.postMessage("LOOK_ALONG_AXIS", "+z")}>+Z</button>
         <button onClick={(e) => props.messenger.postMessage("LOOK_ALONG_AXIS", "-z")}>-Z</button>
+      </div>
+      <div className="grid-checkbox">
+        <span>Grid</span>
+        <input
+          type="checkbox"
+          onChange={(e) => {
+            const checked = e.currentTarget.checked;
+            renderer.gridVisible = checked;
+            setGridVisible(renderer.gridVisible);
+          }}
+          checked={gridVisible}
+        />
+      </div>
+      <div className="axes-checkbox">
+        <span>Axes</span>
+        <input
+          type="checkbox"
+          onChange={(e) => {
+            const checked = e.currentTarget.checked;
+            renderer.axesVisible = checked;
+            setAxesVisible(renderer.axesVisible);
+          }}
+          checked={axesVisible}
+        />
       </div>
     </div>
   );

@@ -15,9 +15,9 @@ export interface RayTracerPropertiesProps {
   object: RayTracer;
   messenger: Messenger;
   onPropertyChange: (e: ObjectPropertyInputEvent) => void;
-	onPropertyValueChangeAsNumber: (id: string, prop: string, valueAsNumber: number) => void;
-	onPropertyValueChangeAsString: (id: string, prop: string, valueAsString: string) => void;
-	onButtonClick: (e: React.MouseEvent<HTMLElement, MouseEvent>) => void;
+  onPropertyValueChangeAsNumber: (id: string, prop: string, valueAsNumber: number) => void;
+  onPropertyValueChangeAsString: (id: string, prop: string, valueAsString: string) => void;
+  onButtonClick: (e: React.MouseEvent<HTMLElement, MouseEvent>) => void;
 }
 
 const RayTracerPropertiesContainerStyle: React.CSSProperties = {
@@ -219,9 +219,11 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
             onClick={(e) => props.messenger.postMessage("RAYTRACER_CALCULATE_RESPONSE", props.object.uuid, props.object.reflectionLossFrequencies)}
           />
         </GridRow>
-        <GridRow span={2}>
+
+        {/* <GridRow span={2}>
           <Button text="Test WASM" onClick={(e) => props.messenger.postMessage("RAYTRACER_TEST_WASM", props.object.uuid, Math.random())} />
-        </GridRow>
+        </GridRow> */}
+       
       </div>
     </div>
   );

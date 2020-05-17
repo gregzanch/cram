@@ -6,7 +6,8 @@ import { OutlinePass } from "three/examples/jsm/postprocessing/OutlinePass";
 import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass";
 import { FXAAShader } from "three/examples/jsm/shaders/FXAAShader";
 import { OrbitControls } from "./OrbitControls";
-
+import { TransformControls } from './TransformControls';
+import { quat2angle, angle2quat, QuatAngle } from '../common/QuatAngle';
 //@ts-ignore
 // import fs from "!raw-loader!./shaders/beam/shader.frag";
 //@ts-ignore
@@ -40,9 +41,15 @@ import Lights from './env/lights';
 import Room from '../objects/room';
 import Messenger from "../messenger";
 
+import { History, Moment, Directions } from '../history';
+
 
 import PickHelper from './pick-helper';
+import { posix } from "path";
 
+import { TransformOverlay } from './overlays';
+import { ApplicationSettings, SettingsCategories, SettingsCategory, EditorSettings } from "../default-settings";
+import hotkeys from "hotkeys-js";
 
 
 export interface SmoothCameraParams {
@@ -98,6 +105,11 @@ export interface ModifierKeyState {
 export interface RendererParams{
 	elt?: HTMLCanvasElement;
 	messenger: Messenger;
+	history: History;
+}
+
+export interface Overlays {
+	transform: TransformOverlay;
 }
 
 export default class Renderer {
@@ -143,14 +155,24 @@ export default class Renderer {
 	smoothingCameraCallback!: any;
 	smoothingCamera!: boolean;
 	messenger: Messenger;
+	history!: History;
 	pickHelper!: PickHelper;
+	cursor!: THREE.Mesh;
 	composer!: EffectComposer;
 	outlinePass!: OutlinePass;
 	renderPass!: RenderPass;
 	effectFXAA!: ShaderPass;
 	
+	
+	transformControls!: TransformControls;
+	currentlyMovingObjects!: boolean;
+	
+	overlays!: Overlays;
+	fdtdrunning!: boolean;
+	
+	settingsGetter!: (category: SettingsCategories) => SettingsCategory
 
-
+	needsToRender!: boolean;
 	
 	constructor(params: RendererParams) {
 		[
@@ -167,17 +189,28 @@ export default class Renderer {
 		
 
 		this.messenger = params.messenger;
+		this.history = params.history;
 		
 	}
 	
-	init(elt: HTMLCanvasElement) {
+	init(elt: HTMLCanvasElement, settingsGetter: (category: SettingsCategories) => SettingsCategory) {
 
+		this.settingsGetter = settingsGetter;
+		
+		const editorSettings = settingsGetter("editor") as EditorSettings;
+		
+		this.fdtdrunning = false;
+		
 		this.modifierKeyState = {
 			Shift: 0,
 			Control: 0,
 			Alt: 0,
 			Meta: 0
 		};
+		
+		this.overlays = {
+			transform: new TransformOverlay("#canvas_overlay")
+    };
 		
 		this.smoothingCamera = false;
 		this.smoothingCameraCallback = undefined;
@@ -193,7 +226,25 @@ export default class Renderer {
 		
 		this.env.add(this.grid, this.lights, this.axes);
 		
+		this.cursor = new THREE.Mesh(
+      new THREE.SphereBufferGeometry(0.05, 8, 8),
+      new THREE.MeshLambertMaterial({
+        color: new THREE.Color(0x6f1d1d),
+        // emissiveIntensity: 2,
+        // emissive: new THREE.Color(1, 1, 0),
+        transparent: true,
+        opacity: 0.25,
+        side: THREE.DoubleSide,
+        reflectivity: 0.15,
+        depthWrite: true,
+        depthTest: false
+      })
+    );
 
+    this.env.add(this.cursor);
+
+		
+		
 		const background = 0xf5f8fa;
 
 		// scene
@@ -210,9 +261,9 @@ export default class Renderer {
 			precision: "mediump"
 		});
 		//@ts-ignore
-		this.renderer.shadowMap.enabled = true;
+		// this.renderer.shadowMap.enabled = true;
 		//@ts-ignore
-		this.renderer.shadowMapSoft = true;
+		// this.renderer.shadowMapSoft = true;
 
 		this.renderer.setSize(this.clientWidth, this.clientHeight);
 		const pixelRatio = window.devicePixelRatio;
@@ -266,7 +317,68 @@ export default class Renderer {
 		this.controls.screenSpacePanning = true;
 		// console.log(this.controls)
 		
-
+		this.transformControls = new TransformControls(this._camera, this.renderer.domElement);
+		this.transformControls.addEventListener("mouseUp", (e) => {
+			if (!e.target.object || !(e.target.object instanceof Container)) {
+				return;
+			}
+			else {
+				const objects = e.target.allAssociatedObjects;
+				const undoSaves = new Map<string, any>();
+				const redoSaves = new Map<string, any>();
+				for (let i = 0; i < objects.length; i++) {
+					undoSaves.set(objects[i].uuid, Object.assign({}, objects[i].userData.lastSave));
+					redoSaves.set(objects[i].uuid, Object.assign({}, objects[i].save()));
+				}
+				this.history.addMoment({
+					category: "OBJECT_TRANSFORM",
+					objectId: e.target.object.uuid,
+					recallFunction: (direction: keyof Directions) => {
+						if (direction === this.history.DIRECTIONS.UNDO) {
+							for (let i = 0; i < objects.length; i++){
+								objects[i].restore(undoSaves.get(objects[i].uuid))
+							}
+						}
+						else if (direction === this.history.DIRECTIONS.REDO) {
+							for (let i = 0; i < objects.length; i++){
+								objects[i].restore(redoSaves.get(objects[i].uuid))
+							}
+						}
+					}
+				});
+			}
+    });
+		this.transformControls.addEventListener("mouseDown", (e) => {
+			const objects = e.target.allAssociatedObjects;
+			for (let i = 0; i < objects.length; i++){
+				objects[i].userData.lastSave = objects[i].save();
+			}
+		});
+		// this.transformControls.setSize(0.5);
+		this.transformControls.addEventListener("change", (e) => {
+			const target = (e.target as TransformControls);
+			const objects = target.allAssociatedObjects;
+			if (typeof objects !== "undefined") {
+				const pos = objects[0] && objects[0].position;
+				const lastSave = objects[0] && objects[0].userData.lastSave;
+				const lastPos = lastSave && new THREE.Vector3().fromArray(lastSave.position);
+				if (pos && lastPos) {
+					const diff = new THREE.Vector3().copy(pos).sub(lastPos);
+					for (let i = 0; i < objects.length; i++) {
+						objects[i].position.set(
+              objects[i].userData.lastSave.position[0] + diff.x,
+              objects[i].userData.lastSave.position[1] + diff.y,
+              objects[i].userData.lastSave.position[2] + diff.z
+            );
+					}
+					this.overlays.transform.setValues(diff.x, diff.y, diff.z);
+				}
+			}
+			// console.log((e.target as TransformControls).getWorldPosition(new THREE.Vector3()))
+		})
+		
+		
+		this.currentlyMovingObjects = false;
 	
 		this.pickHelper = new PickHelper(this.scene, this._camera, this.renderer.domElement);
 	
@@ -285,10 +397,17 @@ export default class Renderer {
 			this.lights.setHelpersVisible(val);
 		};
 
-		this.messenger.addMessageHandler("RENDERER_SHOULD_CHANGE_BACKGROUND", (acc, ...args) => (this.background = args[0]));
-		this.messenger.addMessageHandler("RENDERER_SHOULD_CHANGE_FOG_COLOR", (acc, ...args) => (this.fogColor = args[0]));
+		this.messenger.addMessageHandler("RENDERER_SHOULD_CHANGE_BACKGROUND", (acc, ...args) => {
+			this.background = args[0];
+			this.needsToRender = true;
+		});
+		this.messenger.addMessageHandler("RENDERER_SHOULD_CHANGE_FOG_COLOR", (acc, ...args) => {
+			this.fogColor = args[0];
+			this.needsToRender = true;
+		});
 		this.messenger.addMessageHandler("TOGGLE_CAMERA_ORTHO", (acc, ...args) => {
 			this.setOrtho(this.camera instanceof THREE.PerspectiveCamera);
+			this.needsToRender = true;
 			this.storeCameraState();
 		});
 		this.messenger.addMessageHandler("SHOULD_REMOVE_CONTAINER", (acc, ...args) => {
@@ -299,51 +418,86 @@ export default class Renderer {
 				object.parent && object.parent.remove(object);
 				// this.scene.remove(object);
 			}
+			this.needsToRender = true;
 		});
 		
 		this.messenger.addMessageHandler("LOOK_ALONG_AXIS", (acc, ...args) => {
 			const axis = args[0];
 
 			const onFinish = () => {
-        if (this.camera instanceof THREE.PerspectiveCamera) {
-          this.messenger.postMessage("TOGGLE_CAMERA_ORTHO");
-        }
+				if (this.camera instanceof THREE.PerspectiveCamera) {
+					this.messenger.postMessage("TOGGLE_CAMERA_ORTHO");
+				}
 			};
 			const dist = this.camera.position.distanceTo(this.controls.target);
 			
-			const duration = 1000;
-			const target = new THREE.Vector3(0,0,0);
+			const duration = 125;
+			const target = new THREE.Vector3(0, 0, 0);
 			const easingFunction = EasingFunctions.linear;
 			
 			const adds = {
-        "+x": new THREE.Vector3(dist, 0, 0),
-        "-x": new THREE.Vector3(-dist, 0, 0),
-        "+y": new THREE.Vector3(0, dist, 0),
-        "-y": new THREE.Vector3(0, -dist, 0),
-        "+z": new THREE.Vector3(0, 0, dist),
-        "-z": new THREE.Vector3(0, 0, -dist)
+				"+x": new THREE.Vector3(dist, 0, 0),
+				"-x": new THREE.Vector3(-dist, 0, 0),
+				"+y": new THREE.Vector3(0, dist, 0),
+				"-y": new THREE.Vector3(0, -dist, 0),
+				"+z": new THREE.Vector3(0, 0, dist),
+				"-z": new THREE.Vector3(0, 0, -dist)
 			};
 			if (!adds[axis]) {
 				console.warn("invalid args");
-      	return;
-      }
+				return;
+			}
 			// const position = this.controls.target.clone() as THREE.Vector3;
 			const position = adds[axis];
-      this.smoothCameraTo({ position, target, duration, onFinish, easingFunction });
-			
-		})
+			this.smoothCameraTo({ position, target, duration, onFinish, easingFunction });
+			this.needsToRender = true;
+		});
+		
+		this.messenger.addMessageHandler("MOVE_SELECTED_OBJECTS", () => {
+			const selectedObjects = this.messenger.postMessage("GET_SELECTED_OBJECTS")[0];
+			if (selectedObjects && selectedObjects.length > 0) {
+				hotkeys.setScope("editor-moving");
+				this.transformControls.setTranslationSnap(editorSettings.transform_snap_normal.value);
+				this.overlays.transform.setValues(0,0,0);
+				this.overlays.transform.show();
+				this.currentlyMovingObjects = true;
+				this.transformControls.attach(selectedObjects);
+				// selectedObjects[0] && (selectedObjects[0] as Container).add(this.transformControls);
+				this.env.add(this.transformControls);
+			}
+			this.needsToRender = true;
+		});
 	
-
+		this.messenger.addMessageHandler("PHASE_OUT", () => {
+			console.log("PHASE_OUT");
+			if (this.isPerformingOperation) {
+				this.messenger.postMessage("STOP_OPERATIONS");
+				hotkeys.setScope("editor");
+			}
+			else {
+				this.messenger.postMessage("DESELECT_ALL_OBJECTS");
+				hotkeys.setScope("normal");
+			}
+			this.needsToRender = true;
+		})
+		
+		this.messenger.addMessageHandler("STOP_OPERATIONS", () => {
+			this.env.remove(this.transformControls);
+      this.transformControls.detach();
+      this.currentlyMovingObjects = false;
+      this.overlays.transform.hide();
+      this.needsToRender = true;
+		})
 
 		// save the state of the camera
-		window.addEventListener("mouseup", this.storeCameraState);
+		window.addEventListener("mouseup", (e) => {
+			this.storeCameraState();
+			this.needsToRender = true;
+		});
 
 		window.addEventListener("keydown", (e) => {
 			if (this.modifierKeyState.hasOwnProperty(e.key)) {
 				this.modifierKeyState[e.key] += 1;
-			}
-			if (e.key === "Escape") {
-				this.messenger.postMessage("DESELECT_ALL_OBJECTS");
 			}
 		});
 
@@ -353,27 +507,40 @@ export default class Renderer {
 			}
 		});
 
+		this.renderer.domElement.addEventListener("mousemove", (e) => {
+			this.needsToRender = true;
+		});
+
+		this.renderer.domElement.addEventListener("wheel", (e) => {
+			this.needsToRender = true;
+		});
+		
 		this.renderer.domElement.addEventListener("mousedown", (e) => {
 			const selection = this.pickHelper.pick(e, [this.workspace]);
-
-			if (selection) {
+			if (selection.pickedObject) {
+				console.log(selection.pickedObject);
 				if (e.button == 0) {
-					if (e.shiftKey) {
-						this.messenger.postMessage("APPEND_SELECTION", [selection]);
-					} else if (!e.altKey) {
-						this.messenger.postMessage("SET_SELECTION", [selection]);
-					}
-				} else {
-				}
-			} else {
-				if (e.button == 0) {
-					if (!e.shiftKey && !e.altKey) {
-						this.messenger.postMessage("DESELECT_ALL_OBJECTS");
+					if (!this.currentlyMovingObjects) {
+						if (e.shiftKey) {
+							this.messenger.postMessage("APPEND_SELECTION", [selection.pickedObject]);
+						}
+						else if (!e.altKey) {
+							this.messenger.postMessage("SET_SELECTION", [selection.pickedObject]);
+						}
 					}
 				}
 			}
+			else {
+				if (e.button == 0) {
+					if (!e.shiftKey && !e.altKey) {
+						this.messenger.postMessage("PHASE_OUT");
+          }
+				}
+			}
 			// console.log(this.pickHelper);
+			this.needsToRender = true;
 		});
+		
 		
 		this.render();
 		// this.composer.render();
@@ -382,8 +549,8 @@ export default class Renderer {
 		
 		if (storedState) {
 			if (storedState.object) {
-        this.camera.position.fromArray(storedState.object.pos);
-        this.camera.quaternion.fromArray(storedState.object.quat);
+        storedState.object.pos && this.camera.position.fromArray(storedState.object.pos);
+        storedState.object.quat && this.camera.quaternion.fromArray(storedState.object.quat);
 				this.camera.near = storedState.object.near;
 				this.camera.far = storedState.object.far;
 				if (storedState.object.type === "PerspectiveCamera") {
@@ -401,8 +568,11 @@ export default class Renderer {
     }
 
 		// setInterval(this.render, 1000 / 20);
+		
 
 	}
+	
+	
 	
 	storeCameraState() {
 		const obj = this.camera.toJSON();
@@ -417,9 +587,13 @@ export default class Renderer {
 		this.controls.dispose();
 		this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.mouseButtons = this.mouseConfigSet.Default;
-    this.controls.screenSpacePanning = true;
+		this.controls.screenSpacePanning = true;
+		
+
     // console.log(this.controls)
 	}
+
+	
 	
 	setOrtho(on: boolean) {
 		const near = this.camera.near;
@@ -451,84 +625,6 @@ export default class Renderer {
 		// this.camera.position.set(pos.x, pos.y, pos.z);
 		// this.camera.applyQuaternion(quat);
 		
-	}
-	
-	get camera() {
-		return this._camera;
-	}
-	
-	set camera(camera: THREE.PerspectiveCamera | THREE.OrthographicCamera) {
-		const quat = new THREE.Quaternion().copy(this._camera.quaternion);
-		const pos = new THREE.Vector3().copy(this._camera.position);
-		this._camera = camera;
-		this._camera.up.set(0, 0, 1);
-		// this.controls.dispose();
-		// this.controls = new OrbitControls(this._camera, this.renderer.domElement);
-  	// this.controls.mouseButtons = this.mouseConfigSet.Default;
-		// this.controls.screenSpacePanning = true;
-		this.controls.object = this._camera;
-		this.controls.update();
-		this._camera.position.set(pos.x, pos.y, pos.z);
-		this._camera.setRotationFromQuaternion(quat)
-		this._camera.quaternion.normalize();
-		this._camera.updateProjectionMatrix();
-		if (this.renderPass.camera.uuid !== this._camera.uuid) {
-			this.renderPass.camera = this._camera;
-		}
-		
-		this.pickHelper = new PickHelper(this.scene, this._camera, this.renderer.domElement);
-	}
-	
-	get zoom() {
-		return (this.camera && this.camera.zoom) || 1;
-	}
-	
-	set zoom(zoom: number) {
-		this._camera.zoom = zoom;
-		this.camera.updateProjectionMatrix();
-	}
-	
-	get isOrtho() {
-		return this.camera instanceof THREE.OrthographicCamera;
-	}
-	
-	set isOrtho(ortho: boolean) {
-		if (ortho != this.isOrtho) {
-			this.messenger.postMessage("TOGGLE_CAMERA_ORTHO");
-		}
-	}
-	
-	get background() {
-		return (this.scene.background as THREE.Color).getHexString();
-	}
-	set background(color: string) {
-		(this.scene.background as THREE.Color).setStyle(color);
-	}
-	get fogColor() {
-		return (this.scene.fog && this.scene.fog.color && this.scene.fog.color.getHexString()) || "#000000";
-	}
-	set fogColor(color: string) {
-		this.scene.fog?.color.setStyle(color);
-	}
-	get fov() {
-		return this.camera instanceof THREE.PerspectiveCamera ? this.camera.fov : this._fov;
-	}
-	set fov(fov: number) {
-		this._fov = fov;
-		if (this.camera instanceof THREE.PerspectiveCamera) {
-			this.camera.fov = fov;
-		}
-	}
-	
-	
-	private get clientWidth() {
-		return (this.elt.parentElement as HTMLDivElement).clientWidth;
-	}
-	private get clientHeight() {
-		return (this.elt.parentElement as HTMLDivElement).clientHeight;
-	}
-	private get aspect() {
-		return this.clientWidth / this.clientHeight;
 	}
 	
 	
@@ -565,7 +661,7 @@ export default class Renderer {
         }
 			
 			this.camera.updateProjectionMatrix();
-
+			// this.needsToRender = true;
 			// update any render target sizes here
 		}
 	}
@@ -588,9 +684,11 @@ export default class Renderer {
 	}
 	add(obj: THREE.Object3D) {
 		this.workspaceCursor.add(obj);
+		this.needsToRender = true;
 	}
 	remove(obj: THREE.Object3D) {
 		this.workspace.getObjectByProperty('uuid', obj.uuid)?.remove();
+		this.needsToRender = true;
 	}
 	
 	addRoom(room: Room) {
@@ -604,6 +702,7 @@ export default class Renderer {
 		const color = this.fog.color;
 		this.fog = new THREE.Fog(color.getHex(), near, far);
     this.scene.fog = this.fog;
+    this.needsToRender = true;
 	}
 
 	
@@ -629,6 +728,30 @@ export default class Renderer {
 		}
 	}
 
+	quat2angle(quat: THREE.Quaternion) {
+		return quat2angle(quat);
+	}
+	
+	angle2quat(angle: QuatAngle) {
+		return angle2quat(angle);
+	}
+	
+	applyQuatAngle(angle: number, x: number, y: number, z: number) {
+		const vec = new THREE.Vector3(x, y, z);
+		vec.normalize();
+		const quat = new QuatAngle(angle, vec).toQuaternion();
+		this.camera.applyQuaternion(quat);
+		this.camera.updateProjectionMatrix();
+		this.needsToRender = true;
+	}
+	
+	roll(angle: number) {
+		const quat = new QuatAngle(angle, new THREE.Vector3(0, 0, 1)).toQuaternion();
+		this.camera.applyQuaternion(quat);
+		this.camera.updateProjectionMatrix();
+		this.needsToRender = true;
+	}
+	
 	smoothCameraTo(params: SmoothCameraParams) {
 		const originalPosition = this.camera.position.clone();
 		const originalTarget = this.controls.target.clone();
@@ -653,19 +776,138 @@ export default class Renderer {
 		timer.start();
 	}
 	update() {
-		this.smoothingCamera && this.smoothingCameraCallback();
-		this.messenger.postMessage("RENDERER_UPDATED");
+		if (this.smoothingCamera) {
+			this.needsToRender = true;
+		 	this.smoothingCameraCallback();	
+		}
+		else if (this.fdtdrunning) {
+			this.needsToRender = true;
+		}
+		
 	}
 	render() {
 		
 		this.update();
 		this.resizeCanvasToDisplaySize();
+		
+
+		
+		if (this.needsToRender) {
+			
+			this.composer.render();
+			this.messenger.postMessage("RENDERER_UPDATED");
+			this.needsToRender = false;
+		}
 		requestAnimationFrame(this.render);
-		// this.renderer.render(this.scene, this.camera);
-		this.composer.render();
+	}
+	
+	/**
+	 * returns true if performing an operation, like moving an object. 
+	 * put this here so that if user presses escape while moving/operating it doesnt deselect
+	 */
+	get isPerformingOperation() {
+		return this.currentlyMovingObjects
+	}
+	
+	get camera() {
+		return this._camera;
+	}
+	
+	set camera(camera: THREE.PerspectiveCamera | THREE.OrthographicCamera) {
+		const quat = new THREE.Quaternion().copy(this._camera.quaternion);
+		const pos = new THREE.Vector3().copy(this._camera.position);
+		this._camera = camera;
+		this._camera.up.set(0, 0, 1);
+		// this.controls.dispose();
+		// this.controls = new OrbitControls(this._camera, this.renderer.domElement);
+  	// this.controls.mouseButtons = this.mouseConfigSet.Default;
+		// this.controls.screenSpacePanning = true;
+		this.controls.object = this._camera;
+		this.controls.update();
+		this.transformControls.camera = this._camera;
+		this._camera.position.set(pos.x, pos.y, pos.z);
+		this._camera.setRotationFromQuaternion(quat)
+		this._camera.quaternion.normalize();
+		this._camera.updateProjectionMatrix();
+		if (this.renderPass.camera.uuid !== this._camera.uuid) {
+			this.renderPass.camera = this._camera;
+		}
+		
+		this.pickHelper = new PickHelper(this.scene, this._camera, this.renderer.domElement);
+		this.needsToRender = true;
+	}
+	
+	get gridVisible() {
+		return this.grid && this.grid.visible || false;
+	}
+	
+	set gridVisible(visible: boolean) {
+		this.grid.visible = visible;
+		this.needsToRender = true;
+	}
+
+	get axesVisible() {
+		return this.axes && this.axes.visible || false;
+	}
+	
+	set axesVisible(visible: boolean) {
+		this.axes.visible = visible;
+		this.needsToRender = true;
+	}
+	
+	get zoom() {
+		return (this.camera && this.camera.zoom) || 1;
+	}
+	
+	set zoom(zoom: number) {
+		this._camera.zoom = zoom;
+		this.camera.updateProjectionMatrix();
+		this.needsToRender = true;
+	}
+	
+	get isOrtho() {
+		return this.camera instanceof THREE.OrthographicCamera;
+	}
+	
+	set isOrtho(ortho: boolean) {
+		if (ortho != this.isOrtho) {
+			this.messenger.postMessage("TOGGLE_CAMERA_ORTHO");
+		}
+	}
+	
+	get background() {
+		return (this.scene.background as THREE.Color).getHexString();
+	}
+	set background(color: string) {
+		(this.scene.background as THREE.Color).setStyle(color);
+	}
+	get fogColor() {
+		return (this.scene.fog && this.scene.fog.color && this.scene.fog.color.getHexString()) || "#000000";
+	}
+	set fogColor(color: string) {
+		this.scene.fog?.color.setStyle(color);
+	}
+	get fov() {
+		return this.camera instanceof THREE.PerspectiveCamera ? this.camera.fov : this._fov;
+	}
+	set fov(fov: number) {
+		this._fov = fov;
+		if (this.camera instanceof THREE.PerspectiveCamera) {
+			this.camera.fov = fov;
+		}
+		this.needsToRender = true;
 	}
 	
 	
+	private get clientWidth() {
+		return (this.elt.parentElement as HTMLDivElement).clientWidth;
+	}
+	private get clientHeight() {
+		return (this.elt.parentElement as HTMLDivElement).clientHeight;
+	}
+	private get aspect() {
+		return this.clientWidth / this.clientHeight;
+	}
 	
 	
 	
