@@ -402,6 +402,15 @@ export default class App extends React.Component<AppProps, AppState> {
 				return ({ solvers });
 			}
 		);		
+
+    this.addMessageHandler("SHOULD_ADD_FDTD_2D",
+			(acc, ...args) => {
+				const solvers = { ...this.state.solvers };
+				solvers[acc[0].uuid] = acc[0];
+				return ({ solvers });
+			}
+		);		
+
 		this.addMessageHandler("ADDED_ROOM",
 			(acc, ...args) => {
 			const containers = { ...this.state.containers };
@@ -835,7 +844,7 @@ export default class App extends React.Component<AppProps, AppState> {
           {/* center and right */}
           <SplitterLayout secondaryMinSize={0} primaryMinSize={50} secondaryInitialSize={250} primaryIndex={0}>
             {/* webgl canvas & gutter*/}
-            <SplitterLayout vertical={true} primaryMinSize={40} secondaryMinSize={1} secondaryInitialSize={300} customClassName="canvas-gutter">
+            <SplitterLayout vertical={true} primaryMinSize={40} secondaryMinSize={1} secondaryInitialSize={window.innerHeight/6} customClassName="canvas-gutter">
               <div className="webgl-canvas">
                 <div id="canvas_overlay" ref={this.canvasOverlay}></div>
                 <canvas id="renderer-canvas" ref={this.canvas} />
