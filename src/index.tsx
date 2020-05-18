@@ -338,6 +338,7 @@ state.messenger.addMessageHandler("SHOULD_ADD_FDTD_2D", (acc, ...args) => {
     messenger: state.messenger,
     renderer: state.renderer
   });
+  fdtd2d.name = "FDTD-2D"
   state.solvers[fdtd2d.uuid] = fdtd2d;
 
   return state.solvers[fdtd2d.uuid];
@@ -766,7 +767,7 @@ setTimeout(() => {
 
   expose(
     {
-      // fdtd: state.messenger.postMessage("SHOULD_ADD_FDTD_2D")[0],
+      fdtd: state.messenger.postMessage("SHOULD_ADD_FDTD_2D")[0],
       raytracer: state.messenger.postMessage("SHOULD_ADD_RAYTRACER")[0],
       state,
       THREE
