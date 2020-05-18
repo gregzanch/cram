@@ -13,6 +13,8 @@ export default function FDTD_2DTab(props: FDTD_2DTabProps) {
   const [colorBrightness, setColorBrightness] = useState(props.solver.uniforms['colorBrightness'].value);
   const [heightScale, setHeightScale] = useState(props.solver.uniforms['heightScale'].value);
   const [damping, setDamping] = useState(props.solver.heightmapVariable.material["uniforms"]['damping'].value);
+  const [numPasses, setNumPasses] = useState(props.solver.numPasses);
+  const [running, setRunning] = useState(props.solver.running);
   return (
     <div>
       <div className="slider_with_number-container">
@@ -100,6 +102,50 @@ export default function FDTD_2DTab(props: FDTD_2DTabProps) {
             setHeightScale(e.currentTarget.valueAsNumber || "");
           }}
         />
+      </div>
+
+      <div className="slider_with_number-container">
+        <span className="slider_with_number-label">Number of Passes</span>
+        <input
+          type="range"
+          id="numPasses-slider"
+          className="slider_with_number-slider"
+          value={numPasses}
+          onChange={(e: React.FormEvent<HTMLInputElement>) => {
+            props.solver.numPasses = e.currentTarget.valueAsNumber;
+            setNumPasses(e.currentTarget.valueAsNumber);
+          }}
+          min={1}
+          max={20}
+          step={1}
+        />
+        <input
+          type="number"
+          id="numPasses-number"
+          className="slider_with_number-number"
+          value={numPasses}
+          onChange={(e: React.FormEvent<HTMLInputElement>) => {
+            if (e.currentTarget.valueAsNumber > 1 && e.currentTarget.valueAsNumber < 20) {
+              props.solver.numPasses = Math.round(e.currentTarget.valueAsNumber);
+            }
+            setHeightScale(Math.round(e.currentTarget.valueAsNumber) || "");
+          }}
+        />
+      </div>
+      <div className="run_start-button">
+        <button
+          onClick={(e) => {
+            if (props.solver.running) {
+              props.solver.stop();
+              setRunning(false);
+            }
+            else {
+              props.solver.run();
+              setRunning(true);
+            }
+          }}>
+          {running ? "Stop" : "Run"}
+        </button>
       </div>
     </div>
   );

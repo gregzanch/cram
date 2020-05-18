@@ -45,7 +45,7 @@ import cubicBezier from "./common/cubic-bezier";
 import Timer from './common/timer';
 
 import { History, Moment, Directions } from './history';
-import { FDTD_2D } from "./compute/2d-fdtd";
+import { FDTD_2D, FDTD_2D_Defaults } from "./compute/2d-fdtd";
 
 import { defaultSettings, ApplicationSettings, SettingsCategories } from './default-settings';
 import { SettingsManager, StoredSetting } from "./settings-manager";
@@ -313,30 +313,17 @@ state.messenger.addMessageHandler("SHOULD_ADD_FDTD", (acc, ...args) => {
   return state.solvers[state.simulation];
 });
 
-state.messenger.addMessageHandler("SHOULD_ADD_FDTD_2D", (acc, ...args) => {
-  // const sources = [] as Source[];
-  // const rooms = [] as Room[];
-  // const receivers = [] as Receiver[];
-  // for (const key in state.containers) {
-    // switch (state.containers[key].kind) {
-      // case "source":
-        // sources.push(state.containers[key] as Source);
-        // break;
-      // case "receiver":
-        // receivers.push(state.containers[key] as Receiver);
-        // break;
-      // case "room":
-        // rooms.push(state.containers[key] as Room);
-        // break;
-      // default:
-        // break;
-    // }
-  // }
-
-  // state.simulation = uuid();
+state.messenger.addMessageHandler("SHOULD_ADD_FDTD_2D", (acc, args) => {
+  const defaults = FDTD_2D_Defaults;
+  let width = args && args.width || defaults.width;
+  let height = args && args.height || defaults.height;
+  let cellsize = args && args.cellsize || Math.max(width,height)/128;
   const fdtd2d = new FDTD_2D({
     messenger: state.messenger,
-    renderer: state.renderer
+    renderer: state.renderer,
+    width,
+    height,
+    cellsize
   });
   fdtd2d.name = "FDTD-2D"
   state.solvers[fdtd2d.uuid] = fdtd2d;
@@ -767,7 +754,10 @@ setTimeout(() => {
 
   expose(
     {
-      fdtd: state.messenger.postMessage("SHOULD_ADD_FDTD_2D")[0],
+      fdtd: state.messenger.postMessage("SHOULD_ADD_FDTD_2D", {
+        width: room.boundingBox.max.x,
+        height: room.boundingBox.max.y
+      })[0],
       raytracer: state.messenger.postMessage("SHOULD_ADD_RAYTRACER")[0],
       state,
       THREE
