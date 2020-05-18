@@ -4,3 +4,5 @@ dist
 ir
 3dtextures
 yarn-error.log
+.DS_Store
+ir
