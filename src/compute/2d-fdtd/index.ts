@@ -6,12 +6,15 @@ import shaders from './shaders';
 import Solver from "../solver";
 import FDTDSource from "./fdtd-source";
 import map from '../../common/map';
+import FDTDWall, { FDTDWallProps } from "./fdtd-wall";
+import Surface from "../../objects/surface";
 
 
 
-const defaults = {
+export const FDTD_2D_Defaults = {
   width: 10,
-  height: 10
+  height: 10,
+  cellsize: 10/128
 };
 
 export interface FDTD_2D_Props{
@@ -55,6 +58,7 @@ class FDTD_2D extends Solver {
   readWaterLevelImage!: Uint8Array;
   readWaterLevelRenderTarget!: THREE.WebGLRenderTarget;
   sources!: FDTDSource[];
+  walls!: FDTDWall[];
   /**
    * simulation in seconds
    */
@@ -67,6 +71,7 @@ class FDTD_2D extends Solver {
   width: number;
   height: number;
   cellsize: number;
+  numPasses: number;
   constructor(props: FDTD_2D_Props) {
     super(props);
     this.kind = "fdtd-2d";
@@ -75,9 +80,10 @@ class FDTD_2D extends Solver {
     this.dt = 0.25 / 1000;
     this.running = false;
     this.time = 0;
+    this.numPasses = 1;
     
-    const _width = props.width || defaults.width;
-    const _height = props.height || defaults.height;
+    const _width = props.width || FDTD_2D_Defaults.width;
+    const _height = props.height || FDTD_2D_Defaults.height;
     this.cellsize = props.cellsize || Math.max(_width,_height)/128;
     
     this.nx = Math.ceil(_width / this.cellsize);
@@ -88,12 +94,14 @@ class FDTD_2D extends Solver {
     
     
     this.sources = [] as FDTDSource[];
+    this.walls = [] as FDTDWall[];
 
     this.fillTexture = this.fillTexture.bind(this);
     this.init = this.init.bind(this);
     this.render = this.render.bind(this);
-
+    this.updateWalls = this.updateWalls.bind(this);
     this.updateSourceTexture = this.updateSourceTexture.bind(this);
+    this.addWallsFromSurfaceEdges = this.addWallsFromSurfaceEdges.bind(this);
     this.init();
 
     this.messenger.addMessageHandler("RENDERER_UPDATED", () => {
@@ -118,7 +126,7 @@ class FDTD_2D extends Solver {
         x: 10,
         y: 10,
         amplitude: 1,
-        frequency: 50,
+        frequency: 100,
         phase: 0
       })
     );
@@ -145,7 +153,7 @@ class FDTD_2D extends Solver {
         colorBrightness: { value: 10 },
         cell_size: { value: this.cellsize },
         inv_cell_size: { value: 1 / this.cellsize },
-        heightScale: { value: 0.1 },
+        heightScale: { value: 0.001 },
         heightmap
       }
     ]);
@@ -165,6 +173,7 @@ class FDTD_2D extends Solver {
     (this.mesh.material as ShaderMaterial).wireframe = false;
     this.mesh.matrixAutoUpdate = true;
     this.mesh.position.setX(this.width / 2);
+    this.mesh.position.setY(this.height / 2);
     this.renderer.env.add(this.mesh);
 
     this.gpuCompute = new GPUComputationRenderer(this.nx, this.ny, this.renderer.renderer as WebGLRenderer);
@@ -211,7 +220,26 @@ class FDTD_2D extends Solver {
       depthBuffer: false
     });
   }
-  clearSourceTexture() {}
+  addWall(props: FDTDWallProps) {
+    const x1 = Math.round(props.x1 / this.cellsize);
+    const y1 =  Math.round(props.y1 / this.cellsize);
+    const x2 =  Math.round(props.x2 / this.cellsize);
+    const y2 =  Math.round(props.y2 / this.cellsize);
+    this.walls.push(new FDTDWall({ x1, y1, x2, y2 }));
+    this.updateWalls();
+  }
+  addWallsFromSurfaceEdges(surface: Surface) {
+    const vertices = (surface.edges.geometry as THREE.Geometry).vertices as THREE.Vector3[];
+    for (let i = 0; i < vertices.length; i += 2){
+      const x1 = Math.round( vertices[i].x / this.cellsize);
+      const y1 =  Math.round(vertices[i].y / this.cellsize);
+      const x2 =  Math.round(vertices[i+1].x / this.cellsize);
+      const y2 =  Math.round(vertices[i+1].y / this.cellsize);
+      this.walls.push(new FDTDWall({ x1, y1, x2, y2 }));
+    }
+    this.updateWalls();
+  }
+  
   fillSourceTexture() {
     const pixels = this.sourcemap.image.data;
     let p = 0;
@@ -222,12 +250,30 @@ class FDTD_2D extends Solver {
         const n = 3;
         pixels[p + 0] = 0;
         pixels[p + 1] = 0;
-        pixels[p + 2] = 0;
+        pixels[p + 2] = 1;
         pixels[p + 3] = 1;
         p += 4;
       }
     }
   }
+  
+  updateWalls() {
+    for (let i = 0; i < this.walls.length; i++) {
+      if (this.walls[i].shouldClearPreviousCells) {
+        for (let j = 0; j < this.walls[i].previousCells.length; j++) {
+          const index = 4 * (this.walls[i].previousCells[j][1] * this.nx + this.walls[i].previousCells[j][0]);
+          this.sourcemap.image.data[index + 2] = 1;
+        }
+        this.walls[i].shouldClearPreviousCells = false;
+      }
+      for (let j = 0; j < this.walls[i].cells.length; j++) {
+        const index = 4 * (this.walls[i].cells[j][1] * this.nx + this.walls[i].cells[j][0]);
+        this.sourcemap.image.data[index + 2] = 0;
+      }
+    }
+    this.sourcemap.needsUpdate = true;
+  }
+  
   updateSourceTexture() {
     const pixels = this.sourcemap.image.data;
     for (let i = 0; i < this.sources.length; i++) {
@@ -269,17 +315,20 @@ class FDTD_2D extends Solver {
     }
   }
   render() {
-    this.updateSourceTexture();
-    const uniforms = this.heightmapVariable.material["uniforms"];
-    // uniforms["mousePos"].value.set(2 * Math.cos((2 * Math.PI * Date.now()) / 1000), 2 * Math.sin((2 * Math.PI * Date.now()) / 1000));
-    uniforms["sourcemap"].value = this.sourcemap;
+    for (let i = 0; i < this.numPasses; i++) {
+      this.updateSourceTexture();
 
-    // Do the gpu computation
-    this.gpuCompute.compute();
+      this.heightmapVariable.material["uniforms"]["sourcemap"].value = this.sourcemap;
+
+      // Do the gpu computation
+      this.gpuCompute.compute();
+      
+      this.time += this.dt;
+    }
 
     // Get compute output in custom uniform
     this.uniforms["heightmap"].value = this.gpuCompute.getCurrentRenderTarget(this.heightmapVariable)["texture"];
-    this.time += this.dt;
+    
   }
 }
 
