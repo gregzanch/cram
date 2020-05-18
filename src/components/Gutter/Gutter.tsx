@@ -19,6 +19,8 @@ import { RT60 } from '../../compute/rt';
 import RayTracerTab from './RayTracerTab';
 import RayTracer from '../../compute/raytracer';
 import RendererTab from './RendererTab';
+import FDTD_2DTab from './FDTD_2DTab';
+import { FDTD_2D } from '../../compute/2d-fdtd';
 
 
 export interface GutterProps {
@@ -110,6 +112,12 @@ export default class Gutter extends React.Component<GutterProps, GutterState>{
                 return (
                   <TabPanel key={"gutter-tabpanel-" + i}>
                     <RT60Tab solver={this.props.solvers[x] as RT60} messenger={this.props.messenger} />
+                  </TabPanel>
+                );
+              case "fdtd-2d":
+                return (
+                  <TabPanel key={"gutter-tabpanel-" + i}>
+                    <FDTD_2DTab solver={this.props.solvers[x] as FDTD_2D} messenger={this.props.messenger} />
                   </TabPanel>
                 );
               default:
