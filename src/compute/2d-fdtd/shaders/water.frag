@@ -7,6 +7,7 @@ uniform vec3 emissive;
 uniform vec3 specular;
 uniform float shininess;
 uniform float opacity;
+uniform float colorBrightness;
 
 #include <common>
 #include <packing>
@@ -66,10 +67,10 @@ void main() {
 
 	vec3 col = vec3(0.0,0.0,0.0);
 	if(vHeight > 0.0){
-		col.r = vHeight;
+		col.r = vHeight/127.5*colorBrightness;
 	}
-	else if(vHeight < 0.0){
-		col.g = vHeight;
+	else if(vHeight <= 0.0){
+		col.g = -vHeight/127.5*colorBrightness;
 	}
 
 	gl_FragColor = vec4( col, diffuseColor.a );

@@ -1,4 +1,7 @@
 uniform sampler2D heightmap;
+uniform float inv_cell_size;
+uniform float cell_size;
+uniform float heightScale;
 varying float vHeight;
 #define PHONG
 
@@ -24,7 +27,7 @@ varying vec3 vViewPosition;
 
 void main() {
 
-	vec2 cellSize = vec2( 1.0 / WIDTH, 1.0 / WIDTH );
+	vec2 cellSize = vec2( cell_size );
 
 	#include <uv_vertex>
 	#include <uv2_vertex>
@@ -33,8 +36,8 @@ void main() {
 	// # include <beginnormal_vertex>
 	// Compute normal from heightmap
 	vec3 objectNormal = vec3(
-		( texture2D( heightmap, uv + vec2( - cellSize.x, 0 ) ).x - texture2D( heightmap, uv + vec2( cellSize.x, 0 ) ).x ) * WIDTH / BOUNDS,
-		( texture2D( heightmap, uv + vec2( 0, - cellSize.y ) ).x - texture2D( heightmap, uv + vec2( 0, cellSize.y ) ).x ) * WIDTH / BOUNDS,
+		( texture2D( heightmap, uv + vec2( - cellSize.x, 0 ) ).x - texture2D( heightmap, uv + vec2( cellSize.x, 0 ) ).x ) * inv_cell_size,
+		( texture2D( heightmap, uv + vec2( 0, - cellSize.y ) ).x - texture2D( heightmap, uv + vec2( 0, cellSize.y ) ).x ) * inv_cell_size,
 		1.0 );
 	//<beginnormal_vertex>
 
@@ -50,9 +53,10 @@ void main() {
 #endif
 
 	//# include <begin_vertex>
-	float heightValue = texture2D( heightmap, uv ).x;
+	float heightValue = (texture2D( heightmap, uv ).x - 127.5);
 	vHeight = heightValue;
-	vec3 transformed = vec3( position.x, position.y, heightValue );
+	
+	vec3 transformed = vec3( position.x, position.y, heightValue * heightScale );
 	//<begin_vertex>
 
 	#include <morphtarget_vertex>
