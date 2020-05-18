@@ -518,7 +518,6 @@ export default class Renderer {
 		this.renderer.domElement.addEventListener("mousedown", (e) => {
 			const selection = this.pickHelper.pick(e, [this.workspace]);
 			if (selection.pickedObject) {
-				console.log(selection.pickedObject);
 				if (e.button == 0) {
 					if (!this.currentlyMovingObjects) {
 						if (e.shiftKey) {
