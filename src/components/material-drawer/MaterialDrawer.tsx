@@ -1,17 +1,17 @@
 import React from 'react';
-import Surface from '../objects/surface';
-import Messenger from '../messenger';
-import { AcousticMaterial } from '..';
+import Surface from '../../objects/surface';
+import Messenger from '../../messenger';
+import { AcousticMaterial } from '../..';
 import { uuid } from 'uuidv4';
-import { absorptionGradient } from './AbsorptionGradient';
-import MaterialSliders from './MaterialSliders';
-import { clamp } from '../common/clamp';
+import { absorptionGradient } from '../absorption-gradient/AbsorptionGradient';
+import MaterialSliders from '../material-sliders/MaterialSliders';
+import { clamp } from '../../common/clamp';
 import { Icon, Tag, IToaster } from '@blueprintjs/core';
 import { ButtonGroup, Button } from '@blueprintjs/core';
-import Room from '../objects/room';
-import ObjectView from './ObjectView';
-import { KeyValuePair } from '../common/key-value-pair';
-import Container from '../objects/container';
+import Room from '../../objects/room';
+import ObjectView from '../object-view/ObjectView';
+import { KeyValuePair } from '../../common/key-value-pair';
+import Container from '../../objects/container';
 
 import "./MaterialDrawer.css";
 

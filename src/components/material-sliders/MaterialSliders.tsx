@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@blueprintjs/core';
-import {absorptionGradient, Absorption} from './AbsorptionGradient';
+import {absorptionGradient, Absorption} from '../absorption-gradient/AbsorptionGradient';
 
 interface MaterialSlidersProps {
   values?: number[];

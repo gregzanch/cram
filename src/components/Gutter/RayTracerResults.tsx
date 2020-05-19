@@ -1,7 +1,7 @@
 import React, {useState} from 'react';
 import RayTracer from '../../compute/raytracer';
 import Messenger from '../../messenger';
-import GridRow from '../GridRow';
+import GridRow from '../grid-row/GridRow';
 import { whole_octave } from '../../compute/acoustics';
 
 export interface RayTracerResultsProps{

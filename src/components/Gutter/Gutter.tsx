@@ -7,7 +7,7 @@ import { ParametersPanel } from './ParametersPanel';
 import MaterialsPanel from './MaterialsPanel';
 import { ChartTab } from './ChartTab';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
-import ContextMenu from "../ContextMenu";
+import ContextMenu from "../context-menu/ContextMenu";
 import { SvgIcon } from '@material-ui/core';
 import MoreVert from '@material-ui/icons/MoreVert';
 import CloseIcon from '@material-ui/icons/Close';

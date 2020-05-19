@@ -1,13 +1,13 @@
 import React from "react";
-import TextInput from "../TextInput";
-import NumberInput, { ObjectPropertyInputEvent } from "../NumberInput";
-import CheckboxInput from "../CheckboxInput";
+import TextInput from "../text-input/TextInput";
+import NumberInput, { ObjectPropertyInputEvent } from "../number-input/NumberInput";
+import CheckboxInput from "../checkbox-input/CheckboxInput";
 import Source from '../../objects/source';
-import GridRow from '../GridRow';
+import GridRow from '../grid-row/GridRow';
 import Surface from '../../objects/surface';
-import GridRowSeperator from "../GridRowSeperator";
+import GridRowSeperator from "../grid-row/GridRowSeperator";
 
-import AutoCompleteTextInput from '../AutoCompleteTextInput';
+import AutoCompleteTextInput from '../auto-complete-text-input/AutoCompleteTextInput';
 import Messenger from "../../messenger";
 import { Button, Tag } from "@blueprintjs/core";
 

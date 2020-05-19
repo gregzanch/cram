@@ -1,6 +1,6 @@
 import React from 'react';
 import { Colors } from '@blueprintjs/core';
-import { Characters } from '../constants';
+import { Characters } from '../../constants';
 
 export interface MenuItemTextProps{
   text: string;

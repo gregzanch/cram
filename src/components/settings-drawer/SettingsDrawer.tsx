@@ -1,9 +1,9 @@
 import React from "react";
 
 import { Drawer, Position, InputGroup, Button } from "@blueprintjs/core";
-import { Setting } from "../setting";
+import { Setting } from "../../setting";
 
-import { KeyValuePair } from "../common/key-value-pair";
+import { KeyValuePair } from "../../common/key-value-pair";
 
 import "./SettingsDrawer.css";
 

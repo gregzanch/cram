@@ -1,7 +1,7 @@
 import React from 'react';
 import { RT60 } from '../../compute/rt';
 import Messenger from "../../messenger";
-import { ObjectPropertyInputEvent } from "../NumberInput";
+import { ObjectPropertyInputEvent } from "../number-input/NumberInput";
 import "./RT60Tab.css"
 import RT60Properties from '../ObjectProperties/RT60Properties';
 

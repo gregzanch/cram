@@ -21,12 +21,12 @@ import {
   Toaster,
   IToastProps,
 } from "@blueprintjs/core";
-import MenuItemText from '../components/MenuItemText';
+import MenuItemText from '../components/menu-item-text/MenuItemText';
 import { ItemListRenderer, IItemListRendererProps } from "@blueprintjs/select";
-import MaterialBar from '../components/MaterialBar';
+import MaterialBar from '../components/material-bar/MaterialBar';
 import { Characters, EditorModes, ToolNames } from "../constants";
-import ImportDialog from "../components/ImportDialog";
-import ObjectView from "../components/ObjectView";
+import ImportDialog from "../components/import-dialog/ImportDialog";
+import ObjectView from "../components/object-view/ObjectView";
 import resolve_svg from "../svg/resolve.svg";
 import { set } from "../common/set-at";
 import Container from "../objects/container";
@@ -37,7 +37,7 @@ import Renderer from "../render/renderer";
 import Receiver from "../objects/receiver";
 import Source from "../objects/source";
 import { KeyValuePair } from "../common/key-value-pair";
-import SettingsDrawer from "../components/SettingsDrawer";
+import SettingsDrawer from "../components/settings-drawer/SettingsDrawer";
 import { Setting } from "../setting";
 import { Report } from "../common/browser-report";
 
@@ -52,11 +52,11 @@ import RayTracer from "../compute/raytracer";
 
 import Gutter from '../components/Gutter/Gutter';
 import { Stat } from "../components/Gutter/Stats";
-import { ObjectPropertyInputEvent } from "../components/NumberInput";
+import { ObjectPropertyInputEvent } from "../components/number-input/NumberInput";
 import Surface from "../objects/surface";
 import { AcousticMaterial } from "..";
 import { Searcher } from "fast-fuzzy";
-import MaterialDrawer from "../components/MaterialDrawer";
+import MaterialDrawer from "../components/material-drawer/MaterialDrawer";
 import { SettingsPanel } from "../components/setting-components/SettingsPanel";
 import Results from "../components/Gutter/Results";
 import { Tab, Tabs, TabList, TabPanel } from "react-tabs";

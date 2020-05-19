@@ -8,17 +8,17 @@ import ChevronRightIcon from "@material-ui/icons/ChevronRight";
 
 
 import TreeItem from "@material-ui/lab/TreeItem";
-import TreeItemLabel from './TreeItemLabel';
-import Source from "../objects/source";
-import Receiver from "../objects/receiver";
-import properCase from "../common/proper-case";
-import { KeyValuePair } from "../common/key-value-pair";
-import Container from "../objects/container";
-import Surface from "../objects/surface";
-import Solver from "../compute/solver";
+import TreeItemLabel from '../tree-item-label/TreeItemLabel';
+import Source from "../../objects/source";
+import Receiver from "../../objects/receiver";
+import properCase from "../../common/proper-case";
+import { KeyValuePair } from "../../common/key-value-pair";
+import Container from "../../objects/container";
+import Surface from "../../objects/surface";
+import Solver from "../../compute/solver";
 import { Colors } from "@blueprintjs/core";
 import { Icon } from "@fortawesome/fontawesome-svg-core";
-import ContextMenu from "./ContextMenu";
+import ContextMenu from "../context-menu/ContextMenu";
 import {
   NodesIcon,
   FDTDIcon,
@@ -28,7 +28,7 @@ import {
   SourceIcon,
   ReceiverIcon,
   RT60Icon
-} from './icons';
+} from '../icons';
 import "./ObjectView.css";
 
 

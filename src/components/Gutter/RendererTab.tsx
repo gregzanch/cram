@@ -1,5 +1,5 @@
 import React, {useState} from "react";
-import SliderInput from '../SliderInput';
+import SliderInput from '../slider-input/SliderInput';
 import Messenger from "../../messenger";
 import Renderer from "../../render/renderer";
 import { clamp } from '../../common/clamp';

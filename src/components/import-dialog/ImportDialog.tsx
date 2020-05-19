@@ -2,8 +2,8 @@ import React, {useState} from "react";
 
 import { uuid } from 'uuidv4';
 
-import { mmm_dd_yyyy } from "../common/dayt"; 
-import FileTypes from '../common/file-type';
+import { mmm_dd_yyyy } from "../../common/dayt"; 
+import FileTypes from '../../common/file-type';
 
 import {
 	AnchorButton,

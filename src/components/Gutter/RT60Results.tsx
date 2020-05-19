@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import RT60 from "../../compute/rt";
 import Messenger from "../../messenger";
 import {whole_octave} from "../../compute/acoustics";
-import GridRow from "../GridRow";
+import GridRow from "../grid-row/GridRow";
 export interface RT60ResultsProps {
   rt60: RT60;
   messenger: Messenger;

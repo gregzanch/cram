@@ -5,7 +5,7 @@ import Plot from "react-plotly.js";
 import { Button } from "@blueprintjs/core";
 import ObjectProperties from "../ObjectProperties";
 import Messenger from "../../messenger";
-import { ObjectPropertyInputEvent } from "../NumberInput";
+import { ObjectPropertyInputEvent } from "../number-input/NumberInput";
 import SplitterLayout from "react-splitter-layout";
 import RayTracerResults from "./RayTracerResults";
 import PanelContainer from "../../containers/PanelContainer";
