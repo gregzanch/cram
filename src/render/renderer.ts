@@ -221,14 +221,20 @@ export default class Renderer {
 		this.workspaceCursor = this.workspace;
 		
 		this.lights = new Lights();
-		this.grid = new Grid();
+		this.grid = new Grid("grid", {
+      size: 500,
+      cellSize: 1,
+      majorLinesEvery: 10,
+      color1: 0xd4d6d8,
+      color2: 0xe4e7e8
+    });
 		this.axes = new Axes();
 		
 		this.env.add(this.grid, this.lights, this.axes);
 		
 		this.cursor = new THREE.Mesh(
       new THREE.SphereBufferGeometry(0.05, 8, 8),
-      new THREE.MeshLambertMaterial({
+      new THREE.MeshLambertMaterial({fog:false,
         color: new THREE.Color(0x6f1d1d),
         // emissiveIntensity: 2,
         // emissive: new THREE.Color(1, 1, 0),
@@ -382,7 +388,7 @@ export default class Renderer {
 	
 		this.pickHelper = new PickHelper(this.scene, this._camera, this.renderer.domElement);
 	
-		this.fog = new THREE.Fog(background, far - 200, far);
+		this.fog = new THREE.FogExp2(background, 0.015);
 		this.scene.fog = this.fog;
 
 		this.composer = new EffectComposer(this.renderer as THREE.WebGLRenderer);
@@ -692,15 +698,15 @@ export default class Renderer {
 	
 	addRoom(room: Room) {
 		this.workspaceCursor.add(room);
-		const near =
-			room.boundingBox.max
-				.clone()
-				.sub(room.boundingBox.min)
-				.length() * 4;
-		const far = near * 4;
-		const color = this.fog.color;
-		this.fog = new THREE.Fog(color.getHex(), near, far);
-    this.scene.fog = this.fog;
+		// const near =
+			// room.boundingBox.max
+				// .clone()
+				// .sub(room.boundingBox.min)
+				// .length() * 4;
+		// const far = near * 4;
+		// const color = this.fog.color;
+		// this.fog = new THREE.Fog(color.getHex(), 10, 50);
+    // this.scene.fog = this.fog;
     this.needsToRender = true;
 	}
 
@@ -845,11 +851,11 @@ export default class Renderer {
 		this.needsToRender = true;
 	}
 
-	get axesVisible() {
+	get axisVisible() {
 		return this.axes && this.axes.visible || false;
 	}
 	
-	set axesVisible(visible: boolean) {
+	set axisVisible(visible: boolean) {
 		this.axes.visible = visible;
 		this.needsToRender = true;
 	}
@@ -859,7 +865,25 @@ export default class Renderer {
 	}
 	
 	set zoom(zoom: number) {
-		this._camera.zoom = zoom;
+		this.camera.zoom = zoom;
+		this.camera.updateProjectionMatrix();
+		this.needsToRender = true;
+	}
+	get near() {
+		return (this.camera && this.camera.near) || 0.01;
+	}
+	
+	set near(near: number) {
+		this.camera.near = near;
+		this.camera.updateProjectionMatrix();
+		this.needsToRender = true;
+	}
+	get far() {
+		return (this.camera && this.camera.far) || 500;
+	}
+	
+	set far(far: number) {
+		this.camera.far = far;
 		this.camera.updateProjectionMatrix();
 		this.needsToRender = true;
 	}

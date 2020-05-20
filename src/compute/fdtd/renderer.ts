@@ -24,7 +24,7 @@
 //     new THREE.InstancedBufferAttribute(translateArray, 3)
 //   );
 
-//   material = new THREE.RawShaderMaterial({
+//   material = new THREE.RawShaderMaterial({fog:false,
 //     uniforms: {
 //       map: {
 //         value: new THREE.TextureLoader().load("textures/sprites/circle.png")

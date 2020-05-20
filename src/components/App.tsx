@@ -21,23 +21,23 @@ import {
   Toaster,
   IToastProps,
 } from "@blueprintjs/core";
-import MenuItemText from '../components/menu-item-text/MenuItemText';
+import MenuItemText from './menu-item-text/MenuItemText';
 import { ItemListRenderer, IItemListRendererProps } from "@blueprintjs/select";
-import MaterialBar from '../components/material-bar/MaterialBar';
+import MaterialBar from './material-bar/MaterialBar';
 import { Characters, EditorModes, ToolNames } from "../constants";
-import ImportDialog from "../components/import-dialog/ImportDialog";
-import ObjectView from "../components/object-view/ObjectView";
+import ImportDialog from "./import-dialog/ImportDialog";
+import ObjectView from "./object-view/ObjectView";
 import resolve_svg from "../svg/resolve.svg";
 import { set } from "../common/set-at";
 import Container from "../objects/container";
-import PanelContainer from "./PanelContainer";
-import ObjectProperties from "../components/ObjectProperties/index";
+import PanelContainer from "./panel-container/PanelContainer";
+import ObjectProperties from "./ObjectProperties/index";
 import Messenger from "../messenger";
 import Renderer from "../render/renderer";
 import Receiver from "../objects/receiver";
 import Source from "../objects/source";
 import { KeyValuePair } from "../common/key-value-pair";
-import SettingsDrawer from "../components/settings-drawer/SettingsDrawer";
+import SettingsDrawer from "./settings-drawer/SettingsDrawer";
 import { Setting } from "../setting";
 import { Report } from "../common/browser-report";
 
@@ -46,19 +46,19 @@ import "./App.css";
 import { ToolName } from "../constants/tool-names";
 import { EditorMode } from "../constants/editor-modes";
 // import { Process, Task } from "../common/process";
-import SettingsDrawerCheckBox from "../components/setting-components/SettingsDrawerCheckbox";
+import SettingsDrawerCheckBox from "./setting-components/SettingsDrawerCheckbox";
 import Solver from "../compute/solver";
 import RayTracer from "../compute/raytracer";
 
-import Gutter from '../components/Gutter/Gutter';
-import { Stat } from "../components/Gutter/Stats";
-import { ObjectPropertyInputEvent } from "../components/number-input/NumberInput";
+import Gutter from './gutter/Gutter';
+import { Stat } from "./gutter/Stats";
+import { ObjectPropertyInputEvent } from "./number-input/NumberInput";
 import Surface from "../objects/surface";
 import { AcousticMaterial } from "..";
 import { Searcher } from "fast-fuzzy";
-import MaterialDrawer from "../components/material-drawer/MaterialDrawer";
-import { SettingsPanel } from "../components/setting-components/SettingsPanel";
-import Results from "../components/Gutter/Results";
+import MaterialDrawer from "./material-drawer/MaterialDrawer";
+import { SettingsPanel } from "./setting-components/SettingsPanel";
+import Results from "./gutter/Results";
 import { Tab, Tabs, TabList, TabPanel } from "react-tabs";
 import properCase from "../common/proper-case";
 import { ApplicationSettings } from "../default-settings";
@@ -110,7 +110,6 @@ interface AppState {
 	materialDrawerOpen: boolean;
 	terminalOpen: boolean;
   newWarningVisible: boolean;
-  isGutterSplit: boolean;
   canUndo: boolean;
   canRedo: boolean;
   selectedSettingsDrawerTab: number;
@@ -125,7 +124,6 @@ export default class App extends React.Component<AppProps, AppState> {
 	constructor(props: AppProps) {
 		super(props);
     this.state = {
-      isGutterSplit: false,
 			terminalOpen: false,
 			newWarningVisible: false,
 			materialDrawerOpen: false,
@@ -719,23 +717,7 @@ export default class App extends React.Component<AppProps, AppState> {
                   <Popover minimal={true} transitionDuration={10} position={Position.BOTTOM_LEFT}>
                     <Button text="View" className={"main-nav_bar-left_menu-button"} />
                     <Menu>
-                      <MenuItem
-                        text={
-                          <div
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between"
-                            }}>
-                            <div style={{ color: Colors.LIGHT_GRAY1 }}>{this.state.isGutterSplit ? "✓" : ""}</div>
-                            <div>Split Gutter</div>
-                          </div>
-                        }
-                        onClick={() =>
-                          this.setState({
-                            isGutterSplit: !this.state.isGutterSplit
-                          })
-                        }
-                      />
+
                     </Menu>
                   </Popover>
                 </ButtonGroup>
@@ -786,7 +768,7 @@ export default class App extends React.Component<AppProps, AppState> {
             <TabPanel />
             {Object.keys(this.state.settings).map((key) => {
               return (
-                <TabPanel key={"settings-tabpanel-"+key}>
+                <TabPanel key={"settings-tabpanel-" + key}>
                   <SettingsPanel messenger={this.props.messenger} category={key} />
                 </TabPanel>
               );
@@ -842,42 +824,50 @@ export default class App extends React.Component<AppProps, AppState> {
           </PanelContainer>
 
           {/* center and right */}
-          <SplitterLayout secondaryMinSize={0} primaryMinSize={50} secondaryInitialSize={250} primaryIndex={0}>
+          <SplitterLayout secondaryMinSize={0} primaryMinSize={50} secondaryInitialSize={300} primaryIndex={0}>
             {/* webgl canvas & gutter*/}
-            <SplitterLayout vertical={true} primaryMinSize={40} secondaryMinSize={1} secondaryInitialSize={window.innerHeight/6} customClassName="canvas-gutter">
+            <SplitterLayout
+              vertical={true}
+              primaryMinSize={100}
+              secondaryMinSize={1}
+              secondaryInitialSize={1}
+              customClassName="canvas-gutter">
               <div className="webgl-canvas">
                 <div id="canvas_overlay" ref={this.canvasOverlay}></div>
                 <canvas id="renderer-canvas" ref={this.canvas} />
               </div>
 
-              <SplitterLayout primaryIndex={0}>
-                <PanelContainer className="panel full-bottom gutter-panel">
-                  <Gutter messenger={this.props.messenger} solvers={this.state.solvers} key={"gutter-panel"} />
-                </PanelContainer>
-                {this.state.isGutterSplit ? (
-                  <PanelContainer className="panel full-bottom gutter-panel">
-                    <Results messenger={this.props.messenger} solvers={this.state.solvers} key={"results-panel"} />
-                  </PanelContainer>
-                ) : null}
-              </SplitterLayout>
+              <PanelContainer className="panel full-bottom gutter-panel">
+                {/* <Gutter messenger={this.props.messenger} solvers={this.state.solvers} key={"gutter-panel"} /> */}
+                <div></div>
+              </PanelContainer>
             </SplitterLayout>
-
-            <PanelContainer>
-              {(() => {
-                if (Object.keys(this.state.selectedObject).length > 0) {
-                  return (
-                    <ObjectProperties
-                      messenger={this.props.messenger}
-                      object={this.state.selectedObject}
-                      onPropertyChange={this.handleObjectPropertyChange}
-                      onPropertyValueChangeAsNumber={this.handleObjectPropertyValueChangeAsNumber}
-                      onPropertyValueChangeAsString={this.handleObjectPropertyValueChangeAsString}
-                      onButtonClick={this.handleObjectPropertyButtonClick}
-                    />
-                  );
-                }
-              })()}
-            </PanelContainer>
+            <SplitterLayout
+              vertical={true}
+              primaryMinSize={40}
+              secondaryMinSize={1}
+              secondaryInitialSize={window.innerHeight / 2}
+              customClassName="canvas-gutter">
+              <PanelContainer>
+                {(() => {
+                  if (Object.keys(this.state.selectedObject).length > 0) {
+                    return (
+                      <ObjectProperties
+                        messenger={this.props.messenger}
+                        object={this.state.selectedObject}
+                        onPropertyChange={this.handleObjectPropertyChange}
+                        onPropertyValueChangeAsNumber={this.handleObjectPropertyValueChangeAsNumber}
+                        onPropertyValueChangeAsString={this.handleObjectPropertyValueChangeAsString}
+                        onButtonClick={this.handleObjectPropertyButtonClick}
+                      />
+                    );
+                  }
+                })()}
+              </PanelContainer>
+              <PanelContainer className="panel full-bottom gutter-panel">
+                <Gutter messenger={this.props.messenger} solvers={this.state.solvers} key={"gutter-panel"} />
+              </PanelContainer>
+            </SplitterLayout>
           </SplitterLayout>
         </SplitterLayout>
       </div>

@@ -18,7 +18,8 @@ export default class Axes extends Container {
 		this.Xaxis = new THREE.Line(this.makeLine(
 			new THREE.Vector3(-1000, 0, 0),
 			new THREE.Vector3(+1000, 0, 0)
-    ), new THREE.LineBasicMaterial({
+		), new THREE.LineBasicMaterial({
+			fog: true,
       color: 0xff0000,
       transparent: true,
       opacity: 0.3,
@@ -30,7 +31,8 @@ export default class Axes extends Container {
 			new THREE.Vector3(0, -1000, 0),
 			new THREE.Vector3(0, +1000, 0)
 		),
-		new THREE.LineBasicMaterial({
+			new THREE.LineBasicMaterial({
+			fog: true,
 			color: 0x38a10c,
 			transparent: true,
 			opacity: 0.3,
@@ -44,6 +46,7 @@ export default class Axes extends Container {
 				new THREE.Vector3(0, 0, +1000)
 			),
 			new THREE.LineBasicMaterial({
+				fog: true,
 				color: 0x0000ff,
 				transparent: true,
 				opacity: 0.3,

@@ -1,4 +1,5 @@
 import map from '../../common/map';
+import { Vector3 } from 'three';
 
 export interface FDTDSourceProps {
   x: number;
@@ -11,6 +12,7 @@ export interface FDTDSourceProps {
 class FDTDSource{
   x: number;
   y: number;
+
   amplitude: number;
   frequency: number;
   phase: number;
@@ -24,6 +26,7 @@ class FDTDSource{
   constructor(props: FDTDSourceProps) {
     this.x = props.x;
     this.y = props.y;
+
     this.previousX = this.x;
     this.previousY = this.y;
     this.shouldClearPreviousPosition = false;

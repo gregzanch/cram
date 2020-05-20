@@ -14,10 +14,8 @@ export interface SliderProps {
   min: number;
   max: number;
   step: number;
-  hasLabel: boolean;
   label: string;
   tooltipText: string;
-  hasTooltip: boolean;
   labelPosition: "top" | "bottom" | "left" | "right";
 }
 
@@ -34,13 +32,13 @@ export default class Slider extends React.Component<SliderProps, SliderState>{
     this.decimals = countDecimals(this.props.step);
     this.state = {
       stagedValue: this.props.value
-    }
+		}
     this.input = React.createRef<HTMLInputElement>();
     this.setStagedValue = this.setStagedValue.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
   }
-  componentDidMount() {
-    this.input.current!.value = this.state.stagedValue.toFixed(this.decimals);
+	componentDidMount() {
+		this.input.current!.value = this.state.stagedValue && this.state.stagedValue.toFixed(this.decimals) || "0";
   }
   setStagedValue(value: number, callback?: () => void) {
     this.input.current!.value = value.toFixed(this.decimals);
@@ -49,78 +47,68 @@ export default class Slider extends React.Component<SliderProps, SliderState>{
     }, callback);
   }
   handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    this.setStagedValue(clamp(Number(this.input.current!.value), this.props.min, this.props.max));
+    const value = clamp(Number(this.input.current!.value), this.props.min, this.props.max);
+    this.setStagedValue(value, () => this.props.onChange({ id: this.props.id, value }));
     
     event.preventDefault();
   }
   render() {
     return (
-			<div className="slider-container">
-				{this.props.hasLabel && (
-					<Label
-						hasTooltip={this.props.hasTooltip}
-						tooltipText={this.props.tooltipText}
-					>
-						{this.props.label}
-					</Label>
-				)}
-				<div className="slider-component">
-					<button
-						className={"slider-step decrement"}
-						onClick={(e) => {
-							let value = this.state.stagedValue - this.props.step;
-							if (value < this.props.min) {
-								value = this.props.min;
-							}
-							this.setStagedValue(value, () =>
-								this.props.onChange({ id: this.props.id, value })
-							);
-						}}
-					>
-						-
-					</button>
-					<input
-						type="range"
-						className={"slider"}
-						min={this.props.min}
-						max={this.props.max}
-						step={this.props.step}
-						value={this.props.value}
-						id={this.props.id}
-						onChange={(e) => {
-							const value = e.currentTarget.valueAsNumber;
-							this.setStagedValue(value, () =>
-								this.props.onChange({ id: this.props.id, value })
-							);
-						}}
-					/>
-					<button
-						className={"slider-step increment"}
-						onClick={(e) => {
-							let value = this.state.stagedValue + this.props.step;
-							if (value > this.props.max) {
-								value = this.props.max;
-							}
-							this.setStagedValue(value, () =>
-								this.props.onChange({ id: this.props.id, value })
-							);
-						}}
-					>
-						+
-					</button>
-				</div>
-				<form onSubmit={this.handleSubmit} noValidate>
-					<input
-						type="number"
-						className={"slider-number"}
-						min={this.props.min}
-						max={this.props.max}
-						step={this.props.step}
-						id={this.props.id}
-						ref={this.input}
-					/>
-				</form>
-			</div>
-		);
+      <div className="slider-container">
+        <div className="slider-label-container">
+          <Label hasTooltip tooltipText={this.props.tooltipText}>
+            {this.props.label}
+          </Label>
+        </div>
+        <div className="slider-component">
+          <button
+            className={"slider-step decrement"}
+            onClick={(e) => {
+              let value = this.state.stagedValue - this.props.step;
+              if (value < this.props.min) {
+                value = this.props.min;
+              }
+              this.setStagedValue(value, () => this.props.onChange({ id: this.props.id, value }));
+            }}>
+            -
+          </button>
+          <input
+            type="range"
+            className={"slider"}
+            min={this.props.min}
+            max={this.props.max}
+            step={this.props.step}
+            value={this.props.value}
+            id={this.props.id + "-slider-" + window.crypto.getRandomValues(new Uint32Array(1))[0].toString()}
+            onChange={(e) => {
+              const value = e.currentTarget.valueAsNumber;
+              this.setStagedValue(value, () => this.props.onChange({ id: this.props.id, value }));
+            }}
+          />
+          <button
+            className={"slider-step increment"}
+            onClick={(e) => {
+              let value = this.state.stagedValue + this.props.step;
+              if (value > this.props.max) {
+                value = this.props.max;
+              }
+              this.setStagedValue(value, () => this.props.onChange({ id: this.props.id, value }));
+            }}>
+            +
+          </button>
+        </div>
+        <form onSubmit={this.handleSubmit} noValidate>
+          <input
+            type="number"
+            className={"slider-number"}
+            min={this.props.min}
+            max={this.props.max}
+            step={this.props.step}
+            id={this.props.id + "-number-" + window.crypto.getRandomValues(new Uint32Array(1))[0].toString()}
+            ref={this.input}
+          />
+        </form>
+      </div>
+    );
   }
 }

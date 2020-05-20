@@ -15,6 +15,7 @@ export const ICONS = {
 	WORD: "file-word-o"
 };
 export const allowed = {
+	wav: true,
 	stl: true,
 	obj: true,
 	gltf: true

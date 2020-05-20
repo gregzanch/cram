@@ -3,7 +3,7 @@ import * as THREE from "three";
 import Container, { ContainerProps, ContainerSaveObject } from "./container";
 import chroma from "chroma-js";
 import { MATCAP_PORCELAIN_WHITE, MATCAP_UNDER_SHADOW } from "./asset-store";
-
+import FileSaver from "file-saver";
 // import { vs, fs } from '../render/shaders/glow';
 
 
@@ -24,10 +24,12 @@ export default class Receiver extends Container{
   mesh: THREE.Mesh;
   selectedMaterial: THREE.MeshMatcapMaterial;
   normalMaterial: THREE.MeshMatcapMaterial;
+  fdtdSamples: number[];
   constructor(name: string, props?: ReceiverProps) {
     super(name);
     this.kind = "receiver";
-//     const glowmaterial = new THREE.ShaderMaterial({
+    this.fdtdSamples = [] as number[];
+//     const glowmaterial = new THREE.ShaderMaterial({fog:false,
 //       uniforms: {
 //         c: { type: "f", value: 1.0 },
 //         p: { type: "f", value: 1.4 },
@@ -40,12 +42,12 @@ export default class Receiver extends Container{
 //       blending: THREE.AdditiveBlending,
 //       transparent: true
 // });
-     this.selectedMaterial = new THREE.MeshMatcapMaterial({
+     this.selectedMaterial = new THREE.MeshMatcapMaterial({fog:false,
        color: defaults.color,
        matcap: MATCAP_UNDER_SHADOW
      });
 
-     this.normalMaterial = new THREE.MeshMatcapMaterial({
+     this.normalMaterial = new THREE.MeshMatcapMaterial({fog:false,
        color: defaults.color,
        matcap: MATCAP_PORCELAIN_WHITE
      });
@@ -98,6 +100,18 @@ export default class Receiver extends Container{
       this.uuid = state.uuid;
     };
   }
+  clearSamples() {
+    this.fdtdSamples = [] as number[];
+  }
+  saveSamples() {
+    if (this.fdtdSamples.length>0) {
+      const blob = new Blob([this.fdtdSamples.join("\n")], {
+        type: "text/plain;charset=utf-8"
+      });
+      FileSaver.saveAs(blob, `fdtdsamples-${this.uuid}.txt`);
+    } else return;
+  }
+
   getColorAsNumber() {
     return (this.mesh.material as THREE.MeshBasicMaterial).color.getHex();
   }

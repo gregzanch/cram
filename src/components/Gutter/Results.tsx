@@ -5,11 +5,11 @@ import Messenger from "../../messenger";
 import { Tab, Tabs, TabList, TabPanel } from "react-tabs";
 import { KeyValuePair } from "../../common/key-value-pair";
 import Solver from "../../compute/solver";
-import RT60Tab from "./RT60Tab";
+import RT60Tab from "./rt60-tab/RT60Tab";
 import { RT60 } from "../../compute/rt";
 import RayTracer from "../../compute/raytracer";
-import RayTracerResults from "./RayTracerResults";
-import RT60Results from "./RT60Results";
+import RayTracerResults from "./ray-tracer-results/RayTracerResults";
+import RT60Results from "./rt60-results/RT60Results";
 
 export interface ResultsProps {
   solvers: KeyValuePair<Solver>;

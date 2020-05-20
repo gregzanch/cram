@@ -311,7 +311,7 @@ export class FDTD extends Solver {
 
 		this.geometry.setAttribute("translate", new THREE.InstancedBufferAttribute(translateArray, 3));
 		this.geometry.setAttribute("pressure", new THREE.InstancedBufferAttribute(this.u[this.curr],1))
-		this.material = new THREE.RawShaderMaterial({
+		this.material = new THREE.RawShaderMaterial({fog:false,
       uniforms: {
         map: {
           value: new THREE.TextureLoader().load(image)
@@ -392,7 +392,7 @@ export class FDTD extends Solver {
 	// 						this.resolution,
 	// 						this.resolution
 	// 					),
-	// 					new THREE.MeshBasicMaterial({
+	// 					new THREE.MeshBasicMaterial({fog:false,
 	// 						color: 0,
 	// 						transparent: true,
 	// 						opacity: 0.0

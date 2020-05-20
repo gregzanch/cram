@@ -1,0 +1,6 @@
+.property-row-container {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  user-select: none;
+  font-size: 9pt;
+}

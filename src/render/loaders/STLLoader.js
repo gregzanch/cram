@@ -25,7 +25,7 @@
  * For binary STLs geometry might contain colors for vertices. To use it:
  *  // use the same code to load STL as above
  *  if (geometry.hasColors) {
- *    material = new THREE.MeshPhongMaterial({ opacity: geometry.alpha, vertexColors: THREE.VertexColors });
+ *    material = new THREE.MeshPhongMaterial({fog:false, opacity: geometry.alpha, vertexColors: THREE.VertexColors });
  *  } else { .... }
  *  var mesh = new THREE.Mesh( geometry, material );
  *
@@ -44,7 +44,7 @@
  *
  *  for (var i = 0; i < nGeometryGroups; i++) {
  *
- *		var material = new THREE.MeshPhongMaterial({
+ *		var material = new THREE.MeshPhongMaterial({fog:false,
  *			color: colorMap[i],
  *			wireframe: false
  *		});

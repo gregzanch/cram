@@ -1,4 +1,7 @@
 .slider-container {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  
   user-select: none;
   --slider-cursor-focus: pointer;
   --slider-cursor-hover: pointer;
@@ -10,12 +13,16 @@
 .slider-container > form{
   display: inline-block;
 }
-
+.slider-label-container{
+  text-align: right;
+  min-width: 100px;
+}
 .slider-component {
   --slider-component-horizontal-margin: 0.5em;
   display: inline-block;
   margin-left: var(--slider-component-horizontal-margin);
   margin-right: var(--slider-component-horizontal-margin);
+  min-width: 90px;
 }
 
 .slider-component:hover .slider-step{
@@ -89,6 +96,8 @@ input[type="range"].slider {
   -webkit-appearance: none;
   vertical-align: middle;
   margin: 0px 0;
+  width: calc(100% - 30px);
+  min-width: 60px;
 }
 input[type="range"].slider:hover {
   cursor: var(--slider-cursor-hover);
@@ -98,6 +107,7 @@ input[type="range"].slider:focus {
   cursor: var(--slider-cursor-focus);
 }
 input[type="range"].slider::-webkit-slider-runnable-track {
+  width: 100%;
   height: 12px;
   cursor: var(--slider-cursor);
   box-shadow: 0px 0px 0px #000000, 0px 0px 0px #0d0d0d;
@@ -172,6 +182,8 @@ input[type="range"].slider:focus::-ms-fill-upper {
 }
 
 input[type="number"].slider-number {
+  width: 80%;
+  max-width: 100px;
   outline: none;
   border: none;
   border-radius: 2px;

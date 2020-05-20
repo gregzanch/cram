@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom";
 
-import App from "./containers/App";
+import App from "./components/App";
 import browserReport from "./common/browser-report";
 import Messenger from "./messenger";
 import Source from "./objects/source";
@@ -22,7 +22,9 @@ import { Setting } from "./setting";
 import { chunk } from "./common/chunk";
 
 //@ts-ignore
-import basement from "!raw-loader!./res/models/basement_even_ceiling.obj";
+// import basement from "!raw-loader!./res/models/basement_even_ceiling.obj";
+//@ts-ignore
+import basement from "!raw-loader!./res/models/10x13.obj";
 
 import Solver from "./compute/solver";
 import { FDTD } from "./compute/fdtd";
@@ -55,6 +57,8 @@ import fullscreen from "./common/fullscreen";
 
 import { QuatAngle } from './common/QuatAngle';
 import { rad2deg, deg2rad } from './common/convert-rad-deg';
+
+import { AudioFile } from './objects/audio-file';
 
 //@ts-ignore
 // window.CSG = CSG;
@@ -97,6 +101,7 @@ materials.forEach(x => {
 
 
 const state = {
+  audiofiles: {} as KeyValuePair<AudioFile>,
   time: 0,
   selectedObjects: [] as Container[],
   materialsIndex,
@@ -317,13 +322,13 @@ state.messenger.addMessageHandler("SHOULD_ADD_FDTD_2D", (acc, args) => {
   const defaults = FDTD_2D_Defaults;
   let width = args && args.width || defaults.width;
   let height = args && args.height || defaults.height;
-  let cellsize = args && args.cellsize || Math.max(width,height)/128;
+  let cellSize = args && args.cellSize || Math.max(width,height)/128;
   const fdtd2d = new FDTD_2D({
     messenger: state.messenger,
     renderer: state.renderer,
     width,
     height,
-    cellsize
+    cellSize
   });
   fdtd2d.name = "FDTD-2D"
   state.solvers[fdtd2d.uuid] = fdtd2d;
@@ -486,6 +491,11 @@ state.messenger.addMessageHandler("ADDED_ROOM", (acc, ...args) => {
   args[0];
 });
 
+state.messenger.addMessageHandler("ADDED_AUDIO_FILE", (acc, args) => {
+  const audiofile = args[0] as AudioFile;
+  state.audiofiles[audiofile.uuid] = audiofile;
+})
+
 state.messenger.addMessageHandler("IMPORT_FILE", (acc, ...args) => {
   const files = Array.from(args[0]);
   files.forEach(async (file: File) => {
@@ -493,7 +503,7 @@ state.messenger.addMessageHandler("IMPORT_FILE", (acc, ...args) => {
       const objectURL = URL.createObjectURL(file);
       switch (fileType(file.name)) {
         case 'obj': {
-          const result = await(await fetch(objectURL)).text();
+          const result = await (await fetch(objectURL)).text();
           const models = importHandlers.obj(result);
           const surfaces = models.map(
             (model) =>
@@ -511,7 +521,32 @@ state.messenger.addMessageHandler("IMPORT_FILE", (acc, ...args) => {
           state.room = room.uuid;
           state.renderer.addRoom(room);
           state.messenger.postMessage("ADDED_ROOM", room);
-        } break
+        } break;
+        case 'wav': {
+          try {
+            const result = await (await fetch(objectURL)).arrayBuffer();
+            const audioContext = new AudioContext();
+            audioContext.decodeAudioData(result, (buffer: AudioBuffer) => {
+              const channelData = [] as Float32Array[];
+              for (let i = 0; i < buffer.numberOfChannels; i++){
+                channelData.push(buffer.getChannelData(i));
+              }
+              const audioFile = new AudioFile({
+                name: file.name,
+                filename: file.name,
+                sampleRate: buffer.sampleRate,
+                length: buffer.length,
+                duration: buffer.duration,
+                numberOfChannels: buffer.numberOfChannels,
+                channelData
+              });
+              state.messenger.postMessage("ADDED_AUDIO_FILE", audioFile);
+            });
+            console.log(result);
+          } catch (e) {
+            console.error(e);
+          }
+        } break;
         default: break
       }
     }
@@ -728,7 +763,7 @@ setTimeout(() => {
   const room = new Room("room", {
     surfaces,
     originalFileData: basement,
-    originalFileName: "basement_even_ceiling.obj"
+    originalFileName: "10x13.obj"
   });
   state.containers[room.uuid] = room;
   state.renderer.addRoom(room);
@@ -743,21 +778,27 @@ setTimeout(() => {
   (state.containers[sourceidR] as Source).scale.set(1.2, 1.2, 1.2);
   (state.containers[sourceidR] as Source).name = "R";
 
-  (state.containers[receiverId] as Receiver).position.set(6.8, 8.1,  1.2);
+  (state.containers[receiverId] as Receiver).position.set(6.8, 8.1, 1.2);
   (state.containers[receiverId] as Receiver).scale.set(1.5, 1.5, 1.5);
 
-  state.renderer.gridVisible = false;
   
   
   
   state.history.clear();
-
+  
+  const fdtd = state.messenger.postMessage("SHOULD_ADD_FDTD_2D", {
+    width: room.boundingBox.max.x,
+    height: room.boundingBox.max.y,
+    cellSize: .05
+  })[0] as FDTD_2D;
+  fdtd.addWallsFromSurfaceEdges(room.surfaces.children[0] as Surface);
+  // fdtd.addSource(state.containers[sourceidL] as Source);
+  fdtd.addSource(state.containers[sourceidR] as Source);
+  fdtd.addReceiver(state.containers[receiverId] as Receiver);
+  
   expose(
     {
-      fdtd: state.messenger.postMessage("SHOULD_ADD_FDTD_2D", {
-        width: room.boundingBox.max.x,
-        height: room.boundingBox.max.y
-      })[0],
+      fdtd,
       raytracer: state.messenger.postMessage("SHOULD_ADD_RAYTRACER")[0],
       state,
       THREE

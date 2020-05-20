@@ -14,12 +14,12 @@ import CloseIcon from '@material-ui/icons/Close';
 import './Gutter.css';
 import { KeyValuePair } from '../../common/key-value-pair';
 import Solver from '../../compute/solver';
-import RT60Tab from './RT60Tab';
+import RT60Tab from './rt60-tab/RT60Tab';
 import { RT60 } from '../../compute/rt';
-import RayTracerTab from './RayTracerTab';
+import RayTracerTab from './ray-tracer-tab/RayTracerTab';
 import RayTracer from '../../compute/raytracer';
-import RendererTab from './RendererTab';
-import FDTD_2DTab from './FDTD_2DTab';
+import RendererTab from './renderer-tab/RendererTab';
+import FDTD_2DTab from './fdtd-2d-tab/FDTD_2DTab';
 import { FDTD_2D } from '../../compute/2d-fdtd';
 
 

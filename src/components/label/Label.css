@@ -5,18 +5,19 @@
 
 .tooltip .tooltiptext {
   visibility: hidden;
-  max-width: 400px;
+  max-width: 125px;
   width: max-content;
-  background-color: rgb(232, 236, 239, 0.5);
+  background-color: #F4F6F7;
+  box-shadow: 1px 1px 12px 0px rgba(0, 0, 0, 0.12);
+  border: solid 1px rgba(0,0,0,.1);
   color: rgb(58, 58, 58);
   text-align: center;
   border-radius: 4px;
   padding: 5px 5px;
   position: absolute;
-  z-index: 1;
+  z-index: 99;
   top: 150%;
-  left: 50%;
-  margin-left: -60px;
+  left: 0%;
 }
 
 .tooltip:hover .tooltiptext{

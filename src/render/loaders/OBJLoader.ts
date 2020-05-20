@@ -584,12 +584,12 @@ export default class OBJLoader {
 					if (isLine) {
 						material = new THREE.LineBasicMaterial();
 					} else if (isPoints) {
-						material = new THREE.PointsMaterial({
+						material = new THREE.PointsMaterial({fog:false,
 							size: 1,
 							sizeAttenuation: false
 						});
 					} else {
-						material = new THREE.MeshPhongMaterial({
+						material = new THREE.MeshPhongMaterial({fog:false,
 							wireframe: true,
 							color: 0
 						});

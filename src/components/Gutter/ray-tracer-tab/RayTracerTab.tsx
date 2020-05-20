@@ -1,15 +1,15 @@
 import React from "react";
 import "./RayTracerTab.css";
-import RayTracer from "../../compute/raytracer";
+import RayTracer from "../../../compute/raytracer";
 import Plot from "react-plotly.js";
 import { Button } from "@blueprintjs/core";
-import ObjectProperties from "../ObjectProperties";
-import Messenger from "../../messenger";
-import { ObjectPropertyInputEvent } from "../number-input/NumberInput";
+import ObjectProperties from "../../ObjectProperties";
+import Messenger from "../../../messenger";
+import { ObjectPropertyInputEvent } from "../../number-input/NumberInput";
 import SplitterLayout from "react-splitter-layout";
-import RayTracerResults from "./RayTracerResults";
-import PanelContainer from "../../containers/PanelContainer";
-import RayTracerProperties from "../ObjectProperties/RayTracerProperties";
+import RayTracerResults from "../ray-tracer-results/RayTracerResults";
+import PanelContainer from "../../panel-container/PanelContainer";
+import RayTracerProperties from "../../ObjectProperties/RayTracerProperties";
 
 export interface RayTracerTabProps {
   solver: RayTracer;

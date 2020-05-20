@@ -1,7 +1,6 @@
 uniform sampler2D heightmap;
 uniform float inv_cell_size;
 uniform float cell_size;
-uniform float heightScale;
 varying float vHeight;
 #define PHONG
 
@@ -56,7 +55,7 @@ void main() {
 	float heightValue = (texture2D( heightmap, uv ).x - 127.5);
 	vHeight = heightValue;
 	
-	vec3 transformed = vec3( position.x, position.y, heightValue * heightScale );
+	vec3 transformed = vec3( position.x, position.y, heightValue );
 	//<begin_vertex>
 
 	#include <morphtarget_vertex>

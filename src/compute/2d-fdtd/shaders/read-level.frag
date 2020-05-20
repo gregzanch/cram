@@ -1,4 +1,6 @@
 uniform vec2 point1;
+uniform float cell_size;
+uniform float inv_cell_size;
 
 uniform sampler2D levelTexture;
 

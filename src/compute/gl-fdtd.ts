@@ -68,7 +68,7 @@ export default class GLFDTD extends Solver {
     this.texture2.format = THREE.AlphaFormat;
     this.texture2.type = THREE.FloatType;
     
-    var material = new THREE.ShaderMaterial({
+    var material = new THREE.ShaderMaterial({fog:false,
 		uniforms: {
         prev: this.texture1,
         curr: this.texture2,

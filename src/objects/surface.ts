@@ -11,7 +11,7 @@ import { BRDF } from '../compute/raytracer/brdf';
 const glsl = x => x[0];
 const defaults = {
   materials: {
-    shader: new THREE.ShaderMaterial({
+    shader: new THREE.ShaderMaterial({fog:false,
       vertexShader: glsl`
 			varying vec2 vUv;
 
@@ -48,7 +48,7 @@ const defaults = {
       visible: true,
       side: THREE.FrontSide
     }),
-    selected: new THREE.MeshLambertMaterial({
+    selected: new THREE.MeshLambertMaterial({fog:false,
       color: new THREE.Color(0xb3d7ff),
       // emissiveIntensity: 2,
       // emissive: new THREE.Color(1, 1, 0),
@@ -60,7 +60,7 @@ const defaults = {
       depthTest: false
     }),
 
-    mesh: new THREE.MeshLambertMaterial({
+    mesh: new THREE.MeshLambertMaterial({fog:false,
       transparent: true,
       opacity: 0.1,
       side: THREE.DoubleSide,
@@ -72,12 +72,12 @@ const defaults = {
       depthTest: false
     }),
 
-    wire: new THREE.MeshBasicMaterial({
+    wire: new THREE.MeshBasicMaterial({fog:false,
       side: THREE.FrontSide,
       wireframe: true,
       color: 0x2c2d2d
     }),
-    line: new THREE.LineBasicMaterial({
+    line: new THREE.LineBasicMaterial({fog:false,
       color: 0x999999
     })
   },

@@ -20,7 +20,7 @@
     "preserveConstEnums": true,
     "sourceMap": true,
     "typeRoots": [
-      "./node_modules/@types",
+      "@types",
       "./types"
     ],
     "lib": [

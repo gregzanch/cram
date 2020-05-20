@@ -9,7 +9,7 @@ import Source from "../../objects/source";
 import Renderer from "../../render/renderer";
 import Surface from "../../objects/surface";
 import Receiver from "../../objects/receiver";
-import { Stat } from "../../components/Gutter/Stats";
+import { Stat } from "../../components/gutter/Stats";
 import Messenger from "../../messenger";
 import sort from "fast-sort";
 // import * as ac from '../acoustics'
@@ -196,7 +196,7 @@ export default class RayTracer extends Solver {
     this.chartdata = [] as ChartData[];
     this.rays = new THREE.LineSegments(
       this.rayBufferGeometry,
-      new THREE.LineBasicMaterial({
+      new THREE.LineBasicMaterial({fog:false,
         color: 0x282929,
         transparent: true,
         opacity: 0.2,
@@ -209,7 +209,7 @@ export default class RayTracer extends Solver {
     this.rays.renderOrder = -0.5;
     this.rays.frustumCulled = false;
     this.renderer.scene.add(this.rays);
-    var shaderMaterial = new THREE.ShaderMaterial({
+    var shaderMaterial = new THREE.ShaderMaterial({fog:false,
       vertexShader: PointShader.vs,
       fragmentShader: PointShader.fs,
       transparent: true,
@@ -221,7 +221,7 @@ export default class RayTracer extends Solver {
       },
       blending: THREE.NormalBlending
     });
-    var pointsMaterial = new THREE.PointsMaterial({
+    var pointsMaterial = new THREE.PointsMaterial({fog:false,
       color: 0xff0000,
       transparent: true,
       opacity: 0.2,
