@@ -21,6 +21,7 @@ export default function cubicBezier(
 		const c1 = 3 * (1 - t) ** 2 * t;
 		const c2 = 3 * (1 - t) * t ** 2;
 		const c3 = t ** 3;
+		return p0[1] * c0 + p1[1] * c1 + p2[1] * c2 + p3[1] * c3;
 		return sum([
 			scale(p0, c0),
 			scale(p1, c1),
@@ -29,8 +30,3 @@ export default function cubicBezier(
 		]);
 	};
 }
-
-
-const f = cubicBezier(1, 0, 0, 1)
-
-Array(21).fill(0).map((x, i) => f(i/20)); //?

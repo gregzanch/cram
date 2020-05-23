@@ -1,6 +1,6 @@
-import * as Characters from './characters'
-import * as ToolNames from './tool-names'
-import * as EditorModes from './editor-modes'
+import { Characters } from './characters'
+import { ToolNames } from './tool-names'
+import { EditorModes } from './editor-modes'
 
 export const FRAME_RATE = 60;
 

@@ -9,6 +9,7 @@ export interface FDTDWallProps {
 }
 
 class FDTDWall {
+  enabled: boolean;
   x1: number;
   y1: number;
   x2: number;
@@ -24,9 +25,9 @@ class FDTDWall {
     this.cells = rasterizeLine(this.x1, this.y1, this.x2, this.y2);
     this.previousCells = this.cells;
     this.shouldClearPreviousCells = false;
-    
+    this.enabled = true;
   }
-
+  
   move(props: FDTDWallProps) {
     this.previousCells = this.cells;
     this.x1 = props.x1;

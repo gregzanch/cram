@@ -1,6 +1,6 @@
 import React from "react";
 import TextInput from "../text-input/TextInput";
-import NumberInput, { ObjectPropertyInputEvent } from "../number-input/NumberInput";
+import NumberInput, { ObjectPropertyInputEvent } from ".";
 import CheckboxInput from "../checkbox-input/CheckboxInput";
 import Source from '../../objects/source';
 import GridRow from '../grid-row/GridRow';

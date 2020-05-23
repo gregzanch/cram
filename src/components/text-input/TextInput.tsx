@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ObjectPropertyInputEvent } from "../number-input/NumberInput";
+import { ObjectPropertyInputEvent } from "../ObjectProperties";
 
 export interface TextInputProps {
   name: string;

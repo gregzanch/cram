@@ -4,6 +4,7 @@ import Container, { ContainerProps, ContainerSaveObject } from "./container";
 import chroma from "chroma-js";
 import { MATCAP_PORCELAIN_WHITE, MATCAP_UNDER_SHADOW } from "./asset-store";
 import FileSaver from "file-saver";
+import { EditorModes } from "../constants/editor-modes";
 // import { vs, fs } from '../render/shaders/glow';
 
 
@@ -29,28 +30,20 @@ export default class Receiver extends Container{
     super(name);
     this.kind = "receiver";
     this.fdtdSamples = [] as number[];
-//     const glowmaterial = new THREE.ShaderMaterial({fog:false,
-//       uniforms: {
-//         c: { type: "f", value: 1.0 },
-//         p: { type: "f", value: 1.4 },
-//         glowColor: { type: "c", value: new THREE.Color(0xffff00) },
-//         viewVector: { type: "v3", value: camera.position }
-//       },
-//       vertexShader: vs,
-//       fragmentShader: fs,
-//       side: THREE.FrontSide,
-//       blending: THREE.AdditiveBlending,
-//       transparent: true
-// });
-     this.selectedMaterial = new THREE.MeshMatcapMaterial({fog:false,
-       color: defaults.color,
-       matcap: MATCAP_UNDER_SHADOW
-     });
 
-     this.normalMaterial = new THREE.MeshMatcapMaterial({fog:false,
-       color: defaults.color,
-       matcap: MATCAP_PORCELAIN_WHITE
-     });
+    this.selectedMaterial = new THREE.MeshMatcapMaterial({
+      fog: false,
+      color: defaults.color,
+      matcap: MATCAP_UNDER_SHADOW,
+      name: "receiver-selected-material"
+    });
+
+    this.normalMaterial = new THREE.MeshMatcapMaterial({
+      fog: false,
+      color: defaults.color,
+      matcap: MATCAP_PORCELAIN_WHITE,
+      name: "receiver-material"
+    });
     this.mesh = new THREE.Mesh(
       new THREE.SphereGeometry(0.1, 32, 16),
       this.normalMaterial
@@ -117,6 +110,17 @@ export default class Receiver extends Container{
   }
   getColorAsString() {
     return String.fromCharCode(35) + (this.mesh.material as THREE.MeshBasicMaterial).color.getHexString();
+  }
+  onModeChange(mode: EditorModes) {
+    switch (mode) {
+      case EditorModes.OBJECT: { 
+      } break;
+      case EditorModes.SKETCH: { 
+      } break;
+      case EditorModes.EDIT: { 
+      } break;
+      default: break;
+    }
   }
   get color(){
     return String.fromCharCode(35)+(this.mesh.material as THREE.MeshBasicMaterial).color.getHexString();

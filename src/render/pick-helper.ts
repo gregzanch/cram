@@ -37,7 +37,7 @@ export default class PickHelper {
   pick(event, objects = this.objects, scene = this.scene, camera=this.camera, mount=this.mount) {
     this.setPickPosition(event, mount);
     this.raycaster.setFromCamera(this.pickPosition, this.camera);
-    
+
     const intersectedObjects = this.raycaster.intersectObjects(objects, true);
     if (intersectedObjects.length) {
       let i = 0;
@@ -45,8 +45,9 @@ export default class PickHelper {
       let sourceReceiverIndex = 0;
       let clickedOnTransformControl = false;
       let transformControlIndex = 0;
+      
       // console.log(intersectedObjects);
-  
+      
       const indicesWithinThreshold = [] as number[];
       for (let i = 0; i < intersectedObjects.length; i++) {
         const d = dist(
@@ -57,7 +58,7 @@ export default class PickHelper {
           indicesWithinThreshold.push(i);
         }
         
-        
+
         //@ts-ignore
         if (
           intersectedObjects[i].object instanceof TransformControls ||

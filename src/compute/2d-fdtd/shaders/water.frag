@@ -1,6 +1,7 @@
 #define PHONG
 
 varying float vHeight;
+varying float vWall;
 
 uniform vec3 diffuse;
 uniform vec3 emissive;
@@ -73,7 +74,7 @@ void main() {
 		col.g = -vHeight/127.5*colorBrightness;
 	}
 
-	gl_FragColor = vec4( col, diffuseColor.a );
+	gl_FragColor = vec4( col, 1.0 );
 
 	#include <tonemapping_fragment>
 	#include <encodings_fragment>

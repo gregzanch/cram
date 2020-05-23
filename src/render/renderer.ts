@@ -51,6 +51,10 @@ import { TransformOverlay } from './overlays';
 import { ApplicationSettings, SettingsCategories, SettingsCategory, EditorSettings } from "../default-settings";
 import hotkeys from "hotkeys-js";
 
+import { OrientationControl, OrientationControlTargets, OrientationAxisAdds, OrientationAxisQuats, OrientationControlOptions } from './orientation-control/orientation-control';
+import { clamp } from "../common/clamp";
+
+const colored_number_html = (num: number) => /*html*/`<span style="color: ${num < 0 ? "#E68380" : "#A2C982"};">${num.toFixed(3)}</span>`;
 
 export interface SmoothCameraParams {
   /**
@@ -79,6 +83,12 @@ export interface SmoothCameraParams {
   onFinish?: (...args) => void;
 }
 
+export interface SmoothCameraQuatParams extends SmoothCameraParams {
+  /**
+   * final orientation
+   */
+  quat: THREE.Quaternion;
+}
 
 
 export interface OrbitControlMouseConfig {		
@@ -118,7 +128,7 @@ export default class Renderer {
 	modifierKeyState!: ModifierKeyState; 
 	
 	elt!: HTMLCanvasElement;
-	renderer!: THREE.Renderer;
+	renderer!: THREE.WebGLRenderer;
 
 	_camera!: THREE.PerspectiveCamera|THREE.OrthographicCamera;
 	perspectiveCamera!: THREE.PerspectiveCamera;
@@ -126,6 +136,8 @@ export default class Renderer {
 
 	scene!: THREE.Scene;
 	env!: Container;
+	fdtdItems!: Container;
+	interactables!: Container;
 	workspace!: Container;
 
 	lights!: Lights;
@@ -168,12 +180,22 @@ export default class Renderer {
 	currentlyMovingObjects!: boolean;
 	
 	overlays!: Overlays;
-	fdtdrunning!: boolean;
+	fdtd2drunning!: boolean;
+	fdtd3drunning!: boolean;
+	
 	
 	settingsGetter!: (category: SettingsCategories) => SettingsCategory
 
 	needsToRender!: boolean;
 	
+	shouldAnimate: boolean;
+	
+	
+	orientationControl!: OrientationControl;
+	
+	
+	gutter_debug_log!: HTMLElement;
+	gutter_orientation_control_quat!: HTMLElement;
 	constructor(params: RendererParams) {
 		[
 			"init",
@@ -184,22 +206,30 @@ export default class Renderer {
 		].forEach(method => {
 			this[method] = this[method].bind(this);
 		});
-		
-		
-		
 
 		this.messenger = params.messenger;
 		this.history = params.history;
+		this.shouldAnimate = false;
 		
 	}
 	
 	init(elt: HTMLCanvasElement, settingsGetter: (category: SettingsCategories) => SettingsCategory) {
 
+		this.gutter_debug_log = document.querySelector("#gutter-debug-stats") || document.createElement('div');
+		this.gutter_orientation_control_quat = document.createElement('div');
+		
+		this.gutter_debug_log.appendChild(this.gutter_orientation_control_quat);
+		
+		
+		
 		this.settingsGetter = settingsGetter;
 		
 		const editorSettings = settingsGetter("editor") as EditorSettings;
 		
-		this.fdtdrunning = false;
+		this.fdtd2drunning = false;
+		this.fdtd3drunning = false;
+		
+
 		
 		this.modifierKeyState = {
 			Shift: 0,
@@ -217,7 +247,9 @@ export default class Renderer {
 		this.elt = elt;
 		this.stack = [] as Array<(...args) => void>;
 		this.env = new Container("env");
+		this.fdtdItems = new Container("fdtdItems");
 		this.workspace = new Container("workspace");
+		this.interactables = new Container("interactables");
 		this.workspaceCursor = this.workspace;
 		
 		this.lights = new Lights();
@@ -234,7 +266,8 @@ export default class Renderer {
 		
 		this.cursor = new THREE.Mesh(
       new THREE.SphereBufferGeometry(0.05, 8, 8),
-      new THREE.MeshLambertMaterial({fog:false,
+      new THREE.MeshLambertMaterial({
+        fog: false,
         color: new THREE.Color(0x6f1d1d),
         // emissiveIntensity: 2,
         // emissive: new THREE.Color(1, 1, 0),
@@ -243,11 +276,12 @@ export default class Renderer {
         side: THREE.DoubleSide,
         reflectivity: 0.15,
         depthWrite: true,
-        depthTest: false
+        depthTest: false,
+        name: "cursor-material"
       })
     );
-
-    this.env.add(this.cursor);
+		this.cursor.geometry.name = "cursor-gemoetry";
+    // this.env.add(this.cursor);
 
 		
 		
@@ -256,15 +290,15 @@ export default class Renderer {
 		// scene
 		this.scene = new THREE.Scene();
 		this.scene.background = new THREE.Color(background);
-		this.scene.add(this.env, this.workspace);
+		this.scene.add(this.env, this.workspace, this.interactables, this.fdtdItems);
 		
 		// renderer
 		this.renderer = new THREE.WebGLRenderer({
 			canvas: this.elt,
-			context: this.elt.getContext("webgl2", { alpha: false })!,
+			context: this.elt.getContext("webgl2", { alpha: true })!,
 			antialias: true,
+			precision: "highp",
 			depth: true,
-			precision: "mediump"
 		});
 		//@ts-ignore
 		// this.renderer.shadowMap.enabled = true;
@@ -402,6 +436,10 @@ export default class Renderer {
 			console.log(val);
 			this.lights.setHelpersVisible(val);
 		};
+		
+		this.messenger.addMessageHandler("SET_RENDERER_SHOULD_ANIMATE", (acc, ...args) => {
+			this.shouldAnimate = args[0];
+		});
 
 		this.messenger.addMessageHandler("RENDERER_SHOULD_CHANGE_BACKGROUND", (acc, ...args) => {
 			this.background = args[0];
@@ -427,41 +465,65 @@ export default class Renderer {
 			this.needsToRender = true;
 		});
 		
+		this.messenger.addMessageHandler("FOCUS_ON_SELECTED_OBJECTS", (acc, ...args) => { 
+			const selectedObjects = this.messenger.postMessage("GET_SELECTED_OBJECTS")[0];
+			if (selectedObjects && selectedObjects.length > 0) {
+				const easingFunction = EasingFunctions.linear;
+				const position = this.camera.position;
+				const target = selectedObjects[0].position;
+				const duration = 125;
+				const onFinish = () => {
+					this.controls.target.set(target.x, target.y, target.z);
+				};
+				this.smoothCameraTo({ position, target, duration, onFinish, easingFunction });
+			}
+			else {
+				const easingFunction = EasingFunctions.linear;
+        const position = this.camera.position;
+        const target = new THREE.Vector3(0, 0, 0);
+        const duration = 125;
+        const onFinish = () => {
+          this.controls.target.set(target.x, target.y, target.z);
+        };
+        this.smoothCameraTo({ position, target, duration, onFinish, easingFunction });
+			}
+			this.needsToRender = true;
+		})
+		
+		
 		this.messenger.addMessageHandler("LOOK_ALONG_AXIS", (acc, ...args) => {
 			const axis = args[0];
-
-			const onFinish = () => {
-				if (this.camera instanceof THREE.PerspectiveCamera) {
-					this.messenger.postMessage("TOGGLE_CAMERA_ORTHO");
-				}
-			};
+			if (!OrientationAxisAdds[axis]) {
+        console.warn("invalid args");
+        return;
+      }
 			const dist = this.camera.position.distanceTo(this.controls.target);
-			
+
 			const duration = 125;
-			const target = new THREE.Vector3(0, 0, 0);
+			const target = this.controls.target.clone();
 			const easingFunction = EasingFunctions.linear;
-			
-			const adds = {
-				"+x": new THREE.Vector3(dist, 0, 0),
-				"-x": new THREE.Vector3(-dist, 0, 0),
-				"+y": new THREE.Vector3(0, dist, 0),
-				"-y": new THREE.Vector3(0, -dist, 0),
-				"+z": new THREE.Vector3(0, 0, dist),
-				"-z": new THREE.Vector3(0, 0, -dist)
+			const onFinish = () => {
+				this.controls.target.set(target.x, target.y, target.z);
+				this.orientationControl.axis = axis;
+				this.storeCameraState();
+				this.needsToRender = true;
 			};
-			if (!adds[axis]) {
-				console.warn("invalid args");
-				return;
-			}
+			
+
+
 			// const position = this.controls.target.clone() as THREE.Vector3;
-			const position = adds[axis];
-			this.smoothCameraTo({ position, target, duration, onFinish, easingFunction });
+			const position = this.controls.target.clone().add(OrientationAxisAdds[axis].clone().multiplyScalar(dist));
+			const quat = OrientationAxisQuats[axis].clone();
+			this.smoothCameraToQuat({ position, target, duration, onFinish, easingFunction, quat });
 			this.needsToRender = true;
 		});
 		
 		this.messenger.addMessageHandler("MOVE_SELECTED_OBJECTS", () => {
 			const selectedObjects = this.messenger.postMessage("GET_SELECTED_OBJECTS")[0];
 			if (selectedObjects && selectedObjects.length > 0) {
+				for (let i = 0; i < selectedObjects.length; i++){
+					selectedObjects[i].userData.lastSave = selectedObjects[i].save();
+				}
 				hotkeys.setScope("editor-moving");
 				this.transformControls.setTranslationSnap(editorSettings.transform_snap_normal.value);
 				this.overlays.transform.setValues(0,0,0);
@@ -469,13 +531,12 @@ export default class Renderer {
 				this.currentlyMovingObjects = true;
 				this.transformControls.attach(selectedObjects);
 				// selectedObjects[0] && (selectedObjects[0] as Container).add(this.transformControls);
-				this.env.add(this.transformControls);
+				this.interactables.add(this.transformControls);
 			}
 			this.needsToRender = true;
 		});
 	
 		this.messenger.addMessageHandler("PHASE_OUT", () => {
-			console.log("PHASE_OUT");
 			if (this.isPerformingOperation) {
 				this.messenger.postMessage("STOP_OPERATIONS");
 				hotkeys.setScope("editor");
@@ -488,7 +549,7 @@ export default class Renderer {
 		})
 		
 		this.messenger.addMessageHandler("STOP_OPERATIONS", () => {
-			this.env.remove(this.transformControls);
+			this.interactables.remove(this.transformControls);
       this.transformControls.detach();
       this.currentlyMovingObjects = false;
       this.overlays.transform.hide();
@@ -519,12 +580,18 @@ export default class Renderer {
 
 		this.renderer.domElement.addEventListener("wheel", (e) => {
 			this.needsToRender = true;
+			hotkeys.setScope("editor");
 		});
 		
 		this.renderer.domElement.addEventListener("mousedown", (e) => {
-			const selection = this.pickHelper.pick(e, [this.workspace]);
+			hotkeys.setScope("editor");
+			const selection = this.pickHelper.pick(e, [this.workspace, this.interactables]);
+
 			if (selection.pickedObject) {
 				if (e.button == 0) {
+					const point = this.pickHelper.getPickedPoint();
+					this.cursor.position.set(point[0], point[1], point[2]);
+
 					if (!this.currentlyMovingObjects) {
 						if (e.shiftKey) {
 							this.messenger.postMessage("APPEND_SELECTION", [selection.pickedObject]);
@@ -546,8 +613,16 @@ export default class Renderer {
 			this.needsToRender = true;
 		});
 		
+		this.controls.addEventListener('change', e => {
+			const pos = this.camera.position.clone().sub(this.controls.target).normalize().multiplyScalar(this.orientationControl.cameraDistance);
+			this.orientationControl.setCameraTransforms(pos, this.camera.quaternion);
+			this.orientationControl.axis = "none";
+		})
 		
-		this.render();
+
+		
+		
+		
 		// this.composer.render();
 		
 		const storedState = JSON.parse(localStorage.getItem("camera") || defaults.camera) as CameraStore;
@@ -572,9 +647,28 @@ export default class Renderer {
       }
     }
 
-		// setInterval(this.render, 1000 / 20);
+		const storedOrientation = JSON.parse(localStorage.getItem("orientationControl") || defaults.orientationControl) as OrientationControlOptions;
 		
+		this.orientationControl = new OrientationControl("#orientation-overlay", {
+      // width: storedOrientation.width,
+			// height: storedOrientation.height,
+      width: 160,
+			height: 160,
+			axis: storedOrientation.axis
+    });
 
+    this.orientationControl.addClickListener((e) => {
+      if (e.target.match(/top|bottom|right|left|front|back/gim)) {
+        this.messenger.postMessage("LOOK_ALONG_AXIS", e.target);
+      }
+    });
+		
+		
+		const pos = this.camera.position.clone().sub(this.controls.target).normalize().multiplyScalar(this.orientationControl.cameraDistance);
+
+		this.orientationControl.setCameraTransforms(pos, this.camera.quaternion);
+		
+		this.render();
 	}
 	
 	
@@ -585,7 +679,10 @@ export default class Renderer {
 		obj.object.pos = this.camera.position.toArray();
 		obj.object.zoom = this.camera.zoom;
 		obj.object.target = this.controls.target.toArray();
-    localStorage.setItem("camera", JSON.stringify(obj));
+		
+		const orientState = this.orientationControl.save();
+		localStorage.setItem("camera", JSON.stringify(obj));
+		localStorage.setItem("orientationControl", JSON.stringify(orientState));
 	}
 	
 	resetControls() {
@@ -601,6 +698,7 @@ export default class Renderer {
 	
 	
 	setOrtho(on: boolean) {
+		const axis = this.orientationControl.axis;
 		const near = this.camera.near;
 		const far = this.camera.far;
 		const fov = this.camera instanceof THREE.PerspectiveCamera && this.camera.fov || this.fov;
@@ -626,6 +724,11 @@ export default class Renderer {
 			this.camera.layers.enableAll();
 		}
 		this.controls.target.fromArray(target);
+		
+		const pos = this.camera.position.clone().sub(this.controls.target).normalize().multiplyScalar(this.orientationControl.cameraDistance);
+		this.orientationControl.setCameraTransforms(pos, this.camera.quaternion);
+		this.orientationControl.axis = axis;
+		
 		// this.resizeCanvasToDisplaySize(true);
 		// this.camera.position.set(pos.x, pos.y, pos.z);
 		// this.camera.applyQuaternion(quat);
@@ -761,31 +864,86 @@ export default class Renderer {
 		const originalPosition = this.camera.position.clone();
 		const originalTarget = this.controls.target.clone();
 		const target = params.target || originalTarget.clone();
-		const timer = new Timer(params.duration || 1000, (_timer) => {
-			this.smoothingCamera = false;
-			console.log('finished');
-			if (params.onFinish) {
-				params.onFinish(_timer);
-			}
-		});
+		const timer = new Timer(params.duration || 1000, () => {});
 		const curveFunction = params.easingFunction || EasingFunctions.linear;
 		this.smoothingCamera = true;
 		this.smoothingCameraCallback = () => {
-			const progress = curveFunction(timer.tick());
-			const pos = lerp3(originalPosition, params.position, curveFunction(progress));
-			const tar = lerp3(originalTarget, target, curveFunction(progress));
+			const timerProgress = timer.tick();
+			const progress = curveFunction(timerProgress);
+			const pos = lerp3(originalPosition, params.position, progress);
+			const tar = lerp3(originalTarget, target, progress);
 			this.camera.position.set(pos.x, pos.y, pos.z);
 			this.camera.lookAt(tar);
 			this.controls.target.set(tar.x, tar.y, tar.z);
+			if (timerProgress == 1) {
+        this.smoothingCamera = false;
+        params.onFinish && params.onFinish(timer);
+        this.storeCameraState();
+      }
 		};
 		timer.start();
 	}
+
+	smoothCameraToQuat(params: SmoothCameraQuatParams) {
+		const originalPosition = this.camera.position.clone();
+		const originalTarget = this.controls.target.clone();
+		const originalDistance = originalTarget.distanceTo(originalPosition);
+		const originalQuat = this.camera.quaternion.clone();
+		const targetQuat = params.quat || originalQuat.clone();
+		const timer = new Timer(params.duration || 1000, (_timer) => {});
+		const curveFunction = params.easingFunction || EasingFunctions.linear;
+		this.smoothingCamera = true;
+		this.smoothingCameraCallback = () => {
+			const timerProgress = timer.tick();
+			const progress = curveFunction(timerProgress);
+			const pos = lerp3(originalPosition, params.position, progress);
+			const quat = new THREE.Quaternion();
+			quat.copy(originalQuat);
+			const quatslerped = quat.slerp(targetQuat, progress);
+			this.camera.position.set(pos.x, pos.y, pos.z);
+			this.camera.quaternion.copy(quatslerped);
+			// this.camera.updateProjectionMatrix();
+			// get the cameras direction vector
+			const dir = new THREE.Vector3();
+			this.camera.getWorldDirection(dir);
+			
+			// scale it by distance from camera position to target position
+			const scaledDir = dir.multiplyScalar(originalDistance);
+			
+			
+			const tar = this.camera.position.clone().add(scaledDir);
+			
+			const orientationCameraPos = this.camera.position.clone().sub(tar).normalize().multiplyScalar(this.orientationControl.cameraDistance);
+			this.orientationControl.setCameraTransforms(
+				orientationCameraPos,
+        this.camera.quaternion
+			);
+			
+			if (timerProgress == 1) {
+        this.smoothingCamera = false;
+        params.onFinish && params.onFinish(timer);
+        this.storeCameraState();
+      }
+			
+		};
+		timer.start();
+	}
+	
+	addShape() {
+		var triangleShape = new THREE.Shape()
+			.moveTo(80, 20)
+			.lineTo(40, 80)
+			.lineTo(120, 80)
+			.lineTo(80, 20); // close path
+	}
+	
+	
 	update() {
 		if (this.smoothingCamera) {
 			this.needsToRender = true;
 		 	this.smoothingCameraCallback();	
 		}
-		else if (this.fdtdrunning) {
+		else if (this.fdtd2drunning || this.fdtd3drunning) {
 			this.needsToRender = true;
 		}
 		
@@ -797,14 +955,61 @@ export default class Renderer {
 		
 
 		
-		if (this.needsToRender) {
-			
+		if (this.needsToRender || this.shouldAnimate) {
+			const storageQuat = JSON.parse(localStorage.getItem('camera') || "[0]").object.quat as number[];
+			this.gutter_debug_log.innerHTML = `
+				<div>
+					<span>Target Position: </span>
+					${colored_number_html(this.controls.target.x)}, 
+					${colored_number_html(this.controls.target.y)}, 
+					${colored_number_html(this.controls.target.z)}
+				</div>
+				<div>
+					<span>Camera Position: </span>
+					${colored_number_html(this.camera.position.x)}, 
+					${colored_number_html(this.camera.position.y)}, 
+					${colored_number_html(this.camera.position.z)}
+				</div>
+				<div>
+					<span>Camera Quat: </span>
+					${colored_number_html(this.camera.quaternion.x)}, 
+					${colored_number_html(this.camera.quaternion.y)}, 
+					${colored_number_html(this.camera.quaternion.z)}, 
+					${colored_number_html(this.camera.quaternion.w)}, 
+				</div>
+				<div>
+					<span>Storage Quat: </span>
+					${colored_number_html(storageQuat[0])}, 
+					${colored_number_html(storageQuat[1])}, 
+					${colored_number_html(storageQuat[2])}, 
+					${colored_number_html(storageQuat[3])}, 
+				</div>
+				<div>
+					<span>Orient Position: </span>
+					${colored_number_html(this.orientationControl.camera.position.x)}, 
+					${colored_number_html(this.orientationControl.camera.position.y)}, 
+					${colored_number_html(this.orientationControl.camera.position.z)}
+				</div>
+
+				<div>
+					${this.orientationControl.axis}
+				</div>
+				`;
 			this.composer.render();
+			
+
+
+			this.orientationControl.shouldRender = true;
+
 			this.messenger.postMessage("RENDERER_UPDATED");
 			this.needsToRender = false;
 		}
+		if (this.orientationControl.shouldRender) {
+			this.orientationControl.render();
+		}
 		requestAnimationFrame(this.render);
 	}
+	
 	
 	/**
 	 * returns true if performing an operation, like moving an object. 
@@ -842,8 +1047,16 @@ export default class Renderer {
 		this.needsToRender = true;
 	}
 	
+	get fogDensity(){
+		return (this.scene && this.scene.fog && (this.scene.fog as THREE.FogExp2).density) || 0.015;
+	}
+	
+	set fogDensity(density: number) {
+		(this.scene.fog as THREE.FogExp2).density = density;
+	}
+	
 	get gridVisible() {
-		return this.grid && this.grid.visible || false;
+		return this.grid ? this.grid.visible : true;
 	}
 	
 	set gridVisible(visible: boolean) {
@@ -852,7 +1065,7 @@ export default class Renderer {
 	}
 
 	get axisVisible() {
-		return this.axes && this.axes.visible || false;
+		return this.axes ? this.axes.visible : true;
 	}
 	
 	set axisVisible(visible: boolean) {

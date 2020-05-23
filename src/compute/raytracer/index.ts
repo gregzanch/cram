@@ -9,7 +9,7 @@ import Source from "../../objects/source";
 import Renderer from "../../render/renderer";
 import Surface from "../../objects/surface";
 import Receiver from "../../objects/receiver";
-import { Stat } from "../../components/gutter/Stats";
+import { Stat } from "../../components/parameter-config/Stats";
 import Messenger from "../../messenger";
 import sort from "fast-sort";
 // import * as ac from '../acoustics'
@@ -185,6 +185,7 @@ export default class RayTracer extends Solver {
     this.passes = params.passes || defaults.passes;
     this.raycaster = new THREE.Raycaster();
     this.rayBufferGeometry = new THREE.BufferGeometry();
+    this.rayBufferGeometry.name = "raytracer-ray-buffer-geometry";
     this.maxrays = 1e6 - 1;
     this.rayBufferAttribute = new THREE.Float32BufferAttribute(new Float32Array(this.maxrays), 3);
     this.rayBufferAttribute.setUsage(THREE.DynamicDrawUsage);
@@ -196,20 +197,24 @@ export default class RayTracer extends Solver {
     this.chartdata = [] as ChartData[];
     this.rays = new THREE.LineSegments(
       this.rayBufferGeometry,
-      new THREE.LineBasicMaterial({fog:false,
+      new THREE.LineBasicMaterial({
+        fog: false,
         color: 0x282929,
         transparent: true,
         opacity: 0.2,
         premultipliedAlpha: true,
         blending: THREE.NormalBlending,
-        depthFunc: THREE.AlwaysDepth
+        depthFunc: THREE.AlwaysDepth,
+        name: "raytracer-rays-material"
         // depthTest: false
       })
     );
     this.rays.renderOrder = -0.5;
     this.rays.frustumCulled = false;
     this.renderer.scene.add(this.rays);
-    var shaderMaterial = new THREE.ShaderMaterial({fog:false,
+    
+    var shaderMaterial = new THREE.ShaderMaterial({
+      fog: false,
       vertexShader: PointShader.vs,
       fragmentShader: PointShader.fs,
       transparent: true,
@@ -219,15 +224,16 @@ export default class RayTracer extends Solver {
         inverted: { value: 0.0 },
         pointScale: { value: this._pointSize }
       },
-      blending: THREE.NormalBlending
+      blending: THREE.NormalBlending,
+      name: "raytracer-points-material"
     });
-    var pointsMaterial = new THREE.PointsMaterial({fog:false,
-      color: 0xff0000,
-      transparent: true,
-      opacity: 0.2,
-      premultipliedAlpha: true,
-      blending: THREE.NormalBlending
-    });
+    // var pointsMaterial = new THREE.PointsMaterial({fog:false,
+    //   color: 0xff0000,
+    //   transparent: true,
+    //   opacity: 0.2,
+    //   premultipliedAlpha: true,
+    //   blending: THREE.NormalBlending
+    // });
     this.hits = new THREE.Points(this.rayBufferGeometry, shaderMaterial);
     this.hits.frustumCulled = false;
     this.renderer.scene.add(this.hits);
@@ -302,6 +308,11 @@ export default class RayTracer extends Solver {
     this.messageHandlerIDs.forEach(x => {
       this.messenger.removeMessageHandler(x[0], x[1]);
     });
+  }
+  dispose() {
+    this.removeMessageHandlers();
+    this.renderer.scene.remove(this.rays);
+    this.renderer.scene.remove(this.hits);
   }
   addSource(source: Source) {
     this.containers[source.uuid] = source;

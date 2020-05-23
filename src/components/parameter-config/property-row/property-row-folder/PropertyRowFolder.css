@@ -1,0 +1,39 @@
+.property-row-folder-label:hover{
+  background-color: #EAEEF1;
+  cursor: pointer;
+  user-select: none;
+}
+
+.property-row-folder-container > *{
+  --transition-time: 50ms;
+  --folder-contents-shadow-top: inset 0px 15px 10px -15px rgba(221,226,230,0.5);
+  --folder-contents-shadow-bottom: inset 0px -15px 10px -15px rgba(221,226,230,0.5);
+  --transition-function: cubic-bezier(0.250, 0.100, 0.250, 1.000);
+}
+
+.property-row-folder-contents{
+  height: 100px;
+  padding-top: .5em;
+  padding-bottom: .5em;
+  overflow: hidden;
+
+  -webkit-box-shadow: var(--folder-contents-shadow-top),  var(--folder-contents-shadow-bottom);
+  -moz-box-shadow: var(--folder-contents-shadow-top),  var(--folder-contents-shadow-bottom);
+  box-shadow: var(--folder-contents-shadow-top),  var(--folder-contents-shadow-bottom);
+  
+  -webkit-transition: all var(--transition-time) var(--transition-function);
+   -moz-transition: all var(--transition-time) var(--transition-function);
+     -o-transition: all var(--transition-time) var(--transition-function);
+        transition: all var(--transition-time) var(--transition-function);
+}
+
+.property-row-folder-contents-hidden{
+  height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+
+  -webkit-transition: all var(--transition-time) var(--transition-function);
+   -moz-transition: all var(--transition-time) var(--transition-function);
+     -o-transition: all var(--transition-time) var(--transition-function);
+        transition: all var(--transition-time) var(--transition-function);
+}

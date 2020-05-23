@@ -1,18 +1,18 @@
-import React, {useState} from "react";
+import React from "react";
 import TextInput from "../text-input/TextInput";
-import NumberInput, { ObjectPropertyInputEvent } from "../number-input/NumberInput";
+import NumberInput from "../number-input/NumberInput";
 import CheckboxInput from "../checkbox-input/CheckboxInput";
-import Source from '../../objects/source';
+import Source, { SignalSource } from '../../objects/source';
 import GridRow from '../grid-row/GridRow';
 import Messenger from "../../messenger";
 import ColorInput from "../color-input/ColorInput";
-
 import Slider, { SliderChangeEvent } from "../slider/Slider";
-import PropertyRow from "../gutter/property-row/PropertyRow";
+import PropertyRow from "../parameter-config/property-row/PropertyRow";
 import Label from "../label/Label";
-import PropertyRowLabel from "../gutter/property-row/property-row-label/PropertyRowLabel";
-import PropertyRowButton from "../gutter/property-row/property-row-button/PropertyRowButton";
-import PropertyRowCheckbox from "../gutter/property-row/property-row-checkbox/PropertyRowCheckbox";
+import PropertyRowLabel from "../parameter-config/property-row/property-row-label/PropertyRowLabel";
+import PropertyRowButton from "../parameter-config/property-row/property-row-button/PropertyRowButton";
+import PropertyRowCheckbox from "../parameter-config/property-row/property-row-checkbox/PropertyRowCheckbox";
+import { ObjectPropertyInputEvent } from ".";
 
 export interface SourcePropertiesProps {
   object: Source;
@@ -49,28 +49,9 @@ export default function SourceProperties(props: SourcePropertiesProps) {
 	  },
 		onChange: props.onPropertyChange,
 	}
-	
-	const source = props.messenger.postMessage("FETCH_SOURCE", props.object.uuid)[0];
-  // console.log(source);
-  const [frequency, setFrequency] = useState(props.object.frequency);
-	
-	
+	// const source = props.messenger.postMessage("FETCH_SOURCE", props.object.uuid)[0];
 	return (
     <div>
-      <Slider
-        id="frequency"
-        label="Frequency"
-        labelPosition="left"
-        tooltipText="Changes the source's frequency"
-        min={0}
-        max={200}
-        step={0.1}
-        value={frequency}
-        onChange={(e: SliderChangeEvent) => {
-          props.object.frequency = e.value;
-          setFrequency(e.value);
-        }}
-      />
       <div style={SourcePropertiesContainerStyle}>
         {props.object.hasOwnProperty("name") && (
           <GridRow label={"name"}>
@@ -135,12 +116,42 @@ export default function SourceProperties(props: SourcePropertiesProps) {
             />
           </GridRow>
         )}
-        {props.object.hasOwnProperty("uuid") && (
-          <GridRow label={"uuid"}>
-            <span className="muted-text">{props.object.uuid}</span>
-          </GridRow>
-        )}
       </div>
+      <PropertyRow>
+        <PropertyRowLabel label="Signal Source" tooltip="The source thats generating it's signal" />
+        <select
+          value={props.object.signalSource}
+          name="signalSource"
+          onChange={e => {
+            props.onPropertyChange({
+              value: e.currentTarget.selectedIndex,
+              name: e.currentTarget.name,
+              type: "select"
+            })
+        }}>
+          <option value={SignalSource.NONE}>None</option>
+          <option value={SignalSource.OSCILLATOR}>Oscillator</option>
+          <option value={SignalSource.PINK_NOISE}>Pink Noise</option>
+          <option value={SignalSource.WHITE_NOISE}>White Noise</option>
+        </select>
+      </PropertyRow>
+      <Slider
+        id="frequency"
+        label="Frequency"
+        labelPosition="left"
+        tooltipText="Changes the source's frequency"
+        min={0}
+        max={200}
+        step={0.1}
+        value={props.object.frequency}
+        onChange={(e: SliderChangeEvent) => {
+          props.onPropertyChange({
+            name: "frequency",
+            type: "number",
+            value: e.value
+          })
+        }}
+      />
     </div>
   );
 }

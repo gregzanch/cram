@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { ObjectPropertyInputEvent } from "../ObjectProperties";
 
 export interface NumberInputProps {
   name: string;
@@ -14,17 +15,10 @@ export interface NumberInputProps {
   verifier?: (val: string | number) => boolean;
 }
 
-export interface ObjectPropertyInputEvent {
-  name: string;
-  type: string;
-  value: any;
-  checked?: boolean;
-  id?: string;
-}
 
 export function NumberInput(props: NumberInputProps) {
   const _props = {
-    onChange: e =>
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
       props.onChange({
         value: e.currentTarget.value,
         name: props.name,

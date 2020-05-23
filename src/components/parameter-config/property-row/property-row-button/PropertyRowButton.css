@@ -1,0 +1,14 @@
+
+.property-row-button {
+  margin-left: 0.5em;
+  margin-right: 0.5em;
+  border-radius: 4px;
+  margin-top: .125em;
+  margin-bottom: .125em; 
+  width: 100%;
+}
+
+.property-row-button-container {
+  display: flex;
+  justify-content: space-around;
+}

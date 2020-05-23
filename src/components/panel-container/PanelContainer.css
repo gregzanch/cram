@@ -1,0 +1,28 @@
+.panel {
+    margin: 0.5em;
+    /* border: solid 1px rgb(224, 224, 224); */
+    min-width: 25%;
+    overflow-x: hidden;
+    background: #fff;
+    box-shadow: 0 0 0 1px rgba(16, 22, 26, 0.2), 0px 1px 4px 0px rgba(150, 150, 150, 0.32), 0 2px 1px rgba(16, 22, 26, 0.1);
+}
+.panel-content {
+  margin: 0.25em;
+}
+.panel.full {
+  height: calc(100% - 1em); 
+}
+.panel.full-bottom {
+  height: calc(100% - 1em);
+}
+
+.modified-splitter-layout{
+  height: calc(100% - 30px);
+}
+.panel-content-nomargin{
+  margin: 0;
+}
+
+.gutter-panel > .panel-content{
+  margin: 0;
+}

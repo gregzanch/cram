@@ -4,7 +4,8 @@ import { ContextMenuTarget, Menu, MenuItem } from "@blueprintjs/core";
  
 
 export interface ContextMenuProps {
-  handleMenuItemClick: ((event: React.MouseEvent<HTMLElement, MouseEvent>) => void) & ((event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => void);
+    handleMenuItemClick: ((event: React.MouseEvent<HTMLElement, MouseEvent>) => void) & ((event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => void);
+    items?: string[];
 }
 
 
@@ -17,10 +18,12 @@ export class ContextMenu extends React.Component<ContextMenuProps, {}> {
  
     public renderContextMenu() {
         // return a single element, or nothing to use default browser behavior
+        const items = this.props.items || ["Delete", "Log to Console"];
         return (
             <Menu>
-                <MenuItem onClick={this.props.handleMenuItemClick} text="Delete" />
-                <MenuItem onClick={this.props.handleMenuItemClick} text="Log to Console" />
+                {items.map((x, i) => {
+                    return <MenuItem onClick={this.props.handleMenuItemClick} text={x} key={"context-menu-item-"+x} />;
+                })}
             </Menu>
         );
     }

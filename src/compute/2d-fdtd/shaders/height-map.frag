@@ -81,7 +81,7 @@ void main()	{
   }
   
   
-  gl_FragColor = vec4(newpos, newvel, heightmapValue.b, 1.);
+  gl_FragColor = vec4(newpos, newvel, heightmapValue.b, sourcemapValue.b);
 
 
 }

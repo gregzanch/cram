@@ -19,7 +19,6 @@ export interface RoomProps extends ContainerProps {
 export default class Room extends Container {
 	boundingBox!: THREE.Box3;
 	surfaces: Container;
-	_fdtdmeshid!: number;
 	volume: number;
 	units: UNITS;
 	originalFileName?: string;
@@ -54,13 +53,6 @@ export default class Room extends Container {
 				return (a as THREE.Box3).union((b as Surface).geometry.boundingBox);
 		}, new THREE.Box3());
 		return this.boundingBox;
-	}
-	setFDTD(mesh: THREE.Mesh) {
-		this._fdtdmeshid = mesh.id;
-		this.add(mesh);
-	}
-	getFDTDPressureAttribute(): THREE.InstancedBufferAttribute {
-		return (((this.getObjectById(this._fdtdmeshid) as THREE.Mesh).geometry as THREE.InstancedBufferGeometry).getAttribute('pressure') as THREE.InstancedBufferAttribute)
 	}
 	signedVolumeOfTriangle(p1: THREE.Vector3, p2: THREE.Vector3, p3: THREE.Vector3) {
  		return p1.dot(p2.clone().cross(p3)) / 6.0;

@@ -6,6 +6,7 @@ import browserReport from "./common/browser-report";
 import Messenger from "./messenger";
 import Source from "./objects/source";
 import Receiver from "./objects/receiver";
+import Polygon from "./objects/polygon";
 import Renderer from "./render/renderer";
 
 import { fileType, allowed } from "./common/file-type";
@@ -53,21 +54,15 @@ import { defaultSettings, ApplicationSettings, SettingsCategories } from './defa
 import { SettingsManager, StoredSetting } from "./settings-manager";
 import hotkeys from "hotkeys-js";
 
-import fullscreen from "./common/fullscreen";
 
 import { QuatAngle } from './common/QuatAngle';
 import { rad2deg, deg2rad } from './common/convert-rad-deg';
 
 import { AudioFile } from './objects/audio-file';
+import {EditorModes} from "./constants/editor-modes";
 
-//@ts-ignore
-// window.CSG = CSG;
-//@ts-ignore
-// window.CAG = CAG;
 
-expose({ CSG, CAG, cubicBezier, Timer, ac, chunk, THREE, EasingFunctions, QuatAngle, rad2deg, deg2rad });
 
-// import Fuse from "fuse.js";
 export interface AcousticMaterial {
   tags: string[];
   manufacturer: string;
@@ -98,9 +93,33 @@ materials.forEach(x => {
     materialsIndex[x._id] = x;
 });
 
+interface InitialLayout {
+  leftPanelInitialSize: number;
+  bottomPanelInitialSize: number;
+  rightPanelInitialSize: number;
+  rightPanelTopInitialSize: number;
+}
+
+let layout: InitialLayout;
+const layoutstr = localStorage.getItem("layout");
+if (layoutstr) {
+  layout = JSON.parse(layoutstr) as InitialLayout;
+}
+else {
+  layout = {
+    leftPanelInitialSize: 200,
+    bottomPanelInitialSize: 1,
+    rightPanelInitialSize: 300,
+    rightPanelTopInitialSize: 300
+  };
+}
 
 
 const state = {
+  leftPanelInitialSize: layout.leftPanelInitialSize,
+  bottomPanelInitialSize: layout.bottomPanelInitialSize,
+  rightPanelInitialSize: layout.rightPanelInitialSize,
+  rightPanelTopInitialSize: layout.rightPanelTopInitialSize,
   audiofiles: {} as KeyValuePair<AudioFile>,
   time: 0,
   selectedObjects: [] as Container[],
@@ -121,7 +140,8 @@ const state = {
   messenger: new Messenger(),
   history: new History(),
   settings: defaultSettings as ApplicationSettings,
-  settingsManagers: {} as KeyValuePair<SettingsManager>
+  settingsManagers: {} as KeyValuePair<SettingsManager>,
+  editorMode: EditorModes.OBJECT as EditorModes
 };
 
 Object.keys(defaultSettings).map(async (category) => {
@@ -147,8 +167,6 @@ state.renderer = new Renderer({
   messenger: state.messenger,
   history: state.history
 });
-
-
 
 state.messenger.addMessageHandler("SET_SELECTION", (acc, objects) => {
   state.messenger.postMessage("DESELECT_ALL_OBJECTS");
@@ -242,8 +260,6 @@ state.messenger.addMessageHandler("SEARCH_ALL_MATERIALS", (acc, ...args) => {
   return res;
 });
 
-
-
 state.messenger.addMessageHandler("SHOULD_ADD_RAYTRACER", (acc, ...args) => {
   const raytracer = new RayTracer({
     messenger: state.messenger,
@@ -262,10 +278,8 @@ state.messenger.addMessageHandler("SHOULD_ADD_RAYTRACER", (acc, ...args) => {
 
 state.messenger.addMessageHandler("SHOULD_REMOVE_SOLVER", (acc, id) => {
   if (state.solvers && state.solvers[id]) {
-    if (state.solvers[id].kind === "ray-tracer") {
-      (state.solvers[id] as RayTracer).removeMessageHandlers();
-    }
-   delete state.solvers[id];
+    state.solvers[id].dispose();
+    delete state.solvers[id];
  }
 });
 
@@ -350,6 +364,14 @@ state.messenger.addMessageHandler("FETCH_ALL_SOURCES", (acc, ...args) => {
       return args[0].map(y => state.containers[x][y]);
     } else return state.containers[x];
   });
+});
+
+state.messenger.addMessageHandler("FETCH_ALL_SOURCES_AS_MAP", (acc, ...args) => {
+  const sourcemap = new Map<string, Source>();
+  for (let i = 0; i < state.sources.length; i++){
+    sourcemap.set(state.sources[i], state.containers[state.sources[i]] as Source);
+  }
+  return sourcemap;
 });
 
 state.messenger.addMessageHandler("FETCH_ALL_RECEIVERS", (acc, ...args) => {
@@ -698,7 +720,26 @@ state.messenger.addMessageHandler("REDO", (acc, ...args) => {
  return [state.history.canUndo, state.history.canRedo];
 })
 
+state.messenger.addMessageHandler("GET_RENDERER", (acc, ...args) => {
+  return state.renderer;
+})
 
+state.messenger.addMessageHandler("SET_EDITOR_MODE", (acc, ...args) => {
+  if (EditorModes[args[0]]) {
+    state.editorMode = EditorModes[args[0]];
+    for (const key in state.containers) {
+      state.containers[key].onModeChange(state.editorMode);
+    }
+    for (const key in state.solvers) {
+      state.solvers[key].onModeChange(state.editorMode);
+    }
+  }
+  state.renderer.needsToRender = true;
+});
+
+state.messenger.addMessageHandler("GET_EDITOR_MODE", (acc, ...args) => {
+  return state.editorMode;
+})
 
 
 function addHotKey(keybinding, scopes, message) {
@@ -717,6 +758,8 @@ function registerHotKeys() {
   addHotKey("ctrl+shift+z, command+shift+z",["normal", "editor"], "REDO");
   
   addHotKey("m", ["editor"], "MOVE_SELECTED_OBJECTS");
+  addHotKey("f", ["editor"], "FOCUS_ON_SELECTED_OBJECTS");
+  
   addHotKey("escape", ["editor", "editor-moving"], "PHASE_OUT");
   
 }
@@ -725,84 +768,63 @@ registerHotKeys();
 
 hotkeys.setScope("normal");
 
-
-// remove this for prod
-expose({ r: state.renderer }, window);
-
-state.messenger.addMessageHandler("GET_RENDERER", (acc, ...args) => {
-  return state.renderer;
+window.addEventListener('resize', e => {
+  state.renderer.needsToRender = true;
 })
 
-// the main app
+
+
+
+
+// the main appd
 ReactDOM.render(<App {...state} />, document.getElementById("root"));
 
 // This is to simulate user uploading a mesh file and adding source + receiver
 setTimeout(() => {
 
-  const { uuid: sourceidL } = state.messenger.postMessage(
-    "SHOULD_ADD_SOURCE"
-  )[0];
 
-  const { uuid: sourceidR } = state.messenger.postMessage(
-    "SHOULD_ADD_SOURCE"
-  )[0];
+  // const models = importHandlers.obj(basement);
 
+  // const surfaces = models.map(
+  //   (model) =>
+  //     new Surface(model.name, {
+  //       geometry: model.geometry,
+  //       acousticMaterial: state.materialsIndex["rhFUnadRAxTJgCU7"]
+  //     })
+  // );
+  // const room = new Room("room", {
+  //   surfaces,
+  //   originalFileData: basement,
+  //   originalFileName: "10x13.obj"
+  // });
+  // state.containers[room.uuid] = room;
+  // state.renderer.addRoom(room);
 
-  const { uuid: receiverId } = state.messenger.postMessage(
-    "SHOULD_ADD_RECEIVER"
-  )[0];
-  const models = importHandlers.obj(basement);
+  // state.messenger.postMessage("ADDED_ROOM", room);
 
-  const surfaces = models.map(
-    (model) =>
-      new Surface(model.name, {
-        geometry: model.geometry,
-        acousticMaterial: state.materialsIndex["rhFUnadRAxTJgCU7"]
-      })
-  );
-  const room = new Room("room", {
-    surfaces,
-    originalFileData: basement,
-    originalFileName: "10x13.obj"
-  });
-  state.containers[room.uuid] = room;
-  state.renderer.addRoom(room);
-
-  state.messenger.postMessage("ADDED_ROOM", room);
-
-  (state.containers[sourceidL] as Source).position.set(1.15, 9.8, 1.2);
-  (state.containers[sourceidL] as Source).scale.set(1.2, 1.2, 1.2);
-  (state.containers[sourceidL] as Source).name = "L";
-
-  (state.containers[sourceidR] as Source).position.set(3.3, 9.8, 1.2);
-  (state.containers[sourceidR] as Source).scale.set(1.2, 1.2, 1.2);
-  (state.containers[sourceidR] as Source).name = "R";
-
-  (state.containers[receiverId] as Receiver).position.set(6.8, 8.1, 1.2);
-  (state.containers[receiverId] as Receiver).scale.set(1.5, 1.5, 1.5);
-
+  const fdtd = state.messenger.postMessage("SHOULD_ADD_FDTD_2D")[0];
   
+  expose({
+    fdtd,
+    r: state.renderer,
+    Polygon,
+    state,
+    CSG,
+    CAG,
+    cubicBezier,
+    Timer,
+    ac,
+    chunk,
+    THREE,
+    EasingFunctions,
+    QuatAngle,
+    rad2deg,
+    deg2rad
+  });
   
   
   state.history.clear();
   
-  const fdtd = state.messenger.postMessage("SHOULD_ADD_FDTD_2D", {
-    width: room.boundingBox.max.x,
-    height: room.boundingBox.max.y,
-    cellSize: .05
-  })[0] as FDTD_2D;
-  fdtd.addWallsFromSurfaceEdges(room.surfaces.children[0] as Surface);
-  // fdtd.addSource(state.containers[sourceidL] as Source);
-  fdtd.addSource(state.containers[sourceidR] as Source);
-  fdtd.addReceiver(state.containers[receiverId] as Receiver);
-  
-  expose(
-    {
-      fdtd,
-      raytracer: state.messenger.postMessage("SHOULD_ADD_RAYTRACER")[0],
-      state,
-      THREE
-    },
-    window
-  );
 }, 200);
+
+

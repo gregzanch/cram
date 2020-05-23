@@ -1,4 +1,6 @@
-export const EDIT = "EDIT";
-export const SIM = "SIM";
+export enum EditorModes {
+  OBJECT = "OBJECT",
+  SKETCH = "SKETCH",
+  EDIT = "EDIT"
+}
 
-export type EditorMode = "EDIT" | "SIM";

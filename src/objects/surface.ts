@@ -8,47 +8,11 @@ import { AcousticMaterial } from "..";
 import { BRDF } from '../compute/raytracer/brdf';
 
 
-const glsl = x => x[0];
+
 const defaults = {
   materials: {
-    shader: new THREE.ShaderMaterial({fog:false,
-      vertexShader: glsl`
-			varying vec2 vUv;
-
-			void main()
-			{
-				vUv = uv;
-				vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
-				gl_Position = projectionMatrix * mvPosition;
-			}
-
-			`,
-      fragmentShader: glsl`
-				uniform float time;
-
-				varying vec2 vUv;
-
-				void main( void ) {
-
-					vec2 position = - 1.0 + 2.0 * vUv;
-
-					float red = abs( sin( position.x * position.y + time / 5.0 ) );
-					float green = abs( sin( position.x * position.y + time / 4.0 ) );
-					float blue = abs( sin( position.x * position.y + time / 3.0 ) );
-					gl_FragColor = vec4( red, green, blue, 1.0 );
-
-				}
-			`,
-
-      depthTest: true,
-
-      uniforms: {
-        time: { value: 10.0 }
-      },
-      visible: true,
-      side: THREE.FrontSide
-    }),
-    selected: new THREE.MeshLambertMaterial({fog:false,
+    selected: new THREE.MeshLambertMaterial({
+      fog: false,
       color: new THREE.Color(0xb3d7ff),
       // emissiveIntensity: 2,
       // emissive: new THREE.Color(1, 1, 0),
@@ -57,10 +21,12 @@ const defaults = {
       side: THREE.DoubleSide,
       reflectivity: 0.15,
       depthWrite: true,
-      depthTest: false
+      depthTest: false,
+      name: "surface-selected-material"
     }),
 
-    mesh: new THREE.MeshLambertMaterial({fog:false,
+    mesh: new THREE.MeshLambertMaterial({
+      fog: false,
       transparent: true,
       opacity: 0.1,
       side: THREE.DoubleSide,
@@ -69,16 +35,21 @@ const defaults = {
       reflectivity: 0.15,
       color: new THREE.Color(0xaaaaaa),
       depthWrite: true,
-      depthTest: false
+      depthTest: false,
+      name: "surface-material"
     }),
 
-    wire: new THREE.MeshBasicMaterial({fog:false,
+    wire: new THREE.MeshBasicMaterial({
+      fog: false,
       side: THREE.FrontSide,
       wireframe: true,
-      color: 0x2c2d2d
+      color: 0x2c2d2d,
+      name: "surface-wireframe-material"
     }),
-    line: new THREE.LineBasicMaterial({fog:false,
-      color: 0x999999
+    line: new THREE.LineBasicMaterial({
+      fog: false,
+      color: 0x999999,
+      name: "surface-edges-material"
     })
   },
   displayInternalEdges: false,
@@ -116,7 +87,6 @@ export default class Surface extends Container {
 	selectedMaterial: THREE.MeshLambertMaterial;
 	normalMaterial: THREE.MeshLambertMaterial;
 	normalColor: THREE.Color;
-	shaderMaterial: THREE.ShaderMaterial;
 	
 	// for acoustics
 	numHits!: number;
@@ -135,14 +105,15 @@ export default class Surface extends Container {
 		this.displayEdges = props.displayEdges || defaults.displayEdges;
 		this.fillSurface = props.fillSurface || defaults.fillSurface;
 		this._displayVertexNormals = props._displayVertexNormals || defaults._displayVertexNormals;
-		this.shaderMaterial = defaults.materials.shader;
 		this.wire = new THREE.Mesh(props.geometry, defaults.materials.wire);
+		this.wire.geometry.name="surface-wire-geometry"
 		this.numHits = 0;
 		let parent = this.parent;
 		while (parent) {
 			parent = parent.parent;
 		}
 		this.mesh = new THREE.Mesh(props.geometry, defaults.materials.mesh);
+		this.mesh.geometry.name = "surface-geometry";
 		this.mesh.geometry.computeBoundingBox();
 		this.mesh.geometry.computeBoundingSphere();
 		
@@ -150,7 +121,7 @@ export default class Surface extends Container {
 		const tempmesh = new THREE.Mesh(props.geometry.clone(), undefined);
 		tempmesh.geometry.computeVertexNormals()
 		this.vertexNormals = new THREE.VertexNormalsHelper(tempmesh, 0.25, 0xff0000, 1);
-		
+		this.vertexNormals.geometry.name = "surface-vertex-normals-geometry";
 		this.triangles = chunk(chunk(Array.from((props.geometry.getAttribute('position') as THREE.BufferAttribute).array), 3), 3);
 		this._triangles = this.triangles.map(x => new THREE.Triangle(
 			new THREE.Vector3(...x[0]),
@@ -193,7 +164,7 @@ export default class Surface extends Container {
 			});
 		});
 		this.edges = new THREE.LineSegments(segments, defaults.materials.line);
-
+		this.edges.geometry.name = "surface-edges-geometry";
 		
 		this.add(this.mesh);
 		this.mesh.visible = this.fillSurface;

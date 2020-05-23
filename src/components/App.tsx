@@ -24,7 +24,6 @@ import {
 import MenuItemText from './menu-item-text/MenuItemText';
 import { ItemListRenderer, IItemListRendererProps } from "@blueprintjs/select";
 import MaterialBar from './material-bar/MaterialBar';
-import { Characters, EditorModes, ToolNames } from "../constants";
 import ImportDialog from "./import-dialog/ImportDialog";
 import ObjectView from "./object-view/ObjectView";
 import resolve_svg from "../svg/resolve.svg";
@@ -43,31 +42,35 @@ import { Report } from "../common/browser-report";
 
 import "../css";
 import "./App.css";
-import { ToolName } from "../constants/tool-names";
-import { EditorMode } from "../constants/editor-modes";
+
+import { ToolNames } from "../constants/tool-names";
+import { EditorModes } from "../constants/editor-modes";
+import { Characters } from "../constants/characters";
 // import { Process, Task } from "../common/process";
 import SettingsDrawerCheckBox from "./setting-components/SettingsDrawerCheckbox";
 import Solver from "../compute/solver";
 import RayTracer from "../compute/raytracer";
 
-import Gutter from './gutter/Gutter';
-import { Stat } from "./gutter/Stats";
-import { ObjectPropertyInputEvent } from "./number-input/NumberInput";
+import ParameterConfig from './parameter-config/ParameterConfig';
+import { Stat } from "./parameter-config/Stats";
+import { ObjectPropertyInputEvent } from "./ObjectProperties";
 import Surface from "../objects/surface";
 import { AcousticMaterial } from "..";
 import { Searcher } from "fast-fuzzy";
 import MaterialDrawer from "./material-drawer/MaterialDrawer";
 import { SettingsPanel } from "./setting-components/SettingsPanel";
-import Results from "./gutter/Results";
+import Results from "./parameter-config/Results";
 import { Tab, Tabs, TabList, TabPanel } from "react-tabs";
 import properCase from "../common/proper-case";
 import { ApplicationSettings } from "../default-settings";
+import Gutter from "./gutter/Gutter";
+import { timingSafeEqual } from "crypto";
 
 
 const AppToaster = Toaster.create({
   className: "app-toaster",
   position: Position.TOP,
-  
+  maxToasts: 5
 });
 
 
@@ -81,23 +84,28 @@ export interface AppProps {
   containers: KeyValuePair<Container>;
   settings: ApplicationSettings;
   browser: Report;
+  rightPanelTopInitialSize: number;
+  bottomPanelInitialSize: number;
+  rightPanelInitialSize: number;
+  leftPanelInitialSize: number;
 }
 
-
-
-
-
 interface AppState {
+  rightPanelTopSize: number;
+  bottomPanelSize: number;
+  rightPanelSize: number;
+  leftPanelSize: number;
+  
 	importDialogVisible: boolean;
 	containers: KeyValuePair<Container>;
   selectedObject: Container;
   
 	settingsDrawerVisible: boolean;
 	settings: ApplicationSettings;
-	mode: EditorMode;
+	mode: EditorModes;
 	// process: Process;
 	solvers: KeyValuePair<Solver>;
-	tool: ToolName;
+	tool: ToolNames;
 	simulationRunning: boolean;
 	darkmode: boolean;
 	stats: Stat[];
@@ -119,11 +127,16 @@ export default class App extends React.Component<AppProps, AppState> {
 	state: AppState;
   canvas: React.RefObject<HTMLCanvasElement>;
   canvasOverlay: React.RefObject<HTMLDivElement>;
+  orientationOverlay: React.RefObject<HTMLDivElement>;
 	statsCanvas: React.RefObject<HTMLCanvasElement>;
 	prog: any;
 	constructor(props: AppProps) {
 		super(props);
     this.state = {
+      rightPanelTopSize: this.props.rightPanelTopInitialSize,
+      bottomPanelSize: this.props.bottomPanelInitialSize,
+      rightPanelSize: this.props.rightPanelInitialSize,
+      leftPanelSize: this.props.leftPanelInitialSize,
 			terminalOpen: false,
 			newWarningVisible: false,
 			materialDrawerOpen: false,
@@ -135,8 +148,8 @@ export default class App extends React.Component<AppProps, AppState> {
       selectedObject: {} as Container,
       settingsDrawerVisible: false,
       settings: props.settings,
-      mode: "EDIT",
-      tool: "SELECT",
+      mode: EditorModes.OBJECT,
+      tool: ToolNames.SELECT,
       darkmode: false,
       stats: [] as Stat[],
       canUndo: false,
@@ -154,29 +167,24 @@ export default class App extends React.Component<AppProps, AppState> {
 
     this.canvas = React.createRef<HTMLCanvasElement>();
     this.canvasOverlay = React.createRef<HTMLDivElement>();
-		this.statsCanvas = React.createRef<HTMLCanvasElement>();
+    this.orientationOverlay = React.createRef<HTMLDivElement>();
+    this.statsCanvas = React.createRef<HTMLCanvasElement>();
+    
 		this.showImportDialog = this.showImportDialog.bind(this);
 		this.handleImportDialogClose = this.handleImportDialogClose.bind(this);
 		this.handleObjectViewClick = this.handleObjectViewClick.bind(this);
 		this.handleObjectViewDelete = this.handleObjectViewDelete.bind(this);
-		this.handleObjectPropertyChange = this.handleObjectPropertyChange.bind(
-			this
-		);
-		this.handleObjectPropertyValueChangeAsNumber = this.handleObjectPropertyValueChangeAsNumber.bind(
-			this
-		);
-		this.handleObjectPropertyValueChangeAsString = this.handleObjectPropertyValueChangeAsString.bind(
-			this
-		);
-		this.handleSettingsButtonClick = this.handleSettingsButtonClick.bind(
-			this
-		);
+		this.handleObjectPropertyChange = this.handleObjectPropertyChange.bind(this);
+		this.handleObjectPropertyValueChangeAsNumber = this.handleObjectPropertyValueChangeAsNumber.bind(this);
+		this.handleObjectPropertyValueChangeAsString = this.handleObjectPropertyValueChangeAsString.bind(this);
+		this.handleSettingsButtonClick = this.handleSettingsButtonClick.bind(this);
 		this.handleMaterialBarClose = this.handleMaterialBarClose.bind(this);
 		this.handleMaterialBarItemSelect = this.handleMaterialBarItemSelect.bind(this);
 		this.handleSettingChange = this.handleSettingChange.bind(this);
 		this.handleObjectPropertyButtonClick = this.handleObjectPropertyButtonClick.bind(this);
     this.addMessageHandler = this.addMessageHandler.bind(this);
     this.handleSettingsTabChange = this.handleSettingsTabChange.bind(this);
+    this.saveLayout = this.saveLayout.bind(this);
 	}
 	addMessageHandler(message: string, handler: (acc, ...args) => KeyValuePair<any>, cb?: ()=>void) {
 		this.props.messenger.addMessageHandler(message, (acc, ...args) => {
@@ -537,6 +545,9 @@ export default class App extends React.Component<AppProps, AppState> {
 			case "number":
 				selectedObject[prop] = Number(e.value);
 				break;
+			case "select":
+				selectedObject[prop] = Number(e.value);
+				break;
 			default:
 				selectedObject[prop] = e.value;
 				break;
@@ -601,7 +612,17 @@ export default class App extends React.Component<AppProps, AppState> {
       selectedSettingsDrawerTab: index
     });
   }
-	
+  
+  saveLayout() {
+    const layout = {
+      bottomPanelInitialSize: this.state.bottomPanelSize,
+      rightPanelInitialSize: this.state.rightPanelSize,
+      leftPanelInitialSize: this.state.leftPanelSize,
+      rightPanelTopInitialSize: this.state.rightPanelTopSize
+    };
+    localStorage.setItem("layout", JSON.stringify(layout));
+  }
+  
 	render() {
 		return (
       <div>
@@ -613,7 +634,12 @@ export default class App extends React.Component<AppProps, AppState> {
               <Menu className="main-nav_bar-left_menu">
                 <ButtonGroup minimal={true}>
                   {/* FILE */}
-                  <Popover minimal={true} transitionDuration={10} position={Position.BOTTOM_LEFT} className="main-nav_bar-left_menu-popover-file">
+                  <Popover
+                    minimal={true}
+                    transitionDuration={10}
+                    position={Position.BOTTOM_LEFT}
+                    className="main-nav_bar-left_menu-popover-file"
+                  >
                     <Button text="File" className={"main-nav_bar-left_menu-button"} />
                     <Menu>
                       <MenuItem
@@ -661,14 +687,18 @@ export default class App extends React.Component<AppProps, AppState> {
                             style={{
                               display: "flex",
                               justifyContent: "space-between"
-                            }}>
+                            }}
+                          >
                             <div>Source</div>
                             <div style={{ color: Colors.LIGHT_GRAY1 }}></div>
                           </div>
                         }
                         onClick={() => this.props.messenger.postMessage("SHOULD_ADD_SOURCE")}
                       />
-                      <MenuItem text="Receiver" onClick={() => this.props.messenger.postMessage("SHOULD_ADD_RECEIVER")}></MenuItem>
+                      <MenuItem
+                        text="Receiver"
+                        onClick={() => this.props.messenger.postMessage("SHOULD_ADD_RECEIVER")}
+                      ></MenuItem>
                       <MenuDivider />
                       <MenuItem
                         text={
@@ -676,7 +706,8 @@ export default class App extends React.Component<AppProps, AppState> {
                             style={{
                               display: "flex",
                               justifyContent: "space-between"
-                            }}>
+                            }}
+                          >
                             <div>Ray Tracer</div>
                             <div style={{ color: Colors.LIGHT_GRAY1 }}></div>
                           </div>
@@ -690,7 +721,8 @@ export default class App extends React.Component<AppProps, AppState> {
                             style={{
                               display: "flex",
                               justifyContent: "space-between"
-                            }}>
+                            }}
+                          >
                             <div>2D-FDTD</div>
                             <div style={{ color: Colors.LIGHT_GRAY1 }}></div>
                           </div>
@@ -703,7 +735,8 @@ export default class App extends React.Component<AppProps, AppState> {
                             style={{
                               display: "flex",
                               justifyContent: "space-between"
-                            }}>
+                            }}
+                          >
                             <div>RT60</div>
                             <div style={{ color: Colors.LIGHT_GRAY1 }}></div>
                           </div>
@@ -717,14 +750,32 @@ export default class App extends React.Component<AppProps, AppState> {
                   <Popover minimal={true} transitionDuration={10} position={Position.BOTTOM_LEFT}>
                     <Button text="View" className={"main-nav_bar-left_menu-button"} />
                     <Menu>
-
+                      <MenuItem
+                        text={
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between"
+                            }}
+                          >
+                            <div>Clear Local Storage</div>
+                            <div style={{ color: Colors.LIGHT_GRAY1 }}></div>
+                          </div>
+                        }
+                        onClick={() => localStorage.clear()}
+                      />
                     </Menu>
                   </Popover>
                 </ButtonGroup>
               </Menu>
             </Navbar.Group>
             <Navbar.Group align={Alignment.RIGHT} className="main-nav_bar-right_group">
-              <Button icon="cog" minimal={true} className={"main-nav_bar-right_menu-button"} onClick={this.handleSettingsButtonClick}></Button>
+              <Button
+                icon="cog"
+                minimal={true}
+                className={"main-nav_bar-right_menu-button"}
+                onClick={this.handleSettingsButtonClick}
+              ></Button>
             </Navbar.Group>
           </Navbar>
         </div>
@@ -746,7 +797,8 @@ export default class App extends React.Component<AppProps, AppState> {
             this.setState({
               newWarningVisible: false
             });
-          }}>
+          }}
+        >
           Are you sure you want to start over?
         </Alert>
         <SettingsDrawer
@@ -757,7 +809,8 @@ export default class App extends React.Component<AppProps, AppState> {
             this.setState({
               settings: this.props.messenger.postMessage("SUBMIT_ALL_SETTINGS")[0]
             });
-          }}>
+          }}
+        >
           <Tabs selectedIndex={this.state.selectedSettingsDrawerTab} onSelect={this.handleSettingsTabChange}>
             <TabList>
               <Tab disabled />
@@ -787,10 +840,15 @@ export default class App extends React.Component<AppProps, AppState> {
           canEscapeKeyClose={true}
           isCloseButtonShown={true}
           title="Material Selection"
-          isOpen={this.state.materialDrawerOpen}>
+          isOpen={this.state.materialDrawerOpen}
+        >
           <MaterialDrawer
             messenger={this.props.messenger}
-            object={this.state.selectedObject && this.state.selectedObject instanceof Surface ? this.state.selectedObject : undefined}
+            object={
+              this.state.selectedObject && this.state.selectedObject instanceof Surface
+                ? this.state.selectedObject
+                : undefined
+            }
           />
         </Drawer>
 
@@ -812,7 +870,23 @@ export default class App extends React.Component<AppProps, AppState> {
           }}
         />
 
-        <SplitterLayout secondaryMinSize={5} primaryMinSize={50} secondaryInitialSize={200} primaryIndex={1} customClassName="modified-splitter-layout">
+        <SplitterLayout
+          secondaryMinSize={5}
+          primaryMinSize={50}
+          secondaryInitialSize={this.props.leftPanelInitialSize}
+          primaryIndex={1}
+          customClassName="modified-splitter-layout"
+          onDragStart={() => {
+            this.props.messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", true);
+          }}
+          onDragEnd={() => {
+            this.props.messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", false);
+            this.saveLayout();
+          }}
+          onSecondaryPaneSizeChange={(value: number) => {
+            this.setState({ leftPanelSize: value });
+          }}
+        >
           {/* object view */}
           <PanelContainer>
             <ObjectView
@@ -824,30 +898,63 @@ export default class App extends React.Component<AppProps, AppState> {
           </PanelContainer>
 
           {/* center and right */}
-          <SplitterLayout secondaryMinSize={0} primaryMinSize={50} secondaryInitialSize={300} primaryIndex={0}>
+          <SplitterLayout
+            secondaryMinSize={0}
+            primaryMinSize={50}
+            secondaryInitialSize={this.props.rightPanelInitialSize}
+            primaryIndex={0}
+            onDragStart={() => {
+              this.props.messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", true);
+            }}
+            onDragEnd={() => {
+              this.props.messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", false);
+              this.saveLayout();
+            }}
+            onSecondaryPaneSizeChange={(value: number) => {
+              this.setState({ rightPanelSize: value });
+            }}
+          >
             {/* webgl canvas & gutter*/}
             <SplitterLayout
               vertical={true}
               primaryMinSize={100}
               secondaryMinSize={1}
-              secondaryInitialSize={1}
-              customClassName="canvas-gutter">
+              secondaryInitialSize={this.props.bottomPanelInitialSize}
+              customClassName="canvas-parameter-config"
+              onDragStart={() => {
+                this.props.messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", true);
+              }}
+              onDragEnd={() => {
+                this.props.messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", false);
+                this.saveLayout();
+              }}
+              onSecondaryPaneSizeChange={(value: number) => {
+                this.setState({ bottomPanelSize: value });
+              }}
+            >
               <div className="webgl-canvas">
                 <div id="canvas_overlay" ref={this.canvasOverlay}></div>
+                <div id="orientation-overlay" ref={this.orientationOverlay}></div>
                 <canvas id="renderer-canvas" ref={this.canvas} />
               </div>
 
-              <PanelContainer className="panel full-bottom gutter-panel">
-                {/* <Gutter messenger={this.props.messenger} solvers={this.state.solvers} key={"gutter-panel"} /> */}
-                <div></div>
+              <PanelContainer className="panel full-bottom gutter-panel" margin>
+                <Gutter messenger={this.props.messenger} />
               </PanelContainer>
             </SplitterLayout>
             <SplitterLayout
               vertical={true}
               primaryMinSize={40}
               secondaryMinSize={1}
-              secondaryInitialSize={window.innerHeight / 2}
-              customClassName="canvas-gutter">
+              secondaryInitialSize={this.props.rightPanelTopInitialSize}
+              customClassName="canvas-parameter-config"
+              onDragEnd={() => {
+                this.saveLayout();
+              }}
+              onSecondaryPaneSizeChange={(value: number) => {
+                this.setState({ rightPanelTopSize: value });
+              }}
+            >
               <PanelContainer>
                 {(() => {
                   if (Object.keys(this.state.selectedObject).length > 0) {
@@ -864,8 +971,12 @@ export default class App extends React.Component<AppProps, AppState> {
                   }
                 })()}
               </PanelContainer>
-              <PanelContainer className="panel full-bottom gutter-panel">
-                <Gutter messenger={this.props.messenger} solvers={this.state.solvers} key={"gutter-panel"} />
+              <PanelContainer className="panel full-bottom parameter-config-panel">
+                <ParameterConfig
+                  messenger={this.props.messenger}
+                  solvers={this.state.solvers}
+                  key={"parameter-config-panel"}
+                />
               </PanelContainer>
             </SplitterLayout>
           </SplitterLayout>

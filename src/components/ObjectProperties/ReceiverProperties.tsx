@@ -1,13 +1,27 @@
-import React from "react";
+import React, { useState } from "react";
 import TextInput from "../text-input/TextInput";
-import NumberInput, { ObjectPropertyInputEvent } from "../number-input/NumberInput";
+import NumberInput from "../number-input/NumberInput";
+import { ObjectPropertyInputEvent } from '.';
 import CheckboxInput from "../checkbox-input/CheckboxInput";
 import Source from '../../objects/source';
 import GridRow from '../grid-row/GridRow';
 import Receiver from "../../objects/receiver";
 import ColorInput from '../color-input/ColorInput';
+import Slider, { SliderChangeEvent } from "../slider/Slider";
+import PropertyRow from "../parameter-config/property-row/PropertyRow";
+import Label from "../label/Label";
+import PropertyRowLabel from "../parameter-config/property-row/property-row-label/PropertyRowLabel";
+import PropertyRowButton from "../parameter-config/property-row/property-row-button/PropertyRowButton";
+import PropertyRowCheckbox from "../parameter-config/property-row/property-row-checkbox/PropertyRowCheckbox";
+import PropertyRowTextInput, { TextInputChangeEvent } from "../parameter-config/property-row/property-row-text-input/PropertyRowTextInput";
+import GridRowSeperator from "../grid-row/GridRowSeperator";
+import Messenger from "../../messenger";
+import { IToastProps } from "@blueprintjs/core";
+
+
 
 export interface ReceiverPropertiesProps {
+  messenger: Messenger;
   object: Receiver;
   onPropertyChange: (e: ObjectPropertyInputEvent) => void;
   onPropertyValueChangeAsNumber: (
@@ -40,7 +54,10 @@ export default function ReceiverProperties(props: ReceiverPropertiesProps) {
 		  width: "30%"
 	  },
     onChange: props.onPropertyChange
-	}
+  }
+  
+  // const [name, setName] = useState(props.object.name);
+  // const [visible, setVisible] = useState(props.object.visible);
 	
 	
 	return (
@@ -57,7 +74,6 @@ export default function ReceiverProperties(props: ReceiverPropertiesProps) {
             <CheckboxInput name="visible" checked={props.object.visible} onChange={props.onPropertyChange} />
           </GridRow>
         )}
-
         {props.object.hasOwnProperty("position") && (
           <GridRow label={"position"}>
             <NumberInput name="x" value={props.object.position.x} {...XYZProps} />
@@ -104,7 +120,43 @@ export default function ReceiverProperties(props: ReceiverPropertiesProps) {
             <span className="muted-text">{props.object.uuid}</span>
           </GridRow>
         )}
+        <GridRowSeperator />
       </div>
+      <PropertyRow>
+        <PropertyRowLabel label="Recorded Data" tooltip="The recorded samples from an FDTD-2D simulation" />
+        <div>
+          <PropertyRowButton
+            onClick={(e) => {
+              if (props.object.fdtdSamples.length > 0) {
+                props.messenger.postMessage("SHOW_RECEIVER_FDTD", { uuid: props.object.uuid, name: props.object.name + " - Data" });
+              } else {
+                props.messenger.postMessage("SHOW_TOAST", {
+                  message: `No data has been recorded!`,
+                  intent: "warning",
+                  timeout: 1750,
+                  icon: "issue"
+                } as IToastProps);
+              }
+            }}
+            label="Open in Gutter"
+          />
+          <PropertyRowButton
+            onClick={(e) => {
+              if (props.object.fdtdSamples.length > 0) {
+                props.object.saveSamples();
+              } else {
+                props.messenger.postMessage("SHOW_TOAST", {
+                  message: `No data has been recorded!`,
+                  intent: "warning",
+                  timeout: 1750,
+                  icon: "issue"
+                } as IToastProps);
+              }
+            }}
+            label="Download"
+          />
+        </div>
+      </PropertyRow>
     </div>
   );
 }

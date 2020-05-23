@@ -4,6 +4,7 @@ import Surface from "./surface";
 import Room from "./room";
 import Source from "./source";
 import { KeyValuePair } from "../common/key-value-pair";
+import { EditorModes } from "../constants";
 
 type UserData = {
 	[key: string]: any;
@@ -85,6 +86,9 @@ export default class Container extends THREE.Group {
 			this.uuid = state.uuid;
 		};
 	}
+	onModeChange(mode: EditorModes) {
+		
+  }
 
 	get x() {
 		return this.position.x;

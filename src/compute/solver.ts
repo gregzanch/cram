@@ -1,4 +1,5 @@
 import {uuid} from 'uuidv4';
+import { EditorModes } from '../constants/editor-modes';
 
 
 
@@ -8,7 +9,7 @@ export interface SolverParams{
     name?: string;
 }
 
-export default class Solver{
+export default abstract class Solver{
     params: SolverParams
     name: string;
     uuid: string;
@@ -25,4 +26,11 @@ export default class Solver{
         this.clearpass = false;
         this.update = () => { };
     }
+    dispose() {
+        console.log("disposed from abstract...")
+    }
+    onModeChange(mode: EditorModes) {
+        
+    }
 }
+

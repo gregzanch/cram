@@ -11,7 +11,14 @@ import GenericObjectProperties, { GenericObjectPropertiesProps } from './Generic
 import Container from "../../objects/container";
 import Solver from "../../compute/solver";
 import Messenger from "../../messenger";
-import { ObjectPropertyInputEvent } from "../number-input/NumberInput";
+
+export interface ObjectPropertyInputEvent {
+  name: string;
+  type: string;
+  value: any;
+  checked?: boolean;
+  id?: string;
+}
 
 
 export interface ObjectPropertiesProps {

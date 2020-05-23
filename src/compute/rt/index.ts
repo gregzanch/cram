@@ -32,6 +32,7 @@ export class RT60 extends Solver{
   arauPuchades() {
     
   }
+
 }
 
 export default RT60;
