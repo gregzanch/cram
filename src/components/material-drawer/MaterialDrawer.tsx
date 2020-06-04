@@ -1,7 +1,7 @@
 import React from 'react';
 import Surface from '../../objects/surface';
 import Messenger from '../../messenger';
-import { AcousticMaterial } from '../..';
+import { AcousticMaterial } from '../../db/acoustic-material';
 import { uuid } from 'uuidv4';
 import { absorptionGradient } from '../absorption-gradient/AbsorptionGradient';
 import MaterialSliders from '../material-sliders/MaterialSliders';
@@ -117,21 +117,21 @@ export default class MaterialDrawer extends React.Component<MaterialDrawerProps,
           
           const isSelected =
             this.state.selected_item &&
-            this.state.selected_item._id &&
-            filteredItems[i]._id === this.state.selected_item._id;
+            this.state.selected_item.uuid &&
+            filteredItems[i].uuid === this.state.selected_item.uuid;
           const selectedClassname = "material_drawer-list_item-selected";
           const normalClassname = "material_drawer-list_item-container";
           const containerProps = {
             className: isSelected ? selectedClassname : normalClassname,
             onClick: e => this.handleListItemClick(filteredItems[i]),
             onDoubleClick: e => console.log(filteredItems[i]),
-            key: filteredItems[i]._id
+            key: filteredItems[i].uuid
           };
           MaterialDrawerListArray.push(
             <div {...containerProps}>
               <div
                 className="material_drawer-list_item-material"
-                key={filteredItems[i]._id + "mat"}
+                key={filteredItems[i].uuid + "mat"}
                 onDoubleClick={containerProps.onDoubleClick}>
                 {filteredItems[i].material}
               </div>
@@ -145,7 +145,7 @@ export default class MaterialDrawer extends React.Component<MaterialDrawerProps,
                 </div> */}
                 <div
                   className="material_drawer-list_item-absorption"
-                  key={filteredItems[i]._id + "grad"}
+                  key={filteredItems[i].uuid + "grad"}
                   onDoubleClick={containerProps.onDoubleClick}
                   style={{
                     background: `${absorptionGradient(
@@ -167,7 +167,7 @@ export default class MaterialDrawer extends React.Component<MaterialDrawerProps,
     
     
     
-    const absorption = this.state.selected_item._id && Object.keys(this.state.selected_item.absorption).map((x) => {
+    const absorption = this.state.selected_item.uuid && Object.keys(this.state.selected_item.absorption).map((x) => {
       return (
         <div key={uuid()}>
           <div className="material_drawer-display-material_absorption-header">{x}Hz</div>
@@ -175,7 +175,7 @@ export default class MaterialDrawer extends React.Component<MaterialDrawerProps,
         </div>
       );
     })
-    const materialProperties = this.state.selected_item._id && (
+    const materialProperties = this.state.selected_item.uuid && (
       <>
         <div className={"material_drawer-display-material_name"}>
           <span>
@@ -185,7 +185,7 @@ export default class MaterialDrawer extends React.Component<MaterialDrawerProps,
         <div className={"material_drawer-display-material_material"}>
           <span>{this.state.selected_item.material}</span>
           <span className="muted-text" style={{ textAlign: "right" }}>
-            {this.state.selected_item._id}
+            {this.state.selected_item.uuid}
           </span>
         </div>
         <div className={"material_drawer-display-material_id"}></div>
@@ -204,6 +204,7 @@ export default class MaterialDrawer extends React.Component<MaterialDrawerProps,
                 return a;
               }, {} as KeyValuePair<Room>)}
               onClick={this.handleObjectViewClick}
+              messenger={this.props.messenger}
             />
           )}
         </div>
@@ -230,7 +231,8 @@ export default class MaterialDrawer extends React.Component<MaterialDrawerProps,
                 this.setState({
                   bufferLength: clamp(15 + this.state.bufferLength, 1, filteredItems.length)
                 })
-              }>
+              }
+            >
               show more...
             </a>
           </div>
@@ -241,9 +243,13 @@ export default class MaterialDrawer extends React.Component<MaterialDrawerProps,
                 intent="success"
                 text="assign"
                 icon="tick"
-                disabled={!this.state.selected_item || typeof this.state.selected_item._id === "undefined"}
+                disabled={!this.state.selected_item || typeof this.state.selected_item.uuid === "undefined"}
                 onClick={(e) => {
-                  this.props.messenger.postMessage("ASSIGN_MATERIAL", this.state.selected_item, this.state.selected_object.uuid || false);
+                  this.props.messenger.postMessage(
+                    "ASSIGN_MATERIAL",
+                    this.state.selected_item,
+                    this.state.selected_object.uuid || false
+                  );
                 }}
               />
             </div>

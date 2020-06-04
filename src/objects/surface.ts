@@ -1,13 +1,13 @@
 import * as THREE from "three";
 import Container, { ContainerProps } from "./container";
-import {chunk} from '../common/chunk';
+import { chunk } from "../common/chunk";
+import roundTo from '../common/round-to';
 import { KeyValuePair } from "../common/key-value-pair";
-import interpolateAlpha from '../compute/acoustics/interpolate-alpha';
-import reflectionCoefficient from '../compute/acoustics/reflection-coefficient';
-import { AcousticMaterial } from "..";
-import { BRDF } from '../compute/raytracer/brdf';
-
-
+import interpolateAlpha from "../compute/acoustics/interpolate-alpha";
+import reflectionCoefficient from "../compute/acoustics/reflection-coefficient";
+import { AcousticMaterial } from "../db/acoustic-material";
+import { BRDF } from "../compute/raytracer/brdf";
+import Room from "./room";
 
 const defaults = {
   materials: {
@@ -59,7 +59,7 @@ const defaults = {
 };
 
 export interface SurfaceProps extends ContainerProps {
-	acousticMaterial: AcousticMaterial;
+  acousticMaterial: AcousticMaterial;
   geometry: THREE.BufferGeometry;
   displayInternalEdges?: boolean;
   displayEdges?: boolean;
@@ -67,157 +67,127 @@ export interface SurfaceProps extends ContainerProps {
   _displayVertexNormals?: boolean;
 }
 
-interface KeepLine{
-	keep: boolean;
-	line: number[][];
+interface KeepLine {
+  keep: boolean;
+  line: number[][];
+  triangle_normal: number[];
 }
 
-export default class Surface extends Container {
-	// for render
-	mesh: THREE.Mesh;
-	wire: THREE.Mesh;
-	edges: THREE.LineSegments;
-	displayInternalEdges: boolean;
-	displayEdges: boolean;
-	triangles: number[][][];
-	fillSurface: boolean;
-	_displayVertexNormals: boolean;
-	vertexNormals: THREE.VertexNormalsHelper;
-	_triangles: THREE.Triangle[];
-	selectedMaterial: THREE.MeshLambertMaterial;
-	normalMaterial: THREE.MeshLambertMaterial;
-	normalColor: THREE.Color;
-	
-	// for acoustics
-	numHits!: number;
-	absorption!: number[];
-	absorptionFunction: (freq: number) => number;
-	reflection!: number[];
-	reflectionFunction: (freq: number, theta: number) => number;
-	_acousticMaterial!: AcousticMaterial;
-	brdf: BRDF[];
-	area!: number;
-	// renderer: Renderer;
-	constructor(name: string, props: SurfaceProps) {
-		super(name);
-		this.kind = "surface";
-		this.displayInternalEdges = props.displayInternalEdges || defaults.displayInternalEdges;
-		this.displayEdges = props.displayEdges || defaults.displayEdges;
-		this.fillSurface = props.fillSurface || defaults.fillSurface;
-		this._displayVertexNormals = props._displayVertexNormals || defaults._displayVertexNormals;
-		this.wire = new THREE.Mesh(props.geometry, defaults.materials.wire);
-		this.wire.geometry.name="surface-wire-geometry"
-		this.numHits = 0;
-		let parent = this.parent;
-		while (parent) {
-			parent = parent.parent;
-		}
-		this.mesh = new THREE.Mesh(props.geometry, defaults.materials.mesh);
-		this.mesh.geometry.name = "surface-geometry";
-		this.mesh.geometry.computeBoundingBox();
-		this.mesh.geometry.computeBoundingSphere();
-		
-		// this.mesh.geometry.computeVertexNormals();
-		const tempmesh = new THREE.Mesh(props.geometry.clone(), undefined);
-		tempmesh.geometry.computeVertexNormals()
-		this.vertexNormals = new THREE.VertexNormalsHelper(tempmesh, 0.25, 0xff0000, 1);
-		this.vertexNormals.geometry.name = "surface-vertex-normals-geometry";
-		this.triangles = chunk(chunk(Array.from((props.geometry.getAttribute('position') as THREE.BufferAttribute).array), 3), 3);
-		this._triangles = this.triangles.map(x => new THREE.Triangle(
-			new THREE.Vector3(...x[0]),
-			new THREE.Vector3(...x[1]),
-			new THREE.Vector3(...x[2]),
-		));
-		
-		this.selectedMaterial = defaults.materials.selected;
-		this.normalMaterial = defaults.materials.mesh;
-		this.normalColor = new THREE.Color(0xaaaaaa);
-		this.select = this.select.bind(this);
-		this.select = this.deselect.bind(this);
-		
-		// console.log(this.triangles);
-		const dict = {} as KeyValuePair<KeepLine>;
-		this.triangles.forEach(tri => {
-			for (let i = 0; i < 3; i++) {
-				const line = [tri[i], tri[(i + 1) % 3]];
-				const key = JSON.stringify(line.sort());
-				if (!dict[key]) {
-					dict[key] = {
-						keep: true,
-						line: line
-					};
-				}
-				else {
-					dict[key].keep = false;
-				}
-			}
-		});
-		const segments = new THREE.Geometry();
-		const edges = Object.keys(dict).reduce((a, b: string) => {
-			if (dict[b].keep) {
-				a.push(dict[b].line);
-			}
-			return a;
-		}, [] as number[][][]).forEach(edge => {
-			edge.forEach(vert => {
-				segments.vertices.push(new THREE.Vector3(vert[0], vert[1], vert[2]));
-			});
-		});
-		this.edges = new THREE.LineSegments(segments, defaults.materials.line);
-		this.edges.geometry.name = "surface-edges-geometry";
-		
-		this.add(this.mesh);
-		this.mesh.visible = this.fillSurface;
-		// (parent! as THREE.Scene).add(this.mesh);
-		this.add(this.wire);
-		this.wire.visible = this.displayInternalEdges;
-		this.add(this.edges);
-		this.edges.visible = this.displayEdges;
-		this.add(this.vertexNormals);
-		this.vertexNormals.visible = this._displayVertexNormals;
-		
-		// this.absorption = [0.05, 0.15, 0.10, 0.05, 0.04, 0.07, 0.09, 0.09];
-		this.absorption = [0.00,0.04,0.23,0.52,0.90,0.94,0.66,0.66];
-		const freq = [63, 125, 250, 500, 1000., 2000, 4000, 8000];
-		this.absorptionFunction = interpolateAlpha(this.absorption, freq);
-		this.reflectionFunction = (freq, theta) => reflectionCoefficient(this.absorptionFunction(freq), theta);
-		this.acousticMaterial = props.acousticMaterial;
-		this.brdf = [] as BRDF[];
-		for (const key in this.acousticMaterial.absorption){
-			this.brdf.push(new BRDF({
-				absorptionCoefficient: this.acousticMaterial.absorption[key],
-				diffusionCoefficient: 0.1
-			}));	
-		}
-		
-		this.select = () => {
-			this.selected = true;
-			(this.mesh
-				.material as THREE.MeshLambertMaterial | THREE.ShaderMaterial) = this.selectedMaterial;
-			(this.mesh.material as THREE.MeshLambertMaterial).needsUpdate = true;
-			// setInterval(() => {
-			// 	//@ts-ignore
-			// 	(this.mesh.material as THREE.ShaderMaterial).uniforms["time"] += 1;
-			// }, 16);
-		};
-		this.deselect = () => {
-			this.selected = false;
-			(this.mesh
-				.material as THREE.MeshLambertMaterial) = this.normalMaterial;
-			(this.mesh.material as THREE.MeshLambertMaterial).needsUpdate = true;
-		};
-		this.getArea();
-	}
-	get acousticMaterial() {
-		return this._acousticMaterial;
-	}
-	set acousticMaterial(material: AcousticMaterial) {
-		this._acousticMaterial = material;
-		const freq = Object.keys(this._acousticMaterial.absorption).map(x => Number(x));
-		this.absorption = freq.map(x => this._acousticMaterial.absorption[String(x)]);
-		this.absorptionFunction = interpolateAlpha(this.absorption, freq);
-    this.reflectionFunction = (freq, theta) =>
-      reflectionCoefficient(this.absorptionFunction(freq), theta);
+class Surface extends Container {
+  // for render
+  mesh: THREE.Mesh;
+  wire: THREE.Mesh;
+  edges: THREE.LineSegments;
+  displayInternalEdges: boolean;
+  displayEdges: boolean;
+  triangles: number[][][];
+  fillSurface: boolean;
+  _displayVertexNormals: boolean;
+  vertexNormals: THREE.VertexNormalsHelper;
+  _triangles: THREE.Triangle[];
+  selectedMaterial: THREE.MeshLambertMaterial;
+  normalMaterial: THREE.MeshLambertMaterial;
+  normalColor: THREE.Color;
+
+  // for acoustics
+  numHits!: number;
+  absorption!: number[];
+  absorptionFunction: (freq: number) => number;
+  reflection!: number[];
+  reflectionFunction: (freq: number, theta: number) => number;
+  _acousticMaterial!: AcousticMaterial;
+  brdf: BRDF[];
+  area!: number;
+  // renderer: Renderer;
+  constructor(name: string, props: SurfaceProps) {
+    super(name);
+
+    this.kind = "surface";
+    this.displayInternalEdges = props.displayInternalEdges || defaults.displayInternalEdges;
+    this.displayEdges = props.displayEdges || defaults.displayEdges;
+    this.fillSurface = props.fillSurface || defaults.fillSurface;
+    this._displayVertexNormals = props._displayVertexNormals || defaults._displayVertexNormals;
+    this.wire = new THREE.Mesh(props.geometry, defaults.materials.wire);
+    this.wire.geometry.name = "surface-wire-geometry";
+    this.numHits = 0;
+    this.mesh = new THREE.Mesh(props.geometry, defaults.materials.mesh);
+    this.mesh.geometry.name = "surface-geometry";
+    this.mesh.geometry.computeBoundingBox();
+    this.mesh.geometry.computeBoundingSphere();
+
+    // this.mesh.geometry.computeVertexNormals();
+    const tempmesh = new THREE.Mesh(props.geometry.clone(), undefined);
+    tempmesh.geometry.computeVertexNormals();
+    this.vertexNormals = new THREE.VertexNormalsHelper(tempmesh, 0.25, 0xff0000, 1);
+    this.vertexNormals.geometry.name = "surface-vertex-normals-geometry";
+    this.triangles = chunk(
+      chunk(Array.from((props.geometry.getAttribute("position") as THREE.BufferAttribute).array), 3),
+      3
+    );
+    this._triangles = this.triangles.map(
+      (x) => new THREE.Triangle(new THREE.Vector3(...x[0]), new THREE.Vector3(...x[1]), new THREE.Vector3(...x[2]))
+    );
+
+    this.selectedMaterial = defaults.materials.selected;
+    this.normalMaterial = defaults.materials.mesh;
+    this.normalColor = new THREE.Color(0xaaaaaa);
+
+    const dict = {} as KeyValuePair<KeepLine>;
+    this.triangles.forEach((tri, index) => {
+      // for each vertex
+      const normal = new THREE.Vector3();
+      this._triangles[index].getNormal(normal);
+
+      for (let i = 0; i < 3; i++) {
+        const line = [tri[i], tri[(i + 1) % 3]];
+        const norm = normal
+          .clone()
+          .normalize()
+          .toArray()
+          .map((x) => roundTo(x, 5));
+        const key = JSON.stringify([line.sort(), norm]);
+        // const key = JSON.stringify([line.sort()]);
+        if (!dict[key]) {
+          dict[key] = {
+            keep: true,
+            line: line,
+            triangle_normal: norm
+          };
+        } else {
+          dict[key].keep = false;
+        }
+      }
+    });
+    const segments = new THREE.Geometry();
+    const edges = Object.keys(dict)
+      .reduce((a, b: string) => {
+        if (dict[b].keep) {
+          a.push(dict[b].line);
+        }
+        return a;
+      }, [] as number[][][])
+      .forEach((edge) => {
+        edge.forEach((vert) => {
+          segments.vertices.push(new THREE.Vector3(vert[0], vert[1], vert[2]));
+        });
+      });
+    this.edges = new THREE.LineSegments(segments, defaults.materials.line);
+    this.edges.geometry.name = "surface-edges-geometry";
+
+    this.add(this.mesh);
+    this.mesh.visible = this.fillSurface;
+    this.add(this.wire);
+    this.wire.visible = this.displayInternalEdges;
+    this.add(this.edges);
+    this.edges.visible = this.displayEdges;
+    this.add(this.vertexNormals);
+    this.vertexNormals.visible = this._displayVertexNormals;
+
+    this.absorption = [0.0, 0.04, 0.23, 0.52, 0.9, 0.94, 0.66, 0.66];
+    const freq = [63, 125, 250, 500, 1000, 2000, 4000, 8000];
+    this.absorptionFunction = interpolateAlpha(this.absorption, freq);
+    this.reflectionFunction = (freq, theta) => reflectionCoefficient(this.absorptionFunction(freq), theta);
+    this.acousticMaterial = props.acousticMaterial;
     this.brdf = [] as BRDF[];
     for (const key in this.acousticMaterial.absorption) {
       this.brdf.push(
@@ -227,36 +197,142 @@ export default class Surface extends Container {
         })
       );
     }
-	}
-	resetHits() {
-		this.numHits = 0;
-	}
-	getArea() {
-		this.area = 0;
-		for (let i = 0; i < this._triangles.length; i++){
-			this.area += this._triangles[i].getArea();
-		}
-		return this.area;
-	}
-	getEdges() {
-		return this.edges;
-	}
-	get displayVertexNormals() {
-		return this.vertexNormals.visible;
-	}
-	set displayVertexNormals(displayVertexNormals: boolean) {
-		this.vertexNormals.visible = displayVertexNormals
-	}
-	get geometry() {
-		return this.mesh.geometry;
-	}
-	get faces() {
-		return this._triangles;
-	}
-	get wireframeVisible() {
-		return this.wire.visible;
-	}
-	set wireframeVisible(visible: boolean) {
-		this.wire.visible = visible;
-	}
+    this.getArea();
+  }
+  select() {
+    this.selected = true;
+    (this.mesh.material as THREE.MeshLambertMaterial | THREE.ShaderMaterial) = this.selectedMaterial;
+    (this.mesh.material as THREE.MeshLambertMaterial).needsUpdate = true;
+  }
+  deselect() {
+    this.selected = false;
+    (this.mesh.material as THREE.MeshLambertMaterial) = this.normalMaterial;
+    (this.mesh.material as THREE.MeshLambertMaterial).needsUpdate = true;
+  }
+  flipNormals() {}
+
+  resetHits() {
+    this.numHits = 0;
+  }
+  getArea() {
+    this.area = 0;
+    for (let i = 0; i < this._triangles.length; i++) {
+      this.area += this._triangles[i].getArea();
+    }
+    return this.area;
+  }
+  getEdges() {
+    return this.edges;
+  }
+
+  mergeSurfaces(surfaces: Surface[]) {
+    const name = this.name + "-merged";
+    const acousticMaterial = this.acousticMaterial;
+    const geometry = new THREE.BufferGeometry();
+    const geometryAttributes = {} as any;
+    for (let i = 0; i < surfaces.length; i++) {
+      const geom = surfaces[i].mesh.geometry as THREE.BufferGeometry;
+      const attributeKeys = Object.keys(geom.attributes);
+      attributeKeys.forEach((attr) => {
+        if (attr.match(/position|normals?/gim)) {
+          if (!geometryAttributes[attr]) {
+            geometryAttributes[attr] = {
+              arr: Array.from(geom.attributes[attr].array),
+              itemSize: geom.attributes[attr].itemSize
+            };
+          } else {
+            geometryAttributes[attr].arr = geometryAttributes[attr].arr.concat(Array.from(geom.attributes[attr].array));
+          }
+        }
+      });
+    }
+    Object.keys(geometryAttributes).forEach((attr) => {
+      geometry.setAttribute(
+        attr,
+        new THREE.BufferAttribute(new Float32Array(geometryAttributes[attr].arr), geometryAttributes[attr].itemSize)
+      );
+    });
+    const surface = new Surface(name, {
+      geometry,
+      acousticMaterial
+    });
+    return surface;
+  }
+
+  get acousticMaterial() {
+    return this._acousticMaterial;
+  }
+  set acousticMaterial(material: AcousticMaterial) {
+    this._acousticMaterial = material;
+    const freq = Object.keys(this._acousticMaterial.absorption).map((x) => Number(x));
+    this.absorption = freq.map((x) => this._acousticMaterial.absorption[String(x)]);
+    this.absorptionFunction = interpolateAlpha(this.absorption, freq);
+    this.reflectionFunction = (freq, theta) => reflectionCoefficient(this.absorptionFunction(freq), theta);
+    this.brdf = [] as BRDF[];
+    for (const key in this.acousticMaterial.absorption) {
+      this.brdf.push(
+        new BRDF({
+          absorptionCoefficient: this.acousticMaterial.absorption[key],
+          diffusionCoefficient: 0.1
+        })
+      );
+    }
+  }
+  get displayVertexNormals() {
+    return this.vertexNormals.visible;
+  }
+  set displayVertexNormals(displayVertexNormals: boolean) {
+    this.vertexNormals.visible = displayVertexNormals;
+  }
+  get geometry() {
+    return this.mesh.geometry;
+  }
+  get faces() {
+    return this._triangles;
+  }
+  get wireframeVisible() {
+    return this.wire.visible;
+  }
+  set wireframeVisible(visible: boolean) {
+    this.wire.visible = visible;
+  }
+  get room() {
+    return this.parent!.parent! as Room;
+  }
 }
+
+function mergeSurfaces(surfaces: Surface[]) {
+  const name = surfaces[0].name + "-merged";
+  const acousticMaterial = surfaces[0].acousticMaterial;
+  const geometry = new THREE.BufferGeometry();
+  const geometryAttributes = {} as any;
+  for (let i = 0; i < surfaces.length; i++){
+    const geom = surfaces[i].mesh.geometry as THREE.BufferGeometry;
+    const attributeKeys = Object.keys(geom.attributes);
+    attributeKeys.forEach(attr => {
+      if (attr.match(/position|normals?/gim)) {
+        if (!geometryAttributes[attr]) {
+          geometryAttributes[attr] = {
+            arr: Array.from(geom.attributes[attr].array),
+            itemSize: geom.attributes[attr].itemSize
+          }
+        }
+        else {
+          geometryAttributes[attr].arr = geometryAttributes[attr].arr.concat(Array.from(geom.attributes[attr].array));
+        }
+      }
+    })
+  }
+  Object.keys(geometryAttributes).forEach(attr => {
+    geometry.setAttribute(attr, new THREE.BufferAttribute(new Float32Array(geometryAttributes[attr].arr), geometryAttributes[attr].itemSize));
+  });
+  const surface = new Surface(name, {
+    geometry,
+    acousticMaterial
+  });
+  return surface;
+}
+
+export { Surface, mergeSurfaces };
+
+export default Surface;

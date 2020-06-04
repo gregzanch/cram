@@ -50,3 +50,5 @@ export class AudioFile {
     return newChannelData;
   }
 }
+
+export default AudioFile;

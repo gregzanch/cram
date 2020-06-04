@@ -30,13 +30,14 @@ import {
   RT60Icon
 } from '../icons';
 import "./ObjectView.css";
+import Messenger from "../../messenger";
 
 
 export interface ObjectViewProps {
   containers: KeyValuePair<Container>;
   onDelete: (...args) => void;
   onClick: (...args) => void;
-  
+  messenger: Messenger;
 }
 
 type ClickEvent = React.MouseEvent<HTMLElement, MouseEvent>;
@@ -72,6 +73,36 @@ type ClickEvent = React.MouseEvent<HTMLElement, MouseEvent>;
               case "Log to Console": {
                 console.log(container);
               } break;
+              case "Merge Surfaces": {
+                if (container instanceof Surface) {
+                  const selection = props.messenger.postMessage("GET_SELECTED_OBJECTS")[0];
+                  if (selection.length > 1) {
+                    const selectionHasNonSurfaces = selection.filter(x => x.kind !== "surface").length > 0;
+                    if (selectionHasNonSurfaces) {
+                      return;
+                    }
+                    const newsurface = container.mergeSurfaces(selection);
+                    container.room.surfaces.add(newsurface);
+                    selection.forEach(x => {
+                      props.onDelete(x);
+                    });
+                  }
+                }
+              } break;
+              case "Hide": {
+                const selection = props.messenger.postMessage("GET_SELECTED_OBJECTS")[0];
+                container.visible = false;
+                selection.forEach((obj: Container) => {
+                  obj.visible = false;
+                })
+              } break;
+              case "Show": {
+                const selection = props.messenger.postMessage("GET_SELECTED_OBJECTS")[0];
+                container.visible = true;
+                selection.forEach((obj: Container) => {
+                  obj.visible = true;
+                });
+              } break;
               default:
                 break;
             }
@@ -82,34 +113,54 @@ type ClickEvent = React.MouseEvent<HTMLElement, MouseEvent>;
 
       switch (container["kind"]) {
         case "surface":
-          return (
-            <ContextMenu {...ContextMenuSharedProps}>
-              <TreeItem {...{ icon: <NodesIcon fontSize="inherit" />, className, label, onClick, draggable, key, nodeId }} />
-            </ContextMenu>
-          );
+          {
+            let items = ["Show", "Hide", "Delete", "!seperator", "Log to Console"];
+            const selectedObjectTypes = props.messenger.postMessage("GET_SELECTED_OBJECT_TYPES")[0];
+            if (selectedObjectTypes.length > 1 && selectedObjectTypes.filter((x: string) => x !== "surface").length == 0) {
+              items = ["Merge Surfaces", "!seperator"].concat(items);
+            }
+            return (
+              <ContextMenu items={items} {...ContextMenuSharedProps}>
+                <TreeItem
+                  {...{ icon: <NodesIcon fontSize="inherit" />, className, label, onClick, draggable, key, nodeId }}
+                />
+              </ContextMenu>
+            );
+          } break;
 
         case "source":
-          return (
-            <ContextMenu {...ContextMenuSharedProps}>
-              <TreeItem {...{ icon: <SourceIcon fontSize="inherit" />, className, label, onClick, draggable, key, nodeId }} />
-            </ContextMenu>
-          );
-
+          {
+            let items = ["Show", "Hide", "Delete", "!seperator", "Log to Console"];
+            return (
+              <ContextMenu items={items} {...ContextMenuSharedProps}>
+                <TreeItem
+                  {...{ icon: <SourceIcon fontSize="inherit" />, className, label, onClick, draggable, key, nodeId }}
+                />
+              </ContextMenu>
+            );
+          } break;
         case "receiver":
-          return (
-            <ContextMenu {...ContextMenuSharedProps}>
-              <TreeItem {...{ icon: <ReceiverIcon fontSize="inherit" />, className, label, onClick, draggable, key, nodeId }} />
-            </ContextMenu>
-          );
+          {
+            let items = ["Show", "Hide", "Delete", "!seperator", "Log to Console"];
+            return (
+              <ContextMenu items={items} {...ContextMenuSharedProps}>
+                <TreeItem
+                  {...{ icon: <ReceiverIcon fontSize="inherit" />, className, label, onClick, draggable, key, nodeId }}
+                />
+              </ContextMenu>
+            );
+          } break;
 
         case "room":
-          return (
-            <ContextMenu {...ContextMenuSharedProps}>
-              <TreeItem {...{ label: roomLabel, onClick, draggable, key, nodeId, collapseIcon, className, expandIcon }}>
-                {container.children.map((x) => mapchildren(x, props, expanded, setExpanded))}
-              </TreeItem>
-            </ContextMenu>
-          );
+          {
+            return (
+              <ContextMenu {...ContextMenuSharedProps}>
+                <TreeItem {...{ label: roomLabel, onClick, draggable, key, nodeId, collapseIcon, className, expandIcon }}>
+                  {container.children.map((x) => mapchildren(x, props, expanded, setExpanded))}
+                </TreeItem>
+              </ContextMenu>
+            );
+          } break;
         
         case "container":
           return (

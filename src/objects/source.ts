@@ -50,6 +50,7 @@ export default class Source extends Container {
   shouldClearPreviousPosition: boolean;
   pinkNoiseSamples: Float32Array;
   signalSource: SignalSource;
+  initialSPL: number;
   constructor(name: string, props?: SourceProps) {
     super(name);
     this.kind = "source";
@@ -58,6 +59,7 @@ export default class Source extends Container {
     this.previousY = this.position.y;
     this.previousZ = this.position.z;
     this.shouldClearPreviousPosition = false;
+    this.initialSPL = 120;
     this.amplitude = 1;
     this.frequency = 100;
     this.phase = 0;

@@ -5,3 +5,6 @@ export * from './weight';
 export * from './transmission';
 export * from './std';
 export * from './fft';
+export * from './dbaddition';
+export { airAttenuation } from './air-attenuation';
+export { soundSpeed } from './sound-speed';

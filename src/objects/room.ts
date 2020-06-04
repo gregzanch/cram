@@ -2,7 +2,6 @@ import * as THREE from "three";
 import Container, { ContainerProps } from "./container";
 import Surface from './surface';
 
-import { FDTD } from "../compute/fdtd";
 import { UNITS } from "../enums/units";
 import { RT_CONSTANTS } from "../constants/rt-constants";
 import { third_octave } from "../compute/acoustics";

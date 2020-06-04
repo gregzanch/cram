@@ -28,8 +28,6 @@ export interface ContainerProps {
 export default class Container extends THREE.Group {
 	kind: string;
 	selected: boolean;
-	select!: () => void;
-	deselect!: () => void;
 	renderCallback!: (time?: number) => void;
 	save: () => ContainerSaveObject;
 	restore: (state: ContainerSaveObject) => void;
@@ -44,22 +42,6 @@ export default class Container extends THREE.Group {
 				}
 			})();
 		this.selected = false;
-		this.select = () => {
-			// this.children.forEach((child: Receiver | Room | Source | Surface) => {
-			// 	if (child['kind']) {
-			// 		child.select();
-			// 	}
-			// })
-			// this.selected = true;
-		};
-		this.deselect = () => {
-			// this.children.forEach((child: Receiver | Room | Source | Surface) => {
-			// 		if (child["kind"]) {
-			// 			child.deselect();
-			// 		}
-			// });
-			// this.selected = false;
-		};
 		this.renderCallback = () => { };
 		this.save = () => {
       const name = this.name;
@@ -86,10 +68,9 @@ export default class Container extends THREE.Group {
 			this.uuid = state.uuid;
 		};
 	}
-	onModeChange(mode: EditorModes) {
-		
-  }
-
+	onModeChange(mode: EditorModes) {	}
+	select() { }
+	deselect() { }
 	get x() {
 		return this.position.x;
 	}

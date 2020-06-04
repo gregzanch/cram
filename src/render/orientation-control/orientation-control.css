@@ -1,3 +1,10 @@
+.orientation_control{
+  position: absolute;
+}
+.orientation_control-hidden{
+  display: none;
+}
+
 .helper-arrow {
   user-select: none;
   position: absolute;

@@ -4,3 +4,4 @@ export function chunk(array: Array<any>, size: number) {
 		R.push(array.slice(i, i + size));
 	return R;
 }
+

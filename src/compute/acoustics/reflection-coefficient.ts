@@ -14,7 +14,7 @@ export function reflectionCoefficient(α: number, θ: number) {
   const ξo = (1 - rootOneMinusAlpha) / (1 + rootOneMinusAlpha);
   const ξo_sinθ = ξo * Math.sin(θ);
   const R = (ξo_sinθ - 1) / (ξo_sinθ + 1);
-  return R;
+  return R**2;
 }
 
 export default reflectionCoefficient;

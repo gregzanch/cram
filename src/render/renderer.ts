@@ -35,7 +35,7 @@ import Container from "../objects/container";
 import Grid from "./env/grid";
 import { KeyValuePair } from "../common/key-value-pair";
 
-import defaults from './defaults';
+import defaults from '../default-storage';
 import Axes from './env/axes';
 import Lights from './env/lights';
 import Room from '../objects/room';
@@ -53,6 +53,7 @@ import hotkeys from "hotkeys-js";
 
 import { OrientationControl, OrientationControlTargets, OrientationAxisAdds, OrientationAxisQuats, OrientationControlOptions } from './orientation-control/orientation-control';
 import { clamp } from "../common/clamp";
+import Surface from "../objects/surface";
 
 const colored_number_html = (num: number) => /*html*/`<span style="color: ${num < 0 ? "#E68380" : "#A2C982"};">${num.toFixed(3)}</span>`;
 
@@ -139,6 +140,7 @@ export default class Renderer {
 	fdtdItems!: Container;
 	interactables!: Container;
 	workspace!: Container;
+	sketches!: Container;
 
 	lights!: Lights;
 	axes!: Axes;
@@ -194,8 +196,7 @@ export default class Renderer {
 	orientationControl!: OrientationControl;
 	
 	
-	gutter_debug_log!: HTMLElement;
-	gutter_orientation_control_quat!: HTMLElement;
+
 	constructor(params: RendererParams) {
 		[
 			"init",
@@ -214,11 +215,6 @@ export default class Renderer {
 	}
 	
 	init(elt: HTMLCanvasElement, settingsGetter: (category: SettingsCategories) => SettingsCategory) {
-
-		this.gutter_debug_log = document.querySelector("#gutter-debug-stats") || document.createElement('div');
-		this.gutter_orientation_control_quat = document.createElement('div');
-		
-		this.gutter_debug_log.appendChild(this.gutter_orientation_control_quat);
 		
 		
 		
@@ -250,6 +246,7 @@ export default class Renderer {
 		this.fdtdItems = new Container("fdtdItems");
 		this.workspace = new Container("workspace");
 		this.interactables = new Container("interactables");
+		this.sketches = new Container("sketches");
 		this.workspaceCursor = this.workspace;
 		
 		this.lights = new Lights();
@@ -281,7 +278,7 @@ export default class Renderer {
       })
     );
 		this.cursor.geometry.name = "cursor-gemoetry";
-    // this.env.add(this.cursor);
+    this.env.add(this.cursor);
 
 		
 		
@@ -290,7 +287,7 @@ export default class Renderer {
 		// scene
 		this.scene = new THREE.Scene();
 		this.scene.background = new THREE.Color(background);
-		this.scene.add(this.env, this.workspace, this.interactables, this.fdtdItems);
+		this.scene.add(this.env, this.workspace, this.interactables, this.fdtdItems, this.sketches);
 		
 		// renderer
 		this.renderer = new THREE.WebGLRenderer({
@@ -465,7 +462,7 @@ export default class Renderer {
 			this.needsToRender = true;
 		});
 		
-		this.messenger.addMessageHandler("FOCUS_ON_SELECTED_OBJECTS", (acc, ...args) => { 
+		this.messenger.addMessageHandler("FOCUS_ON_SELECTED_OBJECTS", (acc, ...args) => {
 			const selectedObjects = this.messenger.postMessage("GET_SELECTED_OBJECTS")[0];
 			if (selectedObjects && selectedObjects.length > 0) {
 				const easingFunction = EasingFunctions.linear;
@@ -591,7 +588,12 @@ export default class Renderer {
 				if (e.button == 0) {
 					const point = this.pickHelper.getPickedPoint();
 					this.cursor.position.set(point[0], point[1], point[2]);
-
+					
+					// if (selection.pickedObject.kind === "surface") {
+					// 	window['normal'] = new THREE.Vector3().fromArray(selection.pickedObject.geometry.attributes.normals.array.slice(0, 3));
+					// 	window['point'] = new THREE.Vector3().fromArray(point);
+					// }
+					
 					if (!this.currentlyMovingObjects) {
 						if (e.shiftKey) {
 							this.messenger.postMessage("APPEND_SELECTION", [selection.pickedObject]);
@@ -956,45 +958,7 @@ export default class Renderer {
 
 		
 		if (this.needsToRender || this.shouldAnimate) {
-			const storageQuat = JSON.parse(localStorage.getItem('camera') || "[0]").object.quat as number[];
-			this.gutter_debug_log.innerHTML = `
-				<div>
-					<span>Target Position: </span>
-					${colored_number_html(this.controls.target.x)}, 
-					${colored_number_html(this.controls.target.y)}, 
-					${colored_number_html(this.controls.target.z)}
-				</div>
-				<div>
-					<span>Camera Position: </span>
-					${colored_number_html(this.camera.position.x)}, 
-					${colored_number_html(this.camera.position.y)}, 
-					${colored_number_html(this.camera.position.z)}
-				</div>
-				<div>
-					<span>Camera Quat: </span>
-					${colored_number_html(this.camera.quaternion.x)}, 
-					${colored_number_html(this.camera.quaternion.y)}, 
-					${colored_number_html(this.camera.quaternion.z)}, 
-					${colored_number_html(this.camera.quaternion.w)}, 
-				</div>
-				<div>
-					<span>Storage Quat: </span>
-					${colored_number_html(storageQuat[0])}, 
-					${colored_number_html(storageQuat[1])}, 
-					${colored_number_html(storageQuat[2])}, 
-					${colored_number_html(storageQuat[3])}, 
-				</div>
-				<div>
-					<span>Orient Position: </span>
-					${colored_number_html(this.orientationControl.camera.position.x)}, 
-					${colored_number_html(this.orientationControl.camera.position.y)}, 
-					${colored_number_html(this.orientationControl.camera.position.z)}
-				</div>
-
-				<div>
-					${this.orientationControl.axis}
-				</div>
-				`;
+		
 			this.composer.render();
 			
 
@@ -1144,7 +1108,8 @@ export default class Renderer {
 	private get aspect() {
 		return this.clientWidth / this.clientHeight;
 	}
-	
-	
-	
+	private get mode() {
+		return this.messenger.postMessage("GET_EDITOR_MODE")[0];
+	}
+		
 }

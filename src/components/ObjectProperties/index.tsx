@@ -1,6 +1,5 @@
 import React, {useState} from "react";
 import TabUnselectedIcon from '@material-ui/icons/TabUnselected';
-import FDTDProperties, { FDTDPropertiesProps } from './FDTDProperties';
 import SourceProperties, { SourcePropertiesProps } from './SourceProperties';
 import ReceiverProperties, { ReceiverPropertiesProps } from './ReceiverProperties';
 import RayTracerProperties, {RayTracerPropertiesProps} from './RayTracerProperties';
@@ -49,7 +48,6 @@ export default class ObjectProperties extends React.Component<ObjectPropertiesPr
       case "receiver": return <ReceiverProperties {...this.props as ReceiverPropertiesProps} />;
       case "room": return <RoomProperties {...this.props as RoomPropertiesProps} />;
       case "surface": return <SurfaceProperties {...this.props as SurfacePropertiesProps} />;
-      case "fdtd": return <FDTDProperties {...this.props as FDTDPropertiesProps} />;
       case "ray-tracer": return <RayTracerProperties {...this.props as RayTracerPropertiesProps} />;
       case "rt60": return <RT60Properties {...(this.props as RT60PropertiesProps)} />;
   

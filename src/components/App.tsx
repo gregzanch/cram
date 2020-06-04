@@ -23,7 +23,7 @@ import {
 } from "@blueprintjs/core";
 import MenuItemText from './menu-item-text/MenuItemText';
 import { ItemListRenderer, IItemListRendererProps } from "@blueprintjs/select";
-import MaterialBar from './material-bar/MaterialBar';
+
 import ImportDialog from "./import-dialog/ImportDialog";
 import ObjectView from "./object-view/ObjectView";
 import resolve_svg from "../svg/resolve.svg";
@@ -55,7 +55,7 @@ import ParameterConfig from './parameter-config/ParameterConfig';
 import { Stat } from "./parameter-config/Stats";
 import { ObjectPropertyInputEvent } from "./ObjectProperties";
 import Surface from "../objects/surface";
-import { AcousticMaterial } from "..";
+import { AcousticMaterial } from "../db/acoustic-material";
 import { Searcher } from "fast-fuzzy";
 import MaterialDrawer from "./material-drawer/MaterialDrawer";
 import { SettingsPanel } from "./setting-components/SettingsPanel";
@@ -65,6 +65,7 @@ import properCase from "../common/proper-case";
 import { ApplicationSettings } from "../default-settings";
 import Gutter from "./gutter/Gutter";
 import { timingSafeEqual } from "crypto";
+import NavbarMenuItemLabel from "./NavbarMenuItemLabel";
 
 
 const AppToaster = Toaster.create({
@@ -120,6 +121,7 @@ interface AppState {
   newWarningVisible: boolean;
   canUndo: boolean;
   canRedo: boolean;
+  canDuplicate: boolean;
   selectedSettingsDrawerTab: number;
 }
 
@@ -128,11 +130,13 @@ export default class App extends React.Component<AppProps, AppState> {
   canvas: React.RefObject<HTMLCanvasElement>;
   canvasOverlay: React.RefObject<HTMLDivElement>;
   orientationOverlay: React.RefObject<HTMLDivElement>;
+  responseOverlay: React.RefObject<HTMLDivElement>;
 	statsCanvas: React.RefObject<HTMLCanvasElement>;
 	prog: any;
 	constructor(props: AppProps) {
 		super(props);
     this.state = {
+      canDuplicate: false,
       rightPanelTopSize: this.props.rightPanelTopInitialSize,
       bottomPanelSize: this.props.bottomPanelInitialSize,
       rightPanelSize: this.props.rightPanelInitialSize,
@@ -166,6 +170,7 @@ export default class App extends React.Component<AppProps, AppState> {
 		this.setupMessageHandlers();
 
     this.canvas = React.createRef<HTMLCanvasElement>();
+    this.responseOverlay = React.createRef<HTMLDivElement>();
     this.canvasOverlay = React.createRef<HTMLDivElement>();
     this.orientationOverlay = React.createRef<HTMLDivElement>();
     this.statsCanvas = React.createRef<HTMLCanvasElement>();
@@ -178,8 +183,8 @@ export default class App extends React.Component<AppProps, AppState> {
 		this.handleObjectPropertyValueChangeAsNumber = this.handleObjectPropertyValueChangeAsNumber.bind(this);
 		this.handleObjectPropertyValueChangeAsString = this.handleObjectPropertyValueChangeAsString.bind(this);
 		this.handleSettingsButtonClick = this.handleSettingsButtonClick.bind(this);
-		this.handleMaterialBarClose = this.handleMaterialBarClose.bind(this);
-		this.handleMaterialBarItemSelect = this.handleMaterialBarItemSelect.bind(this);
+		this.handleMaterialDrawerClose = this.handleMaterialDrawerClose.bind(this);
+		this.handleMaterialDrawerItemSelect = this.handleMaterialDrawerItemSelect.bind(this);
 		this.handleSettingChange = this.handleSettingChange.bind(this);
 		this.handleObjectPropertyButtonClick = this.handleObjectPropertyButtonClick.bind(this);
     this.addMessageHandler = this.addMessageHandler.bind(this);
@@ -221,14 +226,16 @@ export default class App extends React.Component<AppProps, AppState> {
     });
     this.addMessageHandler("DESELECT_ALL_OBJECTS", () => {
       return {
+        canDuplicate: false,
         selectedObject: {} as Container,
         lastUpdateReason: "DESELECT_ALL_OBJECTS"
-      }
+      };
     });
     
     this.addMessageHandler("SET_SELECTION", (acc, objects) => {
       if (objects instanceof Array) {
         return {
+          canDuplicate: objects.filter(x=>["source", "receiver"].includes(x.kind)).length == objects.length,
           selectedObject: objects[objects.length - 1],
           lastUpdateReason: "SET_SELECTION"
         };
@@ -352,8 +359,8 @@ export default class App extends React.Component<AppProps, AppState> {
     })
 		this.addMessageHandler("SHOULD_ADD_SOURCE",
 			(acc, ...args) => {
-				const containers = { ...this.state.containers };
-				containers[acc[0].uuid] = acc[0];
+				const containers = this.props.messenger.postMessage("GET_CONTAINERS")[0];
+				// containers[acc[0].uuid] = acc[0];
 				return ({
           containers,
           lastUpdateReason: "SHOULD_ADD_SOURCE"
@@ -362,9 +369,12 @@ export default class App extends React.Component<AppProps, AppState> {
 		);
 		this.addMessageHandler("SHOULD_ADD_RECEIVER",
 			(acc, ...args) => {
-				const containers = { ...this.state.containers };
-				containers[acc[0].uuid] = acc[0];
-				return ({ containers });
+        const containers = this.props.messenger.postMessage("GET_CONTAINERS")[0];
+				// containers[acc[0].uuid] = acc[0];
+        return ({
+          containers,
+          lastUpdateReason: "SHOULD_ADD_RECEIVER"
+        });
 			}
 		);
 		this.addMessageHandler("SHOULD_ADD_RAYTRACER",
@@ -583,12 +593,12 @@ export default class App extends React.Component<AppProps, AppState> {
 	// 	return true;
 	// }
 	
-	handleMaterialBarClose(e) {
+	handleMaterialDrawerClose(e) {
 		this.setState({
 			materialDrawerOpen: false
 		})
 	}
-	handleMaterialBarItemSelect(e) {
+	handleMaterialDrawerItemSelect(e) {
 	}
 	
 	MaterialOptionListRenderer: ItemListRenderer<AcousticMaterial> = (props: IItemListRendererProps<AcousticMaterial>) => {
@@ -671,6 +681,13 @@ export default class App extends React.Component<AppProps, AppState> {
                         disabled={!this.state.canRedo}
                       />
                       <MenuDivider />
+                      <MenuItem
+                        text="Duplicate"
+                        disabled={!this.state.canDuplicate}
+                        onClick={(e) => {
+                          this.props.messenger.postMessage("SHOULD_DUPLICATE_SELECTED_OBJECTS");
+                        }}
+                      ></MenuItem>
                       <MenuItem text="Cut" disabled></MenuItem>
                       <MenuItem text="Copy" disabled></MenuItem>
                       <MenuItem text="Paste" disabled></MenuItem>
@@ -682,24 +699,23 @@ export default class App extends React.Component<AppProps, AppState> {
                     <Button text="Add" className={"main-nav_bar-left_menu-button"} />
                     <Menu>
                       <MenuItem
-                        text={
-                          <div
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between"
-                            }}
-                          >
-                            <div>Source</div>
-                            <div style={{ color: Colors.LIGHT_GRAY1 }}></div>
-                          </div>
-                        }
+                        text={<NavbarMenuItemLabel label="Source" />}
                         onClick={() => this.props.messenger.postMessage("SHOULD_ADD_SOURCE")}
                       />
                       <MenuItem
-                        text="Receiver"
+                        text={<NavbarMenuItemLabel label="Receiver" />}
                         onClick={() => this.props.messenger.postMessage("SHOULD_ADD_RECEIVER")}
-                      ></MenuItem>
+                      />
+
                       <MenuDivider />
+
+                      <MenuItem
+                        text={<NavbarMenuItemLabel label="Sketch" />}
+                        onClick={() => this.props.messenger.postMessage("SHOULD_ADD_SKETCH")}
+                      />
+
+                      <MenuDivider />
+
                       <MenuItem
                         text={
                           <div
@@ -835,7 +851,7 @@ export default class App extends React.Component<AppProps, AppState> {
           autoFocus={true}
           enforceFocus={true}
           hasBackdrop={true}
-          onClose={this.handleMaterialBarClose}
+          onClose={this.handleMaterialDrawerClose}
           canOutsideClickClose={true}
           canEscapeKeyClose={true}
           isCloseButtonShown={true}
@@ -894,6 +910,7 @@ export default class App extends React.Component<AppProps, AppState> {
               solvers={this.state.solvers}
               onClick={this.handleObjectViewClick}
               onDelete={this.handleObjectViewDelete}
+              messenger={this.props.messenger}
             />
           </PanelContainer>
 
@@ -933,6 +950,11 @@ export default class App extends React.Component<AppProps, AppState> {
               }}
             >
               <div className="webgl-canvas">
+                <div
+                  id="response-overlay"
+                  className={"response_overlay response_overlay-hidden"}
+                  ref={this.responseOverlay}
+                ></div>
                 <div id="canvas_overlay" ref={this.canvasOverlay}></div>
                 <div id="orientation-overlay" ref={this.orientationOverlay}></div>
                 <canvas id="renderer-canvas" ref={this.canvas} />

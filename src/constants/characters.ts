@@ -1,5 +1,3 @@
-
-
 export const Characters = {
   COMMAND: "⌘",
   CONTROL: "⌃",
@@ -14,4 +12,3 @@ export const Characters = {
   TAB: "⇥",
   ESCAPE: "⎋"
 };
-

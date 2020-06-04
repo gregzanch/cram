@@ -52,7 +52,7 @@ export default class PickHelper {
       for (let i = 0; i < intersectedObjects.length; i++) {
         const d = dist(
           this.pickPosition,
-          intersectedObjects[i].point.project(this.camera)
+          intersectedObjects[i].point.clone().project(this.camera)
         );
         if (d < THRESHOLD) {
           indicesWithinThreshold.push(i);

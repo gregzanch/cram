@@ -9,7 +9,7 @@ import './Gutter.css';
 export enum TabTypes {
   LOG = 0,
   DEBUG_STATS = 1,
-  RECEIVER_FDTD = 2,
+  RECEIVER_FDTD = 2
 }
 
 export interface TabInfo {

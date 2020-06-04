@@ -49,7 +49,7 @@ export function P2Lp(P: number | number[]): number | number[] {
  * @param Lp sound pressure level
  */
 export function Lp2P(Lp: number | number[]): number | number[] {
-  return allowMultiple((lp: number) => Math.pow(10, lp / 20) * pref.value, Lp);
+  return allowMultiple((lp: number) => 10 ** (lp / 20) * pref.value, Lp);
 }
 
 /**
@@ -81,6 +81,23 @@ export function W2Lw(W: number | number[]): number | number[] {
 export function Lw2W(Lw: number | number[]): number | number[] {
   return allowMultiple((lw: number) => Math.pow(10, lw / 10) * Wref.value, Lw);
 }
+/**
+ * 
+ * @param p pressure in Pa
+ * @param z0 specific acoustic impedance (400 N·s/m3 for air) 
+ */
+export function P2I(p: number | number[], z0: number = 400): number | number[] {
+  return allowMultiple((p: number) => p ** 2 / z0, p);
+}
+
+/**
+ * 
+ * @param I intensity in W/m^2
+ * @param z0 specific acoustic impedance (400 N·s/m^3 for air) 
+ */
+export function I2P(I: number | number[], z0: number = 400): number | number[] {
+  return allowMultiple((I: number) => Math.sqrt(I * z0), I);
+}
 
 export function Lp2Ln(
   Lp: number | number[],
@@ -88,53 +105,4 @@ export function Lp2Ln(
   Ao: number = 108
 ): number | number[] {
   return allowMultiple((lp: number) => lp - 10 * Math.log10(Ao / Ar), Lp);
-}
-
-/**
- * Converts pressure to sound pressure level
- * @param P pressure
- * @deprecated use P2Lp() instead
- */
-export function P_dB(P: number | number[]): number | number[] {
-  return allowMultiple((p: number) => 20 * Math.log10(p / pref.value), P);
-}
-/**
- * Convert sound pressure level to pressure
- * @param Lp sound pressure level
- * @deprecated use Lp2P() instead
- */
-export function dB_P(Lp: number | number[]): number | number[] {
-  return allowMultiple((lp: number) => Math.pow(10, lp / 20) * pref.value, Lp);
-}
-/**
- * Convert Intensity to sound intensity level
- * @param I Intensity
- * @deprecated use I2Li() instead
- */
-export function I_dB(I: number | number[]): number | number[] {
-  return allowMultiple((i: number) => 10 * Math.log10(i / Iref.value), I);
-}
-/**
- * Convert sound intensity level to Intensity
- * @param Li sound intensity level
- * @deprecated use Li2I() instead
- */
-export function dB_I(Li: number | number[]): number | number[] {
-  return allowMultiple((li: number) => Math.pow(10, li / 10) * Iref.value, Li);
-}
-/**
- * Convert Power to sound power level
- * @param W Power
- * @deprecated use W2Lw() instead
- */
-export function W_dB(W: number | number[]): number | number[] {
-  return allowMultiple((w: number) => 10 * Math.log10(w / Wref.value), W);
-}
-/**
- * Convert sound power level to Power
- * @param Lw sound power level
- * @deprecated use Lw2W() instead
- */
-export function dB_W(Lw: number | number[]): number | number[] {
-  return allowMultiple((lw: number) => Math.pow(10, lw / 10) * Wref.value, Lw);
 }

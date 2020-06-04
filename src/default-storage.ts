@@ -1,4 +1,11 @@
-export const camera = {
+export const layout = JSON.stringify({
+  leftPanelInitialSize: 200,
+  bottomPanelInitialSize: 1,
+  rightPanelInitialSize: 300,
+  rightPanelTopInitialSize: 300
+});
+
+export const camera = JSON.stringify({
   metadata: {
     version: 4.5,
     type: "Object",
@@ -36,15 +43,16 @@ export const camera = {
     pos: [15.162523753858894, 45.667823856530894, 4.375393066772595],
     target: [15.162523753338647, 5.765843396335449, 4.375432970526877]
   }
-};
+});
 
-export const orientationControl = {
+export const orientationControl = JSON.stringify({
   width: 180,
   height: 180,
   axis: "none"
-};
+});
 
 export default {
-  camera: JSON.stringify(camera),
-  orientationControl: JSON.stringify(orientationControl)
+  layout,
+  camera,
+  orientationControl
 };

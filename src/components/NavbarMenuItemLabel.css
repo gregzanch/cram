@@ -1,0 +1,8 @@
+.navbar-menu-item-label{ 
+  display: flex;
+  justify-content: space-between;
+}
+
+.navbar-menu-item-label-shortcut{
+ color: #CED9E0; 
+}

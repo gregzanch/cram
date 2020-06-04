@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { ContextMenuTarget, Menu, MenuItem } from "@blueprintjs/core";
+import { ContextMenuTarget, Menu, MenuItem, MenuDivider } from "@blueprintjs/core";
  
 
 export interface ContextMenuProps {
@@ -18,11 +18,16 @@ export class ContextMenu extends React.Component<ContextMenuProps, {}> {
  
     public renderContextMenu() {
         // return a single element, or nothing to use default browser behavior
-        const items = this.props.items || ["Delete", "Log to Console"];
+        const items = this.props.items || ["Delete", "!seperator", "Log to Console"];
         return (
             <Menu>
                 {items.map((x, i) => {
-                    return <MenuItem onClick={this.props.handleMenuItemClick} text={x} key={"context-menu-item-"+x} />;
+                    if (x === "!seperator") {
+                        return <MenuDivider key={"context-menu-item-" + x + String(i)} />;
+                    }
+                    else {
+                        return <MenuItem onClick={this.props.handleMenuItemClick} text={x} key={"context-menu-item-"+x} />;
+                    }
                 })}
             </Menu>
         );

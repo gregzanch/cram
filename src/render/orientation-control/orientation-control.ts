@@ -139,9 +139,9 @@ export class OrientationControl {
     this.element.setAttribute("style", `
       width: ${this.width}px;
       height: ${this.height}px;
-      position: absolute;
       left: calc(100% - .5em - ${this.width}px);
     `);
+    this.element.setAttribute("class", "orientation_control");
     const canvas = document.createElement('canvas');
     canvas.setAttribute('width', this.width.toString());
     canvas.setAttribute('height', this.height.toString());
@@ -624,6 +624,17 @@ export class OrientationControl {
         this.helperArrows[x].classList.add("helper-arrow-hidden");
       }
     })
+  }
+  
+  hide() {
+    if (!this.element.classList.contains("orientation_control-hidden")) {
+      this.element.classList.add("orientation_control-hidden");
+    }
+  }
+  show() {
+    if (this.element.classList.contains("orientation_control-hidden")) {
+      this.element.classList.remove("orientation_control-hidden");
+    }
   }
   
   addClickListener(listener: (e: OrientationControlClickEvent) => void) {
