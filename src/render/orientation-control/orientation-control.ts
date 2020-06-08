@@ -135,7 +135,12 @@ export class OrientationControl {
     this.camera.up.set(0, 0, 1);
     this.camera.position.set(0, -this.cameraDistance, 0);
     this.camera.lookAt(new THREE.Vector3(0, 0, 0));
-    this.element = document.querySelector(selector) || document.createElement('div');
+    let elt = document.querySelector(selector) as HTMLElement;
+    if (!elt) {
+      elt = document.createElement('div');
+      document.appendChild(elt);
+    }
+    this.element = elt;
     this.element.setAttribute("style", `
       width: ${this.width}px;
       height: ${this.height}px;
@@ -307,7 +312,7 @@ export class OrientationControl {
     this.renderer = new THREE.WebGLRenderer({
       alpha: true,
       antialias: true,
-      canvas,
+      canvas
     });
     
     this.renderer.setPixelRatio(window.devicePixelRatio);

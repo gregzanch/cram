@@ -1,6 +1,6 @@
 
 import * as THREE from "three";
-import Container, { ContainerProps, ContainerSaveObject } from "./container";
+import Container, { ContainerProps } from "./container";
 import chroma from "chroma-js";
 import { MATCAP_PORCELAIN_WHITE, MATCAP_UNDER_SHADOW } from "./asset-store";
 import FileSaver from "file-saver";
@@ -8,7 +8,14 @@ import { EditorModes } from "../constants/editor-modes";
 // import { vs, fs } from '../render/shaders/glow';
 
 
-export interface ReceiverSaveObject extends ContainerSaveObject {
+export interface ReceiverSaveObject {
+  name: string;
+  visible: boolean;
+  position: number[];
+  scale: number[];
+  rotation: Array<string | number>;
+  uuid: string;
+  kind: string;
   color: number;
 }
 
@@ -65,33 +72,42 @@ export default class Receiver extends Container{
       }
     };
     this.renderCallback = (time?: number) => {};
-    this.save = () => {
-      const name = this.name;
-      const visible = this.visible;
-      const position = this.position.toArray();
-      const scale = this.scale.toArray();
-      const rotation = this.rotation.toArray();
-      const color = this.getColorAsNumber();
-      const uuid = this.uuid;
-      return {
-        name,
-        visible,
-        position,
-        scale,
-        rotation,
-        color,
-        uuid
-      };
-    };
-    this.restore = (state: ReceiverSaveObject) => {
-      this.name = state.name;
-      this.visible = state.visible;
-      this.position.set(state.position[0], state.position[1], state.position[2]);
-      this.scale.set(state.scale[0], state.scale[1], state.scale[2]);
-      this.rotation.set(Number(state.rotation[0]), Number(state.rotation[1]), Number(state.rotation[2]), String(state.rotation[3]));
-      this.color = state.color;
-      this.uuid = state.uuid;
-    };
+    
+  }
+  save() {
+    const name = this.name;
+    const visible = this.visible;
+    const position = this.position.toArray();
+    const scale = this.scale.toArray();
+    const rotation = this.rotation.toArray();
+    const color = this.getColorAsNumber();
+    const uuid = this.uuid;
+    const kind = this.kind;
+    return {
+      kind,
+      name,
+      visible,
+      position,
+      scale,
+      rotation,
+      color,
+      uuid
+    } as ReceiverSaveObject;
+  }
+  restore(state: ReceiverSaveObject) {
+    this.name = state.name;
+    this.visible = state.visible;
+    this.position.set(state.position[0], state.position[1], state.position[2]);
+    this.scale.set(state.scale[0], state.scale[1], state.scale[2]);
+    this.rotation.set(
+      Number(state.rotation[0]),
+      Number(state.rotation[1]),
+      Number(state.rotation[2]),
+      String(state.rotation[3])
+    );
+    this.color = state.color;
+    this.uuid = state.uuid;
+    return this;
   }
   clearSamples() {
     this.fdtdSamples = [] as number[];

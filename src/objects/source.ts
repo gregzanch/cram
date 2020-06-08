@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import Container, { ContainerProps, ContainerSaveObject } from "./container";
+import Container, { ContainerProps } from "./container";
 import chroma from 'chroma-js';
 import map from "../common/map";
 import { MATCAP_PORCELAIN_WHITE, MATCAP_UNDER_SHADOW } from "./asset-store";
@@ -10,7 +10,14 @@ const defaults = {
   color: 0xa2c982
 };
 
-export interface SourceSaveObject extends ContainerSaveObject{
+export interface SourceSaveObject {
+  name: string;
+  visible: boolean;
+  position: number[];
+  scale: number[];
+  rotation: Array<string | number>;
+  uuid: string;
+  kind: string;
   color: number;
 }
 
@@ -117,33 +124,7 @@ export default class Source extends Container {
       }
     };
     this.renderCallback = (time?: number) => { };
-    this.save = () => {
-      const name = this.name;
-      const visible = this.visible;
-      const position = this.position.toArray();
-      const scale = this.scale.toArray();
-      const rotation = this.rotation.toArray();
-      const color = this.getColorAsNumber();
-      const uuid = this.uuid;
-      return {
-        name,
-        visible,
-        position,
-        scale,
-        rotation,
-        color,
-        uuid
-      }
-    }
-    this.restore = (state: SourceSaveObject) => {
-      this.name = state.name;
-      this.visible = state.visible;
-      this.position.set(state.position[0], state.position[1], state.position[2]);
-      this.scale.set(state.scale[0], state.scale[1], state.scale[2]);
-      this.rotation.set(Number(state.rotation[0]), Number(state.rotation[1]), Number(state.rotation[2]), String(state.rotation[3]));
-      this.color = state.color;
-      this.uuid = state.uuid;
-    }
+
     
     this.updateWave = this.updateWave.bind(this);
     this.updatePreviousPosition = this.updatePreviousPosition.bind(this);
@@ -156,6 +137,41 @@ export default class Source extends Container {
     this.pinkNoiseSamples = new Float32Array(1024);
     this.generatePinkNoiseSamples();
 
+  }
+   save() {
+    const name = this.name;
+    const visible = this.visible;
+    const position = this.position.toArray();
+    const scale = this.scale.toArray();
+    const rotation = this.rotation.toArray();
+    const color = this.getColorAsNumber();
+    const uuid = this.uuid;
+    const kind = this.kind;
+    return {
+      kind,
+      name,
+      visible,
+      position,
+      scale,
+      rotation,
+      color,
+      uuid
+    } as SourceSaveObject;
+  }
+  restore(state: SourceSaveObject) {
+    this.name = state.name;
+    this.visible = state.visible;
+    this.position.set(state.position[0], state.position[1], state.position[2]);
+    this.scale.set(state.scale[0], state.scale[1], state.scale[2]);
+    this.rotation.set(
+      Number(state.rotation[0]),
+      Number(state.rotation[1]),
+      Number(state.rotation[2]),
+      String(state.rotation[3])
+    );
+    this.color = state.color;
+    this.uuid = state.uuid;
+    return this;
   }
   updatePreviousPosition() {
     this.previousX = this.position.x;
@@ -200,7 +216,7 @@ export default class Source extends Container {
     return this.amplitude * Math.sin(2 * Math.PI * this.frequency * time + this.phase);
   }
   getPinkNoiseSample(frame: number) {
-    if (frame == this.pinkNoiseSamples.length - 1) {
+    if (frame % this.pinkNoiseSamples.length == this.pinkNoiseSamples.length - 1) {
       this.generatePinkNoiseSamples();
     }
     return this.pinkNoiseSamples[frame % this.pinkNoiseSamples.length];
@@ -225,6 +241,7 @@ export default class Source extends Container {
       this.pinkNoiseSamples[i] *= 0.11; // (roughly) compensate for gain
       b6 = white * 0.115926;
     }
+    // console.log(Array.from(this.pinkNoiseSamples));
   }
   getColorAsNumber() {
     return (this.mesh.material as THREE.MeshBasicMaterial).color.getHex();

@@ -44,6 +44,8 @@ export function obj(data) {
   const loader = new OBJLoader(data);
   const res = loader.parse();
 
+  console.log(res);
+  
   const [vertices, vertexNormals, textureCoords] = res.models.reduce(
     (a, b) => [a[0].concat(b.vertices), a[1].concat(b.vertexNormals), a[2].concat(b.textureCoords)],
     [[] as any[], [] as any[], [] as any[]]

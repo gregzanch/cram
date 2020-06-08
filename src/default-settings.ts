@@ -16,8 +16,8 @@ const defaultSettings = {
       name: "Default Save Name",
       description: "The default name when saving",
       kind: "text",
-      value: "new-project.json",
-      default_value: "new-project.json"
+      value: "new-project",
+      default_value: "new-project"
     })
   },
   editor: {

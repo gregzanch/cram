@@ -57,7 +57,7 @@ export default class Axes extends Container {
 		);
 		this.Zaxis.geometry.name = "z-axis-geometry";
 		
-		this.renderOrder = -1;
+		this.renderOrder = -0.1;
 		this.add(this.Xaxis, this.Yaxis, this.Zaxis);
 		
   }

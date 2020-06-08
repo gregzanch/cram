@@ -115,7 +115,11 @@ module.exports = function(webpackEnv) {
     mode: isEnvProduction ? "production" : isEnvDevelopment && "development",
     // Stop compilation early in production
     bail: isEnvProduction,
-    devtool: isEnvProduction ? (shouldUseSourceMap ? "source-map" : false) : isEnvDevelopment && "cheap-module-source-map",
+    devtool: isEnvProduction
+      ? shouldUseSourceMap
+        ? "source-map"
+        : false
+      : isEnvDevelopment && "cheap-module-source-map",
     // These are the "entry points" to our application.
     // This means they will be the "root" imports that are included in JS bundle.
     entry: [
@@ -145,7 +149,9 @@ module.exports = function(webpackEnv) {
       // In development, it does not produce real files.
       filename: isEnvProduction ? "static/js/[name].[chunkhash:8].js" : isEnvDevelopment && "static/js/bundle.js",
       // There are also additional JS chunk files if you use code splitting.
-      chunkFilename: isEnvProduction ? "static/js/[name].[chunkhash:8].chunk.js" : isEnvDevelopment && "static/js/[name].chunk.js",
+      chunkFilename: isEnvProduction
+        ? "static/js/[name].[chunkhash:8].chunk.js"
+        : isEnvDevelopment && "static/js/[name].chunk.js",
       // We inferred the "public path" (such as / or /my-project) from homepage.
       // We use "/" in development.
       publicPath: publicPath,
@@ -243,7 +249,9 @@ module.exports = function(webpackEnv) {
       // https://github.com/facebook/create-react-app/issues/290
       // `web` extension prefixes have been added for better support
       // for React Native Web.
-      extensions: paths.moduleFileExtensions.map((ext) => `.${ext}`).filter((ext) => useTypeScript || !ext.includes("ts")),
+      extensions: paths.moduleFileExtensions
+        .map((ext) => `.${ext}`)
+        .filter((ext) => useTypeScript || !ext.includes("ts")),
       alias: {
         // Support React Native Web
         // https://www.smashingmagazine.com/2016/08/a-glimpse-into-the-future-with-react-native-for-web/
@@ -293,7 +301,7 @@ module.exports = function(webpackEnv) {
         {
           test: /\.st\.ts?$/,
           loader: require.resolve("assemblyscript-typescript-loader"),
-          include: path.join(paths.appSrc, "as","assembly"),  
+          include: path.join(paths.appSrc, "as", "assembly")
         },
         {
           test: /\.wasm$/,
@@ -435,7 +443,7 @@ module.exports = function(webpackEnv) {
                 getLocalIdent: getCSSModuleLocalIdent
               })
             },
-            
+
             // "file" loader makes sure those assets get served by WebpackDevServer.
             // When you `import` an asset, you get its (virtual) filename.
             // In production, they would get copied to the `build` folder.
@@ -568,7 +576,14 @@ module.exports = function(webpackEnv) {
             noEmit: true,
             jsx: "preserve"
           },
-          reportFiles: ["**", "!**/*.json", "!**/__tests__/**", "!**/?(*.)(spec|test).*", "!**/src/setupProxy.*", "!**/src/setupTests.*"],
+          reportFiles: [
+            "**",
+            "!**/*.json",
+            "!**/__tests__/**",
+            "!**/?(*.)(spec|test).*",
+            "!**/src/setupProxy.*",
+            "!**/src/setupTests.*"
+          ],
           watch: paths.appSrc,
           silent: true,
           formatter: typescriptFormatter

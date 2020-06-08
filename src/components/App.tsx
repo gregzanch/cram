@@ -26,6 +26,7 @@ import { ItemListRenderer, IItemListRendererProps } from "@blueprintjs/select";
 
 import ImportDialog from "./import-dialog/ImportDialog";
 import ObjectView from "./object-view/ObjectView";
+import ConstructionsView from "./ConstructionsView";
 import resolve_svg from "../svg/resolve.svg";
 import { set } from "../common/set-at";
 import Container from "../objects/container";
@@ -66,6 +67,9 @@ import { ApplicationSettings } from "../default-settings";
 import Gutter from "./gutter/Gutter";
 import { timingSafeEqual } from "crypto";
 import NavbarMenuItemLabel from "./NavbarMenuItemLabel";
+import { Dialog } from "@material-ui/core";
+import SaveDialog from "./SaveDialog";
+import OpenWarning from "./OpenWarning";
 
 
 const AppToaster = Toaster.create({
@@ -101,6 +105,12 @@ interface AppState {
 	containers: KeyValuePair<Container>;
   selectedObject: Container;
   
+  saveDialogVisible: boolean;
+  projectName: string;
+  
+  openWarningVisible: boolean;
+  openAfterSave: boolean;
+  
 	settingsDrawerVisible: boolean;
 	settings: ApplicationSettings;
 	mode: EditorModes;
@@ -123,6 +133,9 @@ interface AppState {
   canRedo: boolean;
   canDuplicate: boolean;
   selectedSettingsDrawerTab: number;
+  
+  constructions: KeyValuePair<Container>;
+  
 }
 
 export default class App extends React.Component<AppProps, AppState> {
@@ -141,8 +154,13 @@ export default class App extends React.Component<AppProps, AppState> {
       bottomPanelSize: this.props.bottomPanelInitialSize,
       rightPanelSize: this.props.rightPanelInitialSize,
       leftPanelSize: this.props.leftPanelInitialSize,
+      saveDialogVisible: false,
+      projectName: this.props.messenger.postMessage("GET_PROJECT_NAME")[0],
+      constructions: this.props.messenger.postMessage("GET_CONSTRUCTIONS")[0],
+      openWarningVisible: false,
 			terminalOpen: false,
-			newWarningVisible: false,
+      newWarningVisible: false,
+      openAfterSave: false,
 			materialDrawerOpen: false,
       lastUpdateReason: "",
       solvers: {} as KeyValuePair<Solver>,
@@ -274,7 +292,15 @@ export default class App extends React.Component<AppProps, AppState> {
 				return ({
 					newWarningVisible: true
 			})
-		});
+    });
+
+    this.addMessageHandler("SHOW_OPEN_WARNING",
+			() => {
+				return ({
+					openWarningVisible: true
+			})
+    });
+    
 		this.addMessageHandler("SHOW_TERMINAL",
 			() => {
 			return ({
@@ -463,6 +489,35 @@ export default class App extends React.Component<AppProps, AppState> {
 				stats: Object.keys(args[0]).map(x => args[0][x]) as Stat[]
 			});
     });
+    this.addMessageHandler("SHOW_SAVE_DIALOG", (acc, ...args) => {
+      return ({
+        saveDialogVisible: true
+      })
+    })
+    this.addMessageHandler("SHOW_SAVE_DIALOG_THEN_OPEN", (acc, ...args) => {
+      return ({
+        saveDialogVisible: true,
+        openAfterSave: true
+      })
+    })
+    this.addMessageHandler("SET_PROJECT_NAME", (acc, ...args) => {
+      return {
+        projectName: (args && args[0]) || this.state.projectName
+      };
+    })
+
+    this.addMessageHandler("ADD_CONSTRUCTION", (acc, ...args) => {
+      return {
+        constructions: this.props.messenger.postMessage("GET_CONSTRUCTIONS")[0]
+      };
+    })
+
+    this.addMessageHandler("REMOVE_CONSTRUCTION", (acc, ...args) => {
+      return {
+        constructions: this.props.messenger.postMessage("GET_CONSTRUCTIONS")[0]
+      };
+    })
+
 	}
 
 	componentDidMount() {
@@ -638,7 +693,7 @@ export default class App extends React.Component<AppProps, AppState> {
       <div>
         <div>
           <Navbar className="main-nav_bar">
-            <Navbar.Group align={Alignment.LEFT} className="main-nav_bar-left_group">
+            <Navbar.Group className="main-nav_bar-left_group">
               <Navbar.Group className="main-nav_bar-logo_text">cram.ui</Navbar.Group>
               <Navbar.Divider />
               <Menu className="main-nav_bar-left_menu">
@@ -654,9 +709,16 @@ export default class App extends React.Component<AppProps, AppState> {
                     <Menu>
                       <MenuItem
                         text={<MenuItemText text="New" hotkey={Characters.SHIFT + "N"} />}
-                        onClick={(e) => this.setState({ newWarningVisible: true })}
+                        onClick={(e) => this.props.messenger.postMessage("SHOW_NEW_WARNING")}
                       />
-                      <MenuItem text="Save" disabled></MenuItem>
+                      <MenuItem
+                        text={<MenuItemText text="Open" hotkey={Characters.COMMAND + "O"} />}
+                        onClick={(e) => this.props.messenger.postMessage("SHOW_OPEN_WARNING")}
+                      />
+                      <MenuItem
+                        text={<MenuItemText text="Save" hotkey={Characters.COMMAND + "S"} />}
+                        onClick={(e) => this.props.messenger.postMessage("SHOW_SAVE_DIALOG")}
+                      />
                       <MenuDivider />
                       <MenuItem text="Import" onClick={this.showImportDialog}></MenuItem>
                     </Menu>
@@ -785,7 +847,10 @@ export default class App extends React.Component<AppProps, AppState> {
                 </ButtonGroup>
               </Menu>
             </Navbar.Group>
-            <Navbar.Group align={Alignment.RIGHT} className="main-nav_bar-right_group">
+            <Navbar.Group className="main-nav_bar-left_group main-nav_bar-projectname_text">
+              {this.state.projectName}
+            </Navbar.Group>
+            <Navbar.Group className="main-nav_bar-right_group">
               <Button
                 icon="cog"
                 minimal={true}
@@ -817,6 +882,62 @@ export default class App extends React.Component<AppProps, AppState> {
         >
           Are you sure you want to start over?
         </Alert>
+        <OpenWarning
+          isOpen={this.state.openWarningVisible}
+          onDiscard={(e) => {
+            this.setState(
+              {
+                openWarningVisible: false
+              },
+              () => this.props.messenger.postMessage("OPEN")
+            );
+          }}
+          onSave={(e) => {
+            this.setState(
+              {
+                openWarningVisible: false
+              },
+              () => {
+                this.props.messenger.postMessage("SHOW_SAVE_DIALOG_THEN_OPEN");
+              }
+            );
+          }}
+          onCancel={(e) => {
+            this.setState({
+              openWarningVisible: false
+            });
+          }}
+        />
+        <SaveDialog
+          messenger={this.props.messenger}
+          isOpen={this.state.saveDialogVisible}
+          filename={this.props.messenger.postMessage("GET_PROJECT_NAME")[0]}
+          onCancel={() => this.setState({ saveDialogVisible: false })}
+          onSave={(e) => {
+            let openAfterSaveCallback = () => {
+              this.setState(
+                {
+                  openAfterSave: false
+                },
+                () => this.props.messenger.postMessage("OPEN")
+              );
+            };
+            openAfterSaveCallback = openAfterSaveCallback.bind(this);
+            const callback = this.state.openAfterSave ? openAfterSaveCallback : () => {};
+            this.setState(
+              {
+                projectName: e.filename,
+                saveDialogVisible: false
+              },
+              () => {
+                this.props.messenger.postMessage("SAVE", {
+                  filename: this.state.projectName,
+                  callback
+                });
+              }
+            );
+          }}
+        />
         <SettingsDrawer
           size={"55%"}
           onClose={this.handleSettingsButtonClick}
@@ -910,6 +1031,10 @@ export default class App extends React.Component<AppProps, AppState> {
               solvers={this.state.solvers}
               onClick={this.handleObjectViewClick}
               onDelete={this.handleObjectViewDelete}
+              messenger={this.props.messenger}
+            />
+            <ConstructionsView
+              constructions={this.state.constructions}
               messenger={this.props.messenger}
             />
           </PanelContainer>

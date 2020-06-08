@@ -15,7 +15,7 @@ import Source from "./objects/source";
 import Receiver from "./objects/receiver";
 import Polygon from "./objects/polygon";
 import Room from "./objects/room";
-import Surface from "./objects/surface";
+import Surface, { SurfaceSaveObject, BufferGeometrySaveObject } from "./objects/surface";
 import AudioFile from './objects/audio-file';
 import Sketch from './objects/sketch';
 
@@ -57,12 +57,14 @@ import browserReport from "./common/browser-report";
 //@ts-ignore
 import baps from "!raw-loader!./res/models/baps-better.obj";
 //@ts-ignore
-import unsplit_cube from "!raw-loader!./res/models/unsplit-cube.obj";
+import rect from "!raw-loader!./res/models/rect10x13.obj";
 //@ts-ignore
 import plane from "!raw-loader!./res/models/plane.stl";
 import expose from "./common/expose";
 import { CSG, CAG } from '@jscad/csg';
 import * as THREE from "three";
+import FileSaver from "file-saver";
+import { BufferGeometry } from "three";
 
 
 
@@ -95,6 +97,7 @@ const state = {
   receivers: [] as string[],
   room: "" as string,
   containers: {} as KeyValuePair<Container>,
+  constructions: {} as KeyValuePair<Container>,
   sketches: {} as KeyValuePair<Sketch>,
   solvers: {} as KeyValuePair<Solver>,
   simulation: "",
@@ -106,6 +109,7 @@ const state = {
   editorMode: EditorModes.OBJECT as EditorModes,
   currentProcess: Processes.NONE as Processes,
   browser: browserReport(navigator.userAgent),
+  projectName: defaultSettings.general.default_save_name.value
 };
 
 Object.keys(defaultSettings).map(async (category) => {
@@ -120,16 +124,37 @@ Object.keys(defaultSettings).map(async (category) => {
         state.settings[category][setting.id].default_value = setting.default_value;
         state.settings[category][setting.id].setStagedValue(setting.value);
       });
+      state.projectName = state.settings.general.default_save_name.value;
     },
-    (event) => console.log(event)
+    (event) => {
+      console.log(event);
+    }
   );
-
-
 });
+
 
 state.renderer = new Renderer({
   messenger: state.messenger,
   history: state.history
+});
+
+state.messenger.addMessageHandler("ADD_CONSTRUCTION", (acc, ...args) => {
+  if (args && args[0]) {
+    const construction = args[0] as Container;
+    state.constructions[construction.uuid] = construction;
+  }
+});
+
+state.messenger.addMessageHandler("REMOVE_CONSTRUCTION", (acc, id) => {
+  if (id) {
+    if (state.constructions[id]) {
+      delete state.constructions[id];
+    } 
+  }
+});
+
+state.messenger.addMessageHandler("GET_CONSTRUCTIONS", (acc, ...args) => {
+  return state.constructions;
 });
 
 state.messenger.addMessageHandler("SET_SELECTION", (acc, objects) => {
@@ -328,9 +353,9 @@ state.messenger.addMessageHandler("RAYTRACER_CALCULATE_RESPONSE", (acc, id, freq
   (state.solvers[id] instanceof RayTracer) && (state.solvers[id] as RayTracer).calculateReflectionLoss(frequencies);
 });
 
-state.messenger.addMessageHandler("RAYTRACER_TEST_WASM", (acc, id, value) => {
-  (state.solvers[id] instanceof RayTracer) && (state.solvers[id] as RayTracer).testWasm(value);
-});
+// state.messenger.addMessageHandler("RAYTRACER_TEST_WASM", (acc, id, value) => {
+//   (state.solvers[id] instanceof RayTracer) && (state.solvers[id] as RayTracer).testWasm(value);
+// });
 
 state.messenger.addMessageHandler("FETCH_ALL_SOURCES", (acc, ...args) => {
   return state.sources.map(x => {
@@ -766,6 +791,7 @@ state.messenger.addMessageHandler("GET_EDITOR_MODE", (acc, ...args) => {
 state.messenger.addMessageHandler("SET_PROCESS", (acc, ...args) => {
   if (Processes[args[0]]) {
     state.currentProcess = Processes[args[0]];
+    state.renderer.currentProcess = state.currentProcess;
     state.renderer.needsToRender = true;
   }
 });
@@ -783,6 +809,134 @@ state.messenger.addMessageHandler("SHOULD_ADD_SKETCH", (acc, ...args) => {
   });
   state.sketches[sketch.uuid] = sketch;
 });
+
+state.messenger.addMessageHandler("SAVE_CONTAINERS", (acc, ...args) => {
+  const keys = Object.keys(state.containers);
+  const saveObjects = keys.map(key => state.containers[key].save());
+  return saveObjects;
+});
+
+state.messenger.addMessageHandler("SET_PROJECT_NAME", (acc, ...args) => {
+  state.projectName = (args && args[0]) || state.projectName;
+  document.title = state.projectName + " | cram.ui";
+})
+
+state.messenger.addMessageHandler("GET_PROJECT_NAME", (acc, ...args) => {
+  return state.projectName;
+})
+
+state.messenger.addMessageHandler("RESTORE_CONTAINERS", (acc, ...args) => {
+  const keys = Object.keys(state.containers);
+  keys.forEach(key => {
+    state.messenger.postMessage("SHOULD_REMOVE_CONTAINER", key);
+  });
+  if (args && args[0] && args[0] instanceof Array) {
+    // console.log(args[0]);
+    args[0].forEach(saveObj => {
+      switch (saveObj["kind"]) {
+        case "source":
+          {
+            const src = new Source("new source", { ...saveObj }).restore(saveObj);
+            state.messenger.postMessage("SHOULD_ADD_SOURCE", src, false);
+            // state.containers[src.uuid] = src;
+            // state.sources.push(src.uuid);
+            // state.renderer.add(src);
+          }
+          break;
+        case "receiver":
+          {
+            const rec = new Receiver("new receiver", { ...saveObj }).restore(saveObj);
+            state.messenger.postMessage("SHOULD_ADD_RECEIVER", rec, false);
+            // state.containers[rec.uuid] = rec;
+            // state.sources.push(rec.uuid);
+            // state.renderer.add(rec);
+          }
+          break;
+        case "room":
+          {
+            const surfaces = saveObj.surfaces.map((surfaceState: SurfaceSaveObject) => {
+              const geometry = new THREE.BufferGeometry();
+              if (!(surfaceState.geometry instanceof THREE.BufferGeometry)) {
+                const geom = surfaceState.geometry as BufferGeometrySaveObject;
+                geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(geom.data.attributes.position.array), geom.data.attributes.position.itemSize, geom.data.attributes.position.normalized));
+                geometry.setAttribute("normals", new THREE.BufferAttribute(new Float32Array(geom.data.attributes.normals.array), geom.data.attributes.normals.itemSize, geom.data.attributes.normals.normalized));
+                geometry.setAttribute("texCoords", new THREE.BufferAttribute(new Float32Array(geom.data.attributes.texCoords.array), geom.data.attributes.texCoords.itemSize, geom.data.attributes.texCoords.normalized));
+              }
+              geometry.name = surfaceState.geometry.name;
+              geometry.uuid = surfaceState.geometry.uuid;
+              const surf = new Surface(surfaceState.name, {
+                acousticMaterial: surfaceState.acousticMaterial,
+                geometry
+              });
+              surf.visible = surfaceState.visible;
+              surf.wireframeVisible = surfaceState.wireframeVisible;
+              surf.displayVertexNormals = surfaceState.displayVertexNormals;
+              surf.edgesVisible = surfaceState.edgesVisible;
+              surf.uuid = surfaceState.uuid;
+              surf.position.set(surfaceState.position[0], surfaceState.position[1], surfaceState.position[2]);
+              surf.rotation.set(surfaceState.rotation[0], surfaceState.rotation[1], surfaceState.rotation[2], "XYZ");
+              surf.scale.set(surfaceState.scale[0], surfaceState.scale[1], surfaceState.scale[2]);
+              return surf;
+            });
+            // console.log(surfaces);
+            // console.log(saveObj.surfaces);
+            const room = new Room(saveObj.name || "room", {
+              surfaces
+            });
+            state.containers[room.uuid] = room;
+            state.renderer.addRoom(room);
+
+            state.messenger.postMessage("ADDED_ROOM", room);
+          }
+          break;
+        default: break;
+      }
+    });
+  }
+});
+
+state.messenger.addMessageHandler("SAVE", (acc, ...args) => {
+  const savedState = state.messenger.postMessage("SAVE_CONTAINERS")[0];
+  const blob = new Blob([JSON.stringify(savedState)], {
+    type: "text/plain;charset=utf-8"
+  });
+  state.projectName = (args && args[0] && args[0].filename) || state.projectName;
+  FileSaver.saveAs(blob, `${state.projectName}.json`);
+  if (args && args[0] && args[0].callback) {
+    args[0].callback();
+  }
+})
+
+state.messenger.addMessageHandler("OPEN", (acc, ...args) => {
+  const tempinput = document.createElement("input");
+  tempinput.type = "file";
+  tempinput.accept = "application/json";
+  tempinput.setAttribute('style', 'display: none');
+  document.body.appendChild(tempinput);
+  tempinput.addEventListener('change', async e => {
+    const files = (e.target as HTMLInputElement).files;
+    if (!files) {
+      tempinput.remove();
+      return;
+    }
+    const file = files[0];
+    const objectURL = URL.createObjectURL(file);
+    try {
+      const result = await (await fetch(objectURL)).text();
+      const savedState = JSON.parse(result);
+      state.messenger.postMessage("RESTORE_CONTAINERS", savedState);
+      state.messenger.postMessage("SET_PROJECT_NAME", file.name.replace('.json',''));
+      tempinput.remove();
+    }
+    catch (e) {
+      console.warn(e);
+    }
+    
+  })
+  tempinput.click();
+})
+
+
 
 
 function addHotKey(keybinding, scopes, message, ...args) {
@@ -802,6 +956,7 @@ function registerHotKeys() {
   
   addHotKey("m", ["editor"], "MOVE_SELECTED_OBJECTS");
   addHotKey("f", ["editor"], "FOCUS_ON_SELECTED_OBJECTS");
+  addHotKey("shift+f", ["editor"], "FOCUS_ON_CURSOR");
   
   addHotKey("escape", ["editor", "editor-moving"], "PHASE_OUT");
   
@@ -823,43 +978,47 @@ window.addEventListener('resize', e => {
 ReactDOM.render(<App {...state} />, document.getElementById("root"));
 
 // This is to simulate user uploading a mesh file and adding source + receiver
-setTimeout(() => {
+// setTimeout(() => {
 
 
-  const models = importHandlers.obj(baps);
+  // const models = importHandlers.obj(rect); 
 
   
   // const models = importHandlers.stl(plane);
   
-  const surfaces = models.map(
-    (model, i) =>
-      new Surface(model.name, {
-        geometry: model.geometry,
-        // acousticMaterial: state.materialsIndex[savedSurfaces[i]]
-        acousticMaterial: state.materialsIndex["ROU1k4g0cgMC5b1N"]
-      })
-  );
-  const room = new Room("room", {
-    surfaces,
-    originalFileData: baps,
-    originalFileName: "baps-better.obj"
-  });
-  state.containers[room.uuid] = room;
-  state.renderer.addRoom(room);
+  // const surfaces = models.map(
+  //   (model, i) =>
+  //     new Surface(model.name, {
+  //       geometry: model.geometry,
+  //       // acousticMaterial: state.materialsIndex[savedSurfaces[i]]
+  //       acousticMaterial: state.materialsIndex["ROU1k4g0cgMC5b1N"]
+  //     })
+  // );
+  // const room = new Room("room", {
+  //   surfaces,
+  //   originalFileData: rect,
+  //   originalFileName: "rect10x13.obj"
+  // });
+  // state.containers[room.uuid] = room;
+  // state.renderer.addRoom(room);
 
-  state.messenger.postMessage("ADDED_ROOM", room);
+  // state.messenger.postMessage("ADDED_ROOM", room);
   
-  const srcR = state.messenger.postMessage("SHOULD_ADD_SOURCE")[0] as Source;
-  srcR.name = "R";
-  srcR.position.set(26.5, 6.4, 3.5);
+  // const src = state.messenger.postMessage("SHOULD_ADD_SOURCE")[0] as Source;
+  // src.name = "src";
+  // src.position.set(0.5, 0.5, 1);
+  
+  // const recsrc = state.messenger.postMessage("SHOULD_ADD_RECEIVER")[0] as Receiver;
+  // recsrc.name = "recsrc";
+  // recsrc.position.set(0.5, 0.5, 0.5);
 
-  const srcL = state.messenger.postMessage("SHOULD_ADD_SOURCE")[0] as Source;
-  srcL.name = "L";
-  srcL.position.set(48, 6.4, 3.5);
+  // const srcL = state.messenger.postMessage("SHOULD_ADD_SOURCE")[0] as Source;
+  // srcL.name = "L";
+  // srcL.position.set(48, 6.4, 3.5);
   
-  const rec = state.messenger.postMessage("SHOULD_ADD_RECEIVER")[0] as Receiver;
-  rec.name = "receiver";
-  rec.position.set(37.25, 19, 1.5);
+  // const rec = state.messenger.postMessage("SHOULD_ADD_RECEIVER")[0] as Receiver;
+  // rec.name = "rec";
+  // rec.position.set(5, 6.5, 1);
   
   // const raytracer = state.messenger.postMessage("SHOULD_ADD_RAYTRACER", {
   //   passes: 100,
@@ -871,9 +1030,13 @@ setTimeout(() => {
   
   // const fdtd = state.messenger.postMessage("SHOULD_ADD_FDTD_2D")[0];
   
+
+// }, 200);
+
+
   expose({
     // fdtd,
-    // raytracer, 
+    // raytracer,
     r: state.renderer,
     Polygon,
     Sketch,
@@ -881,12 +1044,8 @@ setTimeout(() => {
     CSG,
     CAG,
     ac,
-    THREE,
+    THREE
   });
-  
-  
+
   state.history.clear();
   
-}, 200);
-
-

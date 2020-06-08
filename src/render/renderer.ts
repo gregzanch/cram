@@ -1,5 +1,5 @@
 import * as THREE from "three";
-
+import Stats from './Stats';
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass";
 import { OutlinePass } from "three/examples/jsm/postprocessing/OutlinePass";
@@ -54,6 +54,11 @@ import hotkeys from "hotkeys-js";
 import { OrientationControl, OrientationControlTargets, OrientationAxisAdds, OrientationAxisQuats, OrientationControlOptions } from './orientation-control/orientation-control';
 import { clamp } from "../common/clamp";
 import Surface from "../objects/surface";
+import Cursor from './Cursor';
+import ConstructionPlane from "../objects/construction-plane";
+import ConstructionAxis from "../objects/construction-axis";
+import ConstructionPoint from "../objects/construction-point";
+import { Processes } from "../constants/processes";
 
 const colored_number_html = (num: number) => /*html*/`<span style="color: ${num < 0 ? "#E68380" : "#A2C982"};">${num.toFixed(3)}</span>`;
 
@@ -125,6 +130,8 @@ export interface Overlays {
 
 export default class Renderer {
 	
+	stats!: Stats;
+	
 	mouseConfigSet!: MouseConfigSet;
 	modifierKeyState!: ModifierKeyState; 
 	
@@ -141,6 +148,10 @@ export default class Renderer {
 	interactables!: Container;
 	workspace!: Container;
 	sketches!: Container;
+	
+	/** Container for constructions (axis, planes, points) */
+	constructions!: Container;
+	hoveredConstruction!: Container | undefined;
 
 	lights!: Lights;
 	axes!: Axes;
@@ -171,7 +182,7 @@ export default class Renderer {
 	messenger: Messenger;
 	history!: History;
 	pickHelper!: PickHelper;
-	cursor!: THREE.Mesh;
+	cursor!: Cursor;
 	composer!: EffectComposer;
 	outlinePass!: OutlinePass;
 	renderPass!: RenderPass;
@@ -195,6 +206,8 @@ export default class Renderer {
 	
 	orientationControl!: OrientationControl;
 	
+	currentProcess!: Processes
+	
 	
 
 	constructor(params: RendererParams) {
@@ -211,7 +224,7 @@ export default class Renderer {
 		this.messenger = params.messenger;
 		this.history = params.history;
 		this.shouldAnimate = false;
-		
+		this.currentProcess = Processes.NONE;
 	}
 	
 	init(elt: HTMLCanvasElement, settingsGetter: (category: SettingsCategories) => SettingsCategory) {
@@ -247,6 +260,10 @@ export default class Renderer {
 		this.workspace = new Container("workspace");
 		this.interactables = new Container("interactables");
 		this.sketches = new Container("sketches");
+		this.constructions = new Container("constructions");
+		this.addDefaultConstructions();
+		this.hoveredConstruction = undefined;
+		
 		this.workspaceCursor = this.workspace;
 		
 		this.lights = new Lights();
@@ -261,23 +278,7 @@ export default class Renderer {
 		
 		this.env.add(this.grid, this.lights, this.axes);
 		
-		this.cursor = new THREE.Mesh(
-      new THREE.SphereBufferGeometry(0.05, 8, 8),
-      new THREE.MeshLambertMaterial({
-        fog: false,
-        color: new THREE.Color(0x6f1d1d),
-        // emissiveIntensity: 2,
-        // emissive: new THREE.Color(1, 1, 0),
-        transparent: true,
-        opacity: 0.25,
-        side: THREE.DoubleSide,
-        reflectivity: 0.15,
-        depthWrite: true,
-        depthTest: false,
-        name: "cursor-material"
-      })
-    );
-		this.cursor.geometry.name = "cursor-gemoetry";
+		this.cursor = new Cursor();
     this.env.add(this.cursor);
 
 		
@@ -287,14 +288,14 @@ export default class Renderer {
 		// scene
 		this.scene = new THREE.Scene();
 		this.scene.background = new THREE.Color(background);
-		this.scene.add(this.env, this.workspace, this.interactables, this.fdtdItems, this.sketches);
+		this.scene.add(this.env, this.workspace, this.interactables, this.fdtdItems, this.sketches, this.constructions);
 		
 		// renderer
 		this.renderer = new THREE.WebGLRenderer({
 			canvas: this.elt,
 			context: this.elt.getContext("webgl2", { alpha: true })!,
 			antialias: true,
-			precision: "highp",
+			precision: "mediump",
 			depth: true,
 		});
 		//@ts-ignore
@@ -316,6 +317,7 @@ export default class Renderer {
 			
 		this._camera = new THREE.PerspectiveCamera(this._fov, aspect, near, far);
 		this._camera.layers.enableAll();
+		this._camera.position.set(1, 1, 1);
 		this._camera.up.set(up[0], up[1], up[2]);
 
 		
@@ -455,7 +457,7 @@ export default class Renderer {
 			const id = args[0];
 			const object = this.scene.getObjectByProperty("uuid", id);
 			if (object) {
-				console.log(object);
+				// console.log(object);
 				object.parent && object.parent.remove(object);
 				// this.scene.remove(object);
 			}
@@ -484,6 +486,18 @@ export default class Renderer {
         };
         this.smoothCameraTo({ position, target, duration, onFinish, easingFunction });
 			}
+			this.needsToRender = true;
+		})
+
+		this.messenger.addMessageHandler("FOCUS_ON_CURSOR", (acc, ...args) => {
+				const easingFunction = EasingFunctions.linear;
+				const position = this.camera.position;
+				const target = this.cursor.position;
+				const duration = 125;
+				const onFinish = () => {
+					this.controls.target.set(target.x, target.y, target.z);
+				};
+				this.smoothCameraTo({ position, target, duration, onFinish, easingFunction });
 			this.needsToRender = true;
 		})
 		
@@ -572,6 +586,68 @@ export default class Renderer {
 		});
 
 		this.renderer.domElement.addEventListener("mousemove", (e) => {
+			if (this.currentProcess.startsWith("PICKING")) {
+				let selectables = [] as any[];
+				switch (this.currentProcess) {
+					case Processes.PICKING_AXIS: {
+						const constructionAxis = this.constructions.children.filter(x => x['kind'] === "construction-axis");
+						if (constructionAxis.length > 0) {
+							selectables.push(...constructionAxis);
+						}
+					} break;
+					case Processes.PICKING_PLANAR_SURFACE: {
+						const constructionPlanes = this.constructions.children.filter((x) => x["kind"] === "construction-plane");
+						if (constructionPlanes.length > 0) {
+							selectables.push(...constructionPlanes);
+						}
+						const surfs = this.workspace.children.filter((x) => !x["kind"].match(/source|receiver/gim));
+						if (surfs.length > 0) {
+							selectables.push(...surfs);
+						}
+					} break;
+					case Processes.PICKING_RECEIVER: {
+						const receivers = this.workspace.children.filter((x) => x["kind"] === "receiver");
+						if (receivers.length > 0) {
+							selectables.push(...receivers);
+						}
+					} break;
+					case Processes.PICKING_SOURCE: {
+						const sources = this.workspace.children.filter((x) => x["kind"] === "source");
+						if (sources.length > 0) {
+							selectables.push(...sources);
+						}
+					} break;
+					case Processes.PICKING_SURFACE: {
+						const surfs = this.workspace.children.filter((x) => !x["kind"].match(/source|receiver/gim));
+						if (surfs.length > 0) {
+							selectables.push(...surfs);
+						}
+					} break;
+					case Processes.PICKING_VERTEX: {
+						const pts = this.constructions.children.filter((x) => x["kind"] === "construction-point");
+						if (pts.length > 0) {
+							selectables.push(...pts);
+						}
+					} break;
+					default: break;
+				}
+				if (selectables.length > 0) {
+					const selection = this.pickHelper.pick(e, selectables);
+					if (selection.pickedObject) {
+						if (this.hoveredConstruction) {
+							this.hoveredConstruction.deselect();
+						}
+						selection.pickedObject.select();
+						this.hoveredConstruction = selection.pickedObject;
+					}
+					else {
+						if (this.hoveredConstruction) {
+							this.hoveredConstruction.deselect();
+							this.hoveredConstruction = undefined;
+						}
+					}
+				}
+			}
 			this.needsToRender = true;
 		});
 
@@ -616,9 +692,11 @@ export default class Renderer {
 		});
 		
 		this.controls.addEventListener('change', e => {
-			const pos = this.camera.position.clone().sub(this.controls.target).normalize().multiplyScalar(this.orientationControl.cameraDistance);
-			this.orientationControl.setCameraTransforms(pos, this.camera.quaternion);
-			this.orientationControl.axis = "none";
+			if (this.orientationControl) {
+				const pos = this.camera.position.clone().sub(this.controls.target).normalize().multiplyScalar(this.orientationControl.cameraDistance);
+				this.orientationControl.setCameraTransforms(pos, this.camera.quaternion);
+				this.orientationControl.axis = "none";
+			}
 		})
 		
 
@@ -626,9 +704,11 @@ export default class Renderer {
 		
 		
 		// this.composer.render();
-		
-		const storedState = JSON.parse(localStorage.getItem("camera") || defaults.camera) as CameraStore;
-		
+		let storedState = JSON.parse(defaults.camera) as CameraStore;
+		const camerastorage = localStorage.getItem("camera");
+		if (camerastorage) {
+      storedState = JSON.parse(camerastorage);
+    }
 		if (storedState) {
 			if (storedState.object) {
         storedState.object.pos && this.camera.position.fromArray(storedState.object.pos);
@@ -670,7 +750,14 @@ export default class Renderer {
 
 		this.orientationControl.setCameraTransforms(pos, this.camera.quaternion);
 		
+
+		this.stats = new Stats();
+		this.elt.parentElement?.appendChild(this.stats.container);
+		
 		this.render();
+		
+		setTimeout(() => { this.needsToRender = true; }, 100);
+		
 	}
 	
 	
@@ -713,8 +800,8 @@ export default class Renderer {
 			// const right = far * Math.tan((Math.PI / 360) * fov);
 			
 			const top = filmHeight / 2;
-			const right = filmWidth / 2;
 			const bottom = -top;
+			const right = filmWidth / 2;
 			const left = -right;
 			let camera = new THREE.OrthographicCamera(left, right, top, bottom, near, far);
 			// camera.zoom = 8.1;
@@ -730,6 +817,8 @@ export default class Renderer {
 		const pos = this.camera.position.clone().sub(this.controls.target).normalize().multiplyScalar(this.orientationControl.cameraDistance);
 		this.orientationControl.setCameraTransforms(pos, this.camera.quaternion);
 		this.orientationControl.axis = axis;
+		
+		this.updateCursorSize();
 		
 		// this.resizeCanvasToDisplaySize(true);
 		// this.camera.position.set(pos.x, pos.y, pos.z);
@@ -877,6 +966,14 @@ export default class Renderer {
 			this.camera.position.set(pos.x, pos.y, pos.z);
 			this.camera.lookAt(tar);
 			this.controls.target.set(tar.x, tar.y, tar.z);
+			
+			const orientationCameraPos = this.camera.position
+        .clone()
+        .sub(tar)
+        .normalize()
+        .multiplyScalar(this.orientationControl.cameraDistance);
+      this.orientationControl.setCameraTransforms(orientationCameraPos, this.camera.quaternion);
+			
 			if (timerProgress == 1) {
         this.smoothingCamera = false;
         params.onFinish && params.onFinish(timer);
@@ -939,6 +1036,71 @@ export default class Renderer {
 			.lineTo(80, 20); // close path
 	}
 	
+	addDefaultConstructions(){
+
+
+		const origin = new ConstructionPoint("Origin", {
+			point: new THREE.Vector3(0, 0, 0)
+		});
+		origin.visible = false;
+
+		this.messenger.postMessage("ADD_CONSTRUCTION", origin);
+		this.constructions.add(origin);
+
+
+		const xAxis = new ConstructionAxis("X-Axis", {
+			p0: new THREE.Vector3(0.25, 0, 0),
+			p1: new THREE.Vector3(3, 0, 0),
+			color: 0xff0000
+		});
+		xAxis.visible = false;
+		const yAxis = new ConstructionAxis("Y-Axis", {
+			p0: new THREE.Vector3(0, 0.25, 0),
+			p1: new THREE.Vector3(0, 3, 0),
+			color: 0x00ff00
+		});
+		yAxis.visible = false;
+		const zAxis = new ConstructionAxis("Z-Axis", {
+      p0: new THREE.Vector3(0, 0, 0.25),
+      p1: new THREE.Vector3(0, 0, 3),
+      color: 0x0000ff
+		});
+		zAxis.visible = false;
+		
+		this.messenger.postMessage("ADD_CONSTRUCTION", xAxis);
+		this.messenger.postMessage("ADD_CONSTRUCTION", yAxis);
+		this.messenger.postMessage("ADD_CONSTRUCTION", zAxis);
+		this.constructions.add(xAxis, yAxis, zAxis);
+		
+
+		const xyPlane = new ConstructionPlane("XY-Plane", {
+      normal: new THREE.Vector3(0, 0, 1),
+      point: new THREE.Vector3(1.25, 1.25, 0),
+      width: 2,
+      height: 2
+		});
+		xyPlane.visible = false;
+    const zyPlane = new ConstructionPlane("ZY-Plane", {
+      normal: new THREE.Vector3(1, 0, 0),
+      point: new THREE.Vector3(0, 1.25, 1.25),
+      width: 2,
+      height: 2
+		});
+		zyPlane.visible = false;
+    const xzPlane = new ConstructionPlane("XZ-Plane", {
+      normal: new THREE.Vector3(0, 1, 0),
+      point: new THREE.Vector3(1.25, 0, 1.25),
+      width: 2,
+      height: 2
+		});
+		xzPlane.visible = false;
+    this.messenger.postMessage("ADD_CONSTRUCTION", xyPlane);
+    this.messenger.postMessage("ADD_CONSTRUCTION", zyPlane);
+    this.messenger.postMessage("ADD_CONSTRUCTION", xzPlane);
+    this.constructions.add(xyPlane, zyPlane, xzPlane);
+		
+	}
+	
 	
 	update() {
 		if (this.smoothingCamera) {
@@ -949,6 +1111,16 @@ export default class Renderer {
 			this.needsToRender = true;
 		}
 		
+		this.stats.update();
+		
+	}
+	updateCursorSize() {
+		if (this.camera instanceof THREE.OrthographicCamera) {
+			this.cursor.sprite.scale.setScalar(1 / this.camera.zoom);
+		}
+		else {
+			this.cursor.sprite.scale.setScalar(0.035);
+		}
 	}
 	render() {
 		
@@ -961,6 +1133,7 @@ export default class Renderer {
 		
 			this.composer.render();
 			
+			this.updateCursorSize();
 
 
 			this.orientationControl.shouldRender = true;
@@ -1027,7 +1200,15 @@ export default class Renderer {
 		this.grid.visible = visible;
 		this.needsToRender = true;
 	}
-
+	get cursorVisible() {
+		return this.cursor ? this.cursor.visible : true;
+	}
+	
+	set cursorVisible(visible: boolean) {
+		this.cursor.visible = visible;
+		this.needsToRender = true;
+	}
+	
 	get axisVisible() {
 		return this.axes ? this.axes.visible : true;
 	}

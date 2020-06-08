@@ -17,8 +17,8 @@ import Plotly from 'plotly.js';
 import { scatteredEnergy } from "./scattered-energy";
 import PointShader from "./shaders/points";
 import * as ac from '../acoustics';
-import wasmInit from "../../as/wasm-init";
-import loader from "@assemblyscript/loader";
+// import wasmInit from "../../as/wasm-init";
+// import loader from "@assemblyscript/loader";
 import { clamp } from "../../common/clamp";
 
 
@@ -92,6 +92,7 @@ export interface RayTracerParams {
   messenger: Messenger;
   runningWithoutReceivers?: boolean;
   raysVisible?: boolean;
+  pointsVisible?: boolean;
   invertedDrawStyle?: boolean;
 }
 export const defaults = {
@@ -108,6 +109,7 @@ export const defaults = {
   passes: 1,
   pointSize: 2,
   raysVisible: true,
+  pointsVisible: true,
   invertedDrawStyle: false
 };
 export enum DRAWSTYLE {
@@ -154,6 +156,7 @@ class RayTracer extends Solver {
   chartdata: ChartData[];
   passes: number;
   _raysVisible: boolean;
+  _pointsVisible: boolean;
   _invertedDrawStyle: boolean;
   __start_time!: number;
   __calc_time!: number;
@@ -191,6 +194,9 @@ class RayTracer extends Solver {
 
     const paramsHasRaysVisible = typeof params.raysVisible === "boolean";
     this._raysVisible = paramsHasRaysVisible ? params.raysVisible! : defaults.raysVisible;
+
+    const paramsHasPointsVisible = typeof params.pointsVisible === "boolean";
+    this._pointsVisible = paramsHasPointsVisible ? params.pointsVisible! : defaults.pointsVisible;
 
     const paramsHasInvertedDrawStyle = typeof params.invertedDrawStyle === "boolean";
     this._invertedDrawStyle = paramsHasInvertedDrawStyle ? params.invertedDrawStyle! : defaults.invertedDrawStyle;
@@ -931,8 +937,6 @@ class RayTracer extends Solver {
     // attenuation in dB/m
     const airAttenuationdB = ac.airAttenuation(freqs);
 
-
-
     this.responseByIntensity = {} as KeyValuePair<
       KeyValuePair<{
         freqs: number[];
@@ -997,7 +1001,9 @@ class RayTracer extends Solver {
               if (surface.kind === "surface") {
                 coefficient = surface.reflectionFunction(freq, angle);
               }
-              IrayArray[f] = ac.P2I(ac.Lp2P((ac.P2Lp(ac.I2P(IrayArray[f] * coefficient)) as number) - airAttenuationdB[f])) as number;
+              IrayArray[f] = ac.P2I(
+                ac.Lp2P((ac.P2Lp(ac.I2P(IrayArray[f] * coefficient)) as number) - airAttenuationdB[f])
+              ) as number;
             }
           }
           const level = ac.P2Lp(ac.I2P(IrayArray)) as number[];
@@ -1017,40 +1023,37 @@ class RayTracer extends Solver {
     if (!this.responseOverlayElement.classList.contains("response_overlay-hidden")) {
       this.responseOverlayElement.classList.add("response_overlay-hidden");
     }
-    this.renderer.orientationControl.show();  
+    this.renderer.orientationControl.show();
   }
   showPlot() {
     if (this.responseOverlayElement.classList.contains("response_overlay-hidden")) {
       this.responseOverlayElement.classList.remove("response_overlay-hidden");
     }
-    this.renderer.orientationControl.hide();  
+    this.renderer.orientationControl.hide();
   }
-  
-  plotResponseByIntensity(receiverId: string, sourceId: string, passes: number = 2) {
-    
 
+  plotResponseByIntensity(receiverId: string, sourceId: string, passes: number = 2) {
     this.showPlot();
-      
-    
+
     const response = this.responseByIntensity[receiverId][sourceId].response;
     const freqs = this.responseByIntensity[receiverId][sourceId].freqs;
     const time = [] as number[];
     for (let i = 0; i < response.length; i++) {
       time.push(response[i].time);
     }
-    
-    const data = freqs.map(freq => ({
+
+    const data = freqs.map((freq) => ({
       x: time,
       y: [] as number[],
       mode: "lines",
       name: freq.toString()
     }));
-    
-    for (let i = 0; i < response.length; i++){
-      for (let j = 0; j < data.length; j++){
+
+    for (let i = 0; i < response.length; i++) {
+      for (let j = 0; j < data.length; j++) {
         const prev = clamp(i - 1, 0, response.length - 1);
         const next = clamp(i + 1, 0, response.length - 1);
-        const smoothed = (response[prev].level[j] + response[i].level[j] + response[next].level[j])/3;
+        const smoothed = (response[prev].level[j] + response[i].level[j] + response[next].level[j]) / 3;
         data[j].y.push(smoothed);
       }
     }
@@ -1066,18 +1069,28 @@ class RayTracer extends Solver {
         data[i].y = smoothed;
       }
     }
-    
-  
+
     const layout = {
       title: `${this.containers[receiverId].name} from ${this.containers[sourceId].name}`
     };
 
     Plotly.newPlot(this.responseOverlayElement.id, data, layout);
-
-    
-
   }
-  
+
+  computeImageSources(source, previousReflector, maxOrder) {
+    
+    //     for each surface in geometry do
+    //         if (not previousReflector) or
+    //         ((inFrontOf(surface, previousReflector)) and (surface.normal dot previousReflector.normal < 0))
+    //             newSource = reflect(source, surface)
+    //             sources[nofSources++] = newSource
+    //             if (maxOrder > 0)
+    //                 computeImageSources(newSource, surface, maxOrder - 1)
+    
+    const surfaces = this.room.surfaces.children;
+    
+  }
+
   get sources() {
     if (this.sourceIDs.length > 0) {
       return this.sourceIDs.map((x) => this.containers[x]);
@@ -1135,6 +1148,17 @@ class RayTracer extends Solver {
     this.renderer.needsToRender = true;
   }
 
+  get pointsVisible() {
+    return this._pointsVisible;
+  }
+  set pointsVisible(visible: boolean) {
+    if (visible != this._pointsVisible) {
+      this._pointsVisible = visible;
+      this.hits.visible = visible;
+    }
+    this.renderer.needsToRender = true;
+  }
+
   get invertedDrawStyle() {
     return this._invertedDrawStyle;
   }
@@ -1169,23 +1193,23 @@ class RayTracer extends Solver {
     this._runningWithoutReceivers = runningWithoutReceivers;
   }
 
-  testWasm(value: number) {
-    async function loadWasm() {
-      return await loader.instantiate(fetch("wasm/index.wasm"), {
-        index: {
-          consoleLog: (value) => console.log(value)
-        }
-      });
-    }
+  // testWasm(value: number) {
+  //   async function loadWasm() {
+  //     return await loader.instantiate(fetch("wasm/index.wasm"), {
+  //       index: {
+  //         consoleLog: (value) => console.log(value)
+  //       }
+  //     });
+  //   }
 
-    loadWasm()
-      .then((wasm) => {
-        console.log(wasm);
-        const result = wasm["testFunction"](value);
-        console.log(result);
-      })
-      .catch(console.error);
-  }
+  //   loadWasm()
+  //     .then((wasm) => {
+  //       console.log(wasm);
+  //       const result = wasm["testFunction"](value);
+  //       console.log(result);
+  //     })
+  //     .catch(console.error);
+  // }
 }
 
 export default RayTracer;

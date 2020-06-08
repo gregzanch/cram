@@ -6,4 +6,6 @@ export * from './RoomIcon';
 export * from './RayTracerIcon';
 export * from './SourceIcon';
 export * from './ReceiverIcon';
-
+export * from './ConstructionAxisIcon';
+export * from './ConstructionPointIcon';
+export * from './ConstructionPlaneIcon';

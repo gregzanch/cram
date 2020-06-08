@@ -26,6 +26,9 @@ export default function RendererTab(props: RendererTabProps) {
   const [fogDensity, setFogDensity] = useState(renderer.fogDensity);
   const [cameraPropertiesFolderOpen, setCameraPropertiesFolderOpen] = useState(true);
   const [environmentPropertiesFolderOpen, setEnvironmentPropertiesFolderOpen] = useState(true);
+  
+  const [editorPropertiesFolderOpen, setEditorPropertiesFolderOpen] = useState(true);
+  const [cursorVisible, setCursorVisible] = useState(renderer.cursorVisible);
   return (
     <div>
       <PropertyRowFolder
@@ -155,6 +158,35 @@ export default function RendererTab(props: RendererTabProps) {
             }}
             checked={axisVisible}
           />
+        </PropertyRow>
+      </PropertyRowFolder>
+
+      <PropertyRowFolder
+        id="editorPropertiesFolder"
+        label="Editor Properties"
+        open={editorPropertiesFolderOpen}
+        onOpenClose={() => setEditorPropertiesFolderOpen(!editorPropertiesFolderOpen)}
+      >
+        <PropertyRow>
+          <PropertyRowLabel hasToolTip={editorPropertiesFolderOpen} label="Cursor" tooltip="Toggles the cursor" />
+          <PropertyRowCheckbox
+            onChange={(e) => {
+              renderer.cursorVisible = e.currentTarget.checked;
+              setCursorVisible(renderer.cursorVisible);
+            }}
+            checked={cursorVisible}
+          />
+        </PropertyRow>
+
+        <PropertyRow>
+          {/* <PropertyRowLabel hasToolTip={environmentPropertiesFolderOpen} label="Grid" tooltip="Toggles the grid" />
+          <PropertyRowCheckbox
+            onChange={(e) => {
+              renderer.gridVisible = e.currentTarget.checked;
+              setGridVisible(renderer.gridVisible);
+            }}
+            checked={gridVisible}
+          /> */}
         </PropertyRow>
       </PropertyRowFolder>
     </div>
