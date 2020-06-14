@@ -106,21 +106,56 @@ module.exports = function(proxy, allowedHost) {
       // https://github.com/facebook/create-react-app/issues/2272#issuecomment-302832432
       app.use(noopServiceWorkerMiddleware());
       
-             // use proper mime-type for wasm files
-            app.get('*.wasm', function(req, res, next) {
-                var options = {
-                  root: path.join(__dirname, "../public"),
-                  dotfiles: "deny",
-                  headers: {
-                    "Content-Type": "application/wasm"
-                  }
-                };
-                res.sendFile(req.url, options, function (err) {
-                    if (err) {
-                        next(err);
-                    }
-                });
-            });
+      // use proper mime-type for wasm files
+      app.get('*.wasm', function(req, res, next) {
+          var options = {
+            root: path.join(__dirname, "../public"),
+            dotfiles: "deny",
+            headers: {
+              "Content-Type": "application/wasm"
+            }
+          };
+          res.sendFile(req.url, options, function (err) {
+              if (err) {
+                  next(err);
+              }
+          });
+      });
+      app.get("/res/models/:filename", function (req, res, next) {
+        const options = {
+          root: path.join(__dirname, "../src/res/models"),
+          dotfiles: "deny",
+          headers: {
+            "x-timestamp": Date.now(),
+            "x-sent": true
+          }
+        };
+
+        const fileName = req.params.filename;
+        res.sendFile(fileName, options, function (err) {
+          if (err) {
+            next(err);
+          }
+        });
+      });
+      app.get("/res/saves/:filename", function (req, res, next) {
+        const options = {
+          root: path.join(__dirname, "../src/res/saves"),
+          dotfiles: "deny",
+          headers: {
+            "x-timestamp": Date.now(),
+            "x-sent": true
+          }
+        };
+
+        const fileName = req.params.filename;
+        res.sendFile(fileName, options, function (err) {
+          if (err) {
+            next(err);
+          }
+        });
+      });
+      
       
       
     },

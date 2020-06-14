@@ -166,11 +166,25 @@ type ClickEvent = React.MouseEvent<HTMLElement, MouseEvent>;
           return (
             <ContextMenu {...ContextMenuSharedProps}>
               <TreeItem
-                label={<TreeItemLabel icon={<SurfaceIcon fontSize="inherit" />} label={container.name || "untitled"} />}
-                collapseIcon={<ExpandMoreIcon onClick={(e) => setExpanded(expanded.filter((x) => x !== container.uuid))} fontSize="inherit" />}
-                expandIcon={<ChevronRightIcon onClick={(e) => setExpanded(expanded.concat(container.uuid))} fontSize="inherit" />}
+                label={
+                  <TreeItemLabel
+                    icon={<SurfaceIcon fontSize="inherit" />}
+                    label={container.name || "untitled"}
+                    onClick={onClick}
+                  />
+                }
+                collapseIcon={
+                  <ExpandMoreIcon
+                    onClick={(e) => setExpanded(expanded.filter((x) => x !== container.uuid))}
+                    fontSize="inherit"
+                  />
+                }
+                expandIcon={
+                  <ChevronRightIcon onClick={(e) => setExpanded(expanded.concat(container.uuid))} fontSize="inherit" />
+                }
                 className={className}
-                {...sharedProps}>
+                {...sharedProps}
+              >
                 {container.children.map((x) => mapchildren(x, props, expanded, setExpanded))}
               </TreeItem>
             </ContextMenu>

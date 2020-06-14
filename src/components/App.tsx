@@ -3,7 +3,6 @@ import SplitterLayout from "react-splitter-layout";
 import {
   FocusStyleManager,
   Navbar,
-  Alignment,
   Button,
   Menu,
   MenuItem,
@@ -12,10 +11,7 @@ import {
   Position,
   MenuDivider,
   Drawer,
-  Classes,
   Colors,
-  AnchorButton,
-  Overlay,
   Alert,
   Intent,
   Toaster,
@@ -27,15 +23,10 @@ import { ItemListRenderer, IItemListRendererProps } from "@blueprintjs/select";
 import ImportDialog from "./import-dialog/ImportDialog";
 import ObjectView from "./object-view/ObjectView";
 import ConstructionsView from "./ConstructionsView";
-import resolve_svg from "../svg/resolve.svg";
-import { set } from "../common/set-at";
 import Container from "../objects/container";
 import PanelContainer from "./panel-container/PanelContainer";
 import ObjectProperties from "./ObjectProperties/index";
 import Messenger from "../messenger";
-import Renderer from "../render/renderer";
-import Receiver from "../objects/receiver";
-import Source from "../objects/source";
 import { KeyValuePair } from "../common/key-value-pair";
 import SettingsDrawer from "./settings-drawer/SettingsDrawer";
 import { Setting } from "../setting";
@@ -47,29 +38,23 @@ import "./App.css";
 import { ToolNames } from "../constants/tool-names";
 import { EditorModes } from "../constants/editor-modes";
 import { Characters } from "../constants/characters";
-// import { Process, Task } from "../common/process";
-import SettingsDrawerCheckBox from "./setting-components/SettingsDrawerCheckbox";
 import Solver from "../compute/solver";
-import RayTracer from "../compute/raytracer";
 
 import ParameterConfig from './parameter-config/ParameterConfig';
 import { Stat } from "./parameter-config/Stats";
 import { ObjectPropertyInputEvent } from "./ObjectProperties";
 import Surface from "../objects/surface";
 import { AcousticMaterial } from "../db/acoustic-material";
-import { Searcher } from "fast-fuzzy";
 import MaterialDrawer from "./material-drawer/MaterialDrawer";
 import { SettingsPanel } from "./setting-components/SettingsPanel";
-import Results from "./parameter-config/Results";
 import { Tab, Tabs, TabList, TabPanel } from "react-tabs";
 import properCase from "../common/proper-case";
 import { ApplicationSettings } from "../default-settings";
 import Gutter from "./gutter/Gutter";
-import { timingSafeEqual } from "crypto";
 import NavbarMenuItemLabel from "./NavbarMenuItemLabel";
-import { Dialog } from "@material-ui/core";
 import SaveDialog from "./SaveDialog";
 import OpenWarning from "./OpenWarning";
+
 
 
 const AppToaster = Toaster.create({
@@ -80,7 +65,6 @@ const AppToaster = Toaster.create({
 
 
 FocusStyleManager.onlyShowFocusOnTabs();
-
 
 
 
@@ -100,6 +84,8 @@ interface AppState {
   bottomPanelSize: number;
   rightPanelSize: number;
   leftPanelSize: number;
+  
+  rendererStatsVisible: boolean;
   
 	importDialogVisible: boolean;
 	containers: KeyValuePair<Container>;
@@ -154,14 +140,15 @@ export default class App extends React.Component<AppProps, AppState> {
       bottomPanelSize: this.props.bottomPanelInitialSize,
       rightPanelSize: this.props.rightPanelInitialSize,
       leftPanelSize: this.props.leftPanelInitialSize,
+      rendererStatsVisible: true,
       saveDialogVisible: false,
       projectName: this.props.messenger.postMessage("GET_PROJECT_NAME")[0],
       constructions: this.props.messenger.postMessage("GET_CONSTRUCTIONS")[0],
       openWarningVisible: false,
-			terminalOpen: false,
+      terminalOpen: false,
       newWarningVisible: false,
       openAfterSave: false,
-			materialDrawerOpen: false,
+      materialDrawerOpen: false,
       lastUpdateReason: "",
       solvers: {} as KeyValuePair<Solver>,
       simulationRunning: false,
@@ -176,11 +163,13 @@ export default class App extends React.Component<AppProps, AppState> {
       stats: [] as Stat[],
       canUndo: false,
       canRedo: false,
-			chartData: [{
-				label: "a",
-				x: [0],
-				y: [0]
-      }],
+      chartData: [
+        {
+          label: "a",
+          x: [0],
+          y: [0]
+        }
+      ],
       selectedSettingsDrawerTab: 1
       // process: new Process({name: "base", steps: [] as Task[]})
     };
@@ -548,6 +537,7 @@ export default class App extends React.Component<AppProps, AppState> {
 	}
 
   handleObjectViewClick(object, e: React.MouseEvent) {
+    console.log(e.currentTarget);
     if (object instanceof Container && object['kind']!=="room") {
       if (e.shiftKey) {
         this.props.messenger.postMessage("APPEND_SELECTION", [object])
@@ -556,16 +546,10 @@ export default class App extends React.Component<AppProps, AppState> {
         this.props.messenger.postMessage("SET_SELECTION", [object]);
       }
     }
-    else if (object instanceof Solver) {
-      this.props.messenger.postMessage("SET_OBJECT_VIEW", object)
-    }
   }
-  handleObjectViewDelete(object: Container | Solver) {
+  handleObjectViewDelete(object: Container) {
     if (object instanceof Container) {
       this.props.messenger.postMessage("SHOULD_REMOVE_CONTAINER", object.uuid);
-    }
-    else if (object instanceof Solver) {
-      this.props.messenger.postMessage("SHOULD_REMOVE_SOLVER", object.uuid);
     }
   }
 	handleObjectPropertyButtonClick(e: React.MouseEvent<HTMLInputElement, MouseEvent>) {
@@ -842,6 +826,26 @@ export default class App extends React.Component<AppProps, AppState> {
                         }
                         onClick={() => localStorage.clear()}
                       />
+                      <MenuItem
+                        text={
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between"
+                            }}
+                          >
+                            <div>{this.state.rendererStatsVisible ? "Hide Renderer Stats" : "Show Renderer Stats"}</div>
+                            <div style={{ color: Colors.LIGHT_GRAY1 }}></div>
+                          </div>
+                        }
+                        onClick={(e) => {
+                          this.props.messenger.postMessage(
+                            "SET_RENDERER_STATS_VISIBLE",
+                            !this.state.rendererStatsVisible
+                          );
+                          this.setState({ rendererStatsVisible: !this.state.rendererStatsVisible });
+                        }}
+                      />
                     </Menu>
                   </Popover>
                 </ButtonGroup>
@@ -1033,10 +1037,7 @@ export default class App extends React.Component<AppProps, AppState> {
               onDelete={this.handleObjectViewDelete}
               messenger={this.props.messenger}
             />
-            <ConstructionsView
-              constructions={this.state.constructions}
-              messenger={this.props.messenger}
-            />
+            <ConstructionsView constructions={this.state.constructions} messenger={this.props.messenger} />
           </PanelContainer>
 
           {/* center and right */}

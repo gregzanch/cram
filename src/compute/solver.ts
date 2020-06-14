@@ -32,5 +32,7 @@ export default abstract class Solver{
     onModeChange(mode: EditorModes) {
         
     }
+    onParameterConfigFocus() {}
+    onParameterConfigBlur() {}
 }
 

@@ -4,6 +4,7 @@ import chroma from 'chroma-js';
 import map from "../common/map";
 import { MATCAP_PORCELAIN_WHITE, MATCAP_UNDER_SHADOW } from "./asset-store";
 import { EditorModes } from "../constants/editor-modes";
+import { P2I, Lp2P } from '../compute/acoustics';
 
 
 const defaults = {
@@ -57,7 +58,8 @@ export default class Source extends Container {
   shouldClearPreviousPosition: boolean;
   pinkNoiseSamples: Float32Array;
   signalSource: SignalSource;
-  initialSPL: number;
+  _initialSPL: number;
+  _initialIntensity: number;
   constructor(name: string, props?: SourceProps) {
     super(name);
     this.kind = "source";
@@ -66,7 +68,8 @@ export default class Source extends Container {
     this.previousY = this.position.y;
     this.previousZ = this.position.z;
     this.shouldClearPreviousPosition = false;
-    this.initialSPL = 120;
+    this._initialSPL = 120;
+    this._initialIntensity = P2I(Lp2P(this._initialSPL)) as number;
     this.amplitude = 1;
     this.frequency = 100;
     this.phase = 0;
@@ -274,5 +277,14 @@ export default class Source extends Container {
       (this.normalMaterial as THREE.MeshMatcapMaterial).color.setHex(col);
       (this.selectedMaterial as THREE.MeshMatcapMaterial).color.setHex(col);
     }
+  }
+  get initialSPL() {
+    return this._initialSPL;
+  }
+  set initialSPL(spl: number) {
+    this._initialSPL = spl;
+  }
+  get initialIntensity() {
+    return this._initialIntensity;
   }
 }

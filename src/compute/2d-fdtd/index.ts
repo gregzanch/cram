@@ -537,6 +537,8 @@ class FDTD_2D extends Solver {
     // Get compute output in custom uniform
     this.uniforms["heightmap"].value = this.gpuCompute.getCurrentRenderTarget(this.heightmapVariable)["texture"];
   }
+  onParameterConfigFocus() {}
+  onParameterConfigBlur() {}
 }
 
 export { FDTD_2D };

@@ -1,0 +1,31 @@
+.global_overlay-cell{
+  text-align: center;
+  padding-left: .25em;
+  padding-right: .25em;
+  font-size: 11px;
+  color: #484848;
+}
+.global_overlay-cell:not(:first-child){
+  border-right: solid 1px rgba(0,0,0,0.35);
+}
+.global_overlay-label{
+  text-align: left;
+  margin-right: .25em;
+}
+.global_overlay-value{
+  text-align: right;
+}
+.canvas_overlay-global_overlay{
+  background: rgba(0,0,0,0);
+  bottom: .25em;
+  right: .25em;
+  box-shadow: none;
+  display: flex;
+  flex-direction: row-reverse;
+}
+.global_overlay-cell-hidden{
+  display: none;
+}
+.global_overlay-hidden{
+  display: none;
+}

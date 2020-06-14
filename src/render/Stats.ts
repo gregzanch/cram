@@ -139,8 +139,11 @@ class Stats {
   currentPanelIndex: number;
   container: HTMLElement;
   fpsPanel: StatsPanel;
+  fpsPanelValue: number;
   memPanel?: StatsPanel;
+  memPanelValue?: number;
   msPanel: StatsPanel;
+  msPanelValue: number;
   beginTime: number;
   prevTime: number;
   frames: number;
@@ -179,9 +182,12 @@ class Stats {
     this.auxPanelUpdatePeriod = 500;
 
     this.fpsPanel = this.addPanel(new StatsPanel("Frame Rate", { ...panelSharedProps, unit: "Hz" }));
+    this.fpsPanelValue = 0;
     this.msPanel = this.addPanel(new StatsPanel("Frame Time", { ...panelSharedProps, unit: "ms" }));
+    this.msPanelValue = 0;
     if (self.performance && self.performance["memory"]) {
       this.memPanel = this.addPanel(new StatsPanel("Heap", { ...panelSharedProps, unit: "MB" }));
+      this.memPanelValue = 0;
     }
 
     this.showSinglePanel(this.currentPanelIndex);
@@ -285,17 +291,20 @@ class Stats {
 
     let time = (performance || Date).now();
 
-    this.msPanel.update(time - this.beginTime, 200);
+    this.msPanelValue = time - this.beginTime;
+    this.msPanel.update(this.msPanelValue, 200);
 
     if (time >= this.prevTime + this.auxPanelUpdatePeriod) {
-      this.fpsPanel.update((this.frames * 1000) / (time - this.prevTime), 100);
+      this.fpsPanelValue = (this.frames * 1000) / (time - this.prevTime);
+      this.fpsPanel.update(this.fpsPanelValue, 100);
 
       this.prevTime = time;
       this.frames = 0;
 
       if (this.memPanel) {
         let memory = performance["memory"];
-        this.memPanel.update(memory.usedJSHeapSize / 1048576, memory.jsHeapSizeLimit / 1048576);
+        this.memPanelValue = memory.usedJSHeapSize / 1048576;
+        this.memPanel.update(this.memPanelValue, memory.jsHeapSizeLimit / 1048576);
       }
     }
 

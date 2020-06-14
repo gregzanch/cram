@@ -133,6 +133,8 @@ class Surface extends Container {
   wire!: THREE.Mesh;
   edges!: THREE.LineSegments;
 
+  center!: THREE.Vector3;
+  
   triangles!: number[][][];
   fillSurface!: boolean;
   vertexNormals!: THREE.VertexNormalsHelper;
@@ -187,6 +189,16 @@ class Surface extends Container {
     this._triangles = this.triangles.map(
       (x) => new THREE.Triangle(new THREE.Vector3(...x[0]), new THREE.Vector3(...x[1]), new THREE.Vector3(...x[2]))
     );
+    
+    this.center = new THREE.Vector3();
+    let area = 0;
+    this._triangles.forEach(tri => {
+      const a = tri.getArea();
+      area += a;
+      this.center.add(tri.getMidpoint(new THREE.Vector3()).multiplyScalar(a));
+    });
+    this.center.divideScalar(area);
+
 
     this.selectedMaterial = defaults.materials.selected;
     this.normalMaterial = defaults.materials.mesh;
@@ -389,7 +401,7 @@ class Surface extends Container {
     this.vertexNormals.visible = displayVertexNormals;
   }
   get geometry() {
-    return this.mesh.geometry;
+    return this.mesh.geometry as THREE.BufferGeometry;
   }
   get faces() {
     return this._triangles;

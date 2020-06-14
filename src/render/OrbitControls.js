@@ -98,6 +98,7 @@ var OrbitControls = function (object, domElement) {
   // for reset
   this.target0 = this.target.clone();
   this.position0 = this.object.position.clone();
+  this.quat0 = this.object.quaternion.clone();
   this.zoom0 = this.object.zoom;
 
   //
@@ -115,12 +116,14 @@ var OrbitControls = function (object, domElement) {
   this.saveState = function () {
     scope.target0.copy(scope.target);
     scope.position0.copy(scope.object.position);
+    scope.quat0.copy(scope.object.quaternion);
     scope.zoom0 = scope.object.zoom;
   };
 
   this.reset = function () {
     scope.target.copy(scope.target0);
     scope.object.position.copy(scope.position0);
+    scope.object.quaternion.copy(scope.quaternion0);
     scope.object.zoom = scope.zoom0;
 
     scope.object.updateProjectionMatrix();
@@ -143,6 +146,9 @@ var OrbitControls = function (object, domElement) {
     var lastQuaternion = new Quaternion();
 
     return function update() {
+      
+
+      
       var position = scope.object.position;
 
       offset.copy(position).sub(scope.target);

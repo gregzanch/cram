@@ -7,7 +7,6 @@ export type ArrayOfValues =
   | Uint16Array
   | Uint32Array
   | Uint8Array
-  | BigUint64Array
   | number[];
 
 export class FFT {

@@ -55,8 +55,23 @@ export default class ParameterConfig extends React.Component<ParameterConfigProp
     }
   }
   handleTabChange(tabIndex: number) {
+    const prevTabIndex = this.state.selectedTabIndex;
+    // debugger;
+    if (prevTabIndex > 1) {
+      const keys = Object.keys(this.props.solvers);
+      if (this.props.solvers[keys[prevTabIndex - 2]] instanceof Solver) {
+        this.props.solvers[keys[prevTabIndex - 2]].onParameterConfigBlur();
+      }
+    }
     this.setState({
       selectedTabIndex: tabIndex
+    }, () => {
+        if (this.state.selectedTabIndex > 1) {
+          const keys = Object.keys(this.props.solvers);
+          if (this.props.solvers[keys[this.state.selectedTabIndex - 2]] instanceof Solver) {
+            this.props.solvers[keys[this.state.selectedTabIndex - 2]].onParameterConfigFocus();
+          }
+        }
     })
   }
   render() {

@@ -32,7 +32,8 @@ export class RT60 extends Solver{
   arauPuchades() {
     
   }
-
+  onParameterConfigFocus() {}
+  onParameterConfigBlur() {}
 }
 
 export default RT60;

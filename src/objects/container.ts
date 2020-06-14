@@ -43,11 +43,49 @@ export default class Container extends THREE.Group {
 		this.selected = false;
 		this.renderCallback = () => { };
 	}
-	save() { return this.toJSON(); }
+	save() {
+		return {
+			kind: this.kind,
+			visible: this.visible,
+			name: this.name,
+			position: this.position.toArray(),
+			rotation: this.rotation.toArray().slice(0, 3),
+			scale: this.scale.toArray(),
+			uuid: this.uuid
+		} as ContainerSaveObject;
+	}
 	restore(state: any){ }
 	onModeChange(mode: EditorModes) {	}
-	select() { }
-	deselect() { }
+	select() {
+		this.children.forEach((x: Surface) => {
+      if (x instanceof Surface) {
+        x.select();
+      }
+    });
+		this.selected = true;
+	}
+	deselect() { 
+		this.children.forEach((x: Surface) => {
+      if (x instanceof Surface) {
+        x.deselect();
+      }
+    });
+		this.selected = false;
+	}
+	selectChildren() {
+		this.children.forEach((x: Surface) => {
+      if (x instanceof Surface) {
+        x.select();
+      }
+    });
+	}
+	deselectChildren() { 
+		this.children.forEach((x: Surface) => {
+      if (x instanceof Surface) {
+        x.deselect();
+      }
+    });
+	}
 	get x() {
 		return this.position.x;
 	}

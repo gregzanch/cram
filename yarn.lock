@@ -1383,6 +1383,11 @@
   dependencies:
     "@types/d3-path" "*"
 
+"@types/d3@^3":
+  version "3.5.43"
+  resolved "https://registry.yarnpkg.com/@types/d3/-/d3-3.5.43.tgz#e9b4992817e0b6c5efaa7d6e5bb2cee4d73eab58"
+  integrity sha512-t9ZmXOcpVxywRw86YtIC54g7M9puRh8hFedRvVfHKf5YyOP6pSxA0TvpXpfseXSCInoW4P7bggTrSDiUOs4g5w==
+
 "@types/dom4@^2.0.1":
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/@types/dom4/-/dom4-2.0.1.tgz#506d5781b9bcab81bd9a878b198aec7dee2a6033"
@@ -1443,6 +1448,13 @@
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/@types/parse-json/-/parse-json-4.0.0.tgz#2f8bb441434d163b35fb8ffdccd7138927ffb8c0"
   integrity sha512-//oorEZjL6sbPcKUaCdIGlIUeH26mgzimjBB77G6XRgnDl/L5wOnpyBGRe/Mmf5CVW3PwEBE1NjiMZ/ssFh4wA==
+
+"@types/plotly.js@^1.50.12":
+  version "1.50.12"
+  resolved "https://registry.yarnpkg.com/@types/plotly.js/-/plotly.js-1.50.12.tgz#dd0c296d1c68d0415d2ce7241a627a73926f897e"
+  integrity sha512-ZyXsV0XCGI/clfo+o04kQNY8SAFR/9k/eiSmooEtg9EENdpOo+Z74qQSYGkGlNWZcdDvFWpWdeOAM7BrJLn/LQ==
+  dependencies:
+    "@types/d3" "^3"
 
 "@types/prop-types@*":
   version "15.7.3"

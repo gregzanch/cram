@@ -87,14 +87,10 @@ export default class Room extends Container {
 	}
 	
   select() {
-    this.surfaces.children.forEach((x: Container) => {
-      x.select();
-    });
+    this.surfaces.select();
   }
   deselect() {
-    this.surfaces.children.forEach((x: Container) => {
-      x.deselect();
-    });
+    this.surfaces.deselect();
   }
 
   calculateBoundingBox() {

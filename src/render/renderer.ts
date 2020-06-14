@@ -47,7 +47,7 @@ import { History, Moment, Directions } from '../history';
 import PickHelper from './pick-helper';
 import { posix } from "path";
 
-import { TransformOverlay } from './overlays';
+import { TransformOverlay, GlobalOverlay } from './overlays';
 import { ApplicationSettings, SettingsCategories, SettingsCategory, EditorSettings } from "../default-settings";
 import hotkeys from "hotkeys-js";
 
@@ -59,6 +59,7 @@ import ConstructionPlane from "../objects/construction-plane";
 import ConstructionAxis from "../objects/construction-axis";
 import ConstructionPoint from "../objects/construction-point";
 import { Processes } from "../constants/processes";
+import roundTo from "../common/round-to";
 
 const colored_number_html = (num: number) => /*html*/`<span style="color: ${num < 0 ? "#E68380" : "#A2C982"};">${num.toFixed(3)}</span>`;
 
@@ -126,6 +127,7 @@ export interface RendererParams{
 
 export interface Overlays {
 	transform: TransformOverlay;
+	global: GlobalOverlay;
 }
 
 export default class Renderer {
@@ -216,7 +218,8 @@ export default class Renderer {
 			"render",
 			"smoothCameraTo",
 			"setOrtho",
-			"storeCameraState"
+			"storeCameraState",
+			"onOrbitControlsChange"
 		].forEach(method => {
 			this[method] = this[method].bind(this);
 		});
@@ -248,8 +251,11 @@ export default class Renderer {
 		};
 		
 		this.overlays = {
-			transform: new TransformOverlay("#canvas_overlay")
-    };
+			transform: new TransformOverlay("#canvas_overlay"),
+			global: new GlobalOverlay(elt.parentElement!)
+		};
+		
+		
 		
 		this.smoothingCamera = false;
 		this.smoothingCameraCallback = undefined;
@@ -295,18 +301,16 @@ export default class Renderer {
 			canvas: this.elt,
 			context: this.elt.getContext("webgl2", { alpha: true })!,
 			antialias: true,
-			precision: "mediump",
 			depth: true,
 		});
-		//@ts-ignore
-		// this.renderer.shadowMap.enabled = true;
-		//@ts-ignore
-		// this.renderer.shadowMapSoft = true;
-
+		
 		this.renderer.setSize(this.clientWidth, this.clientHeight);
 		const pixelRatio = window.devicePixelRatio;
 		//@ts-ignore
 		this.renderer.setPixelRatio(pixelRatio);
+		
+		// this.renderer.gammaFactor = 2.2;
+		// this.renderer.gammaOutput = true;
 		
 		
 		this._fov = 45;
@@ -514,6 +518,7 @@ export default class Renderer {
 			const target = this.controls.target.clone();
 			const easingFunction = EasingFunctions.linear;
 			const onFinish = () => {
+				// this.resetControls();
 				this.controls.target.set(target.x, target.y, target.z);
 				this.orientationControl.axis = axis;
 				this.storeCameraState();
@@ -566,6 +571,16 @@ export default class Renderer {
       this.overlays.transform.hide();
       this.needsToRender = true;
 		})
+
+		this.messenger.addMessageHandler("SET_RENDERER_STATS_VISIBLE", (acc, ...args) => {
+			if (args && args.length > 0) {
+				if (args[0]) {
+					this.stats.unhide();
+				} else {
+					this.stats.hide();
+				}
+			}
+    });
 
 		// save the state of the camera
 		window.addEventListener("mouseup", (e) => {
@@ -691,13 +706,7 @@ export default class Renderer {
 			this.needsToRender = true;
 		});
 		
-		this.controls.addEventListener('change', e => {
-			if (this.orientationControl) {
-				const pos = this.camera.position.clone().sub(this.controls.target).normalize().multiplyScalar(this.orientationControl.cameraDistance);
-				this.orientationControl.setCameraTransforms(pos, this.camera.quaternion);
-				this.orientationControl.axis = "none";
-			}
-		})
+		this.controls.addEventListener('change', this.onOrbitControlsChange);
 		
 
 		
@@ -752,15 +761,37 @@ export default class Renderer {
 		
 
 		this.stats = new Stats();
+		this.overlays.global.addCell("FPS", this.stats.fpsPanelValue, {
+			id: "fps",
+			hidden: false,
+			formatter: (value: number) => String(Math.round(value)) + " Hz"
+		});
+		if (this.stats.memPanel) {
+			this.overlays.global.addCell("Heap", this.stats.memPanelValue!, {
+				id: "heap",
+				hidden: false,
+				formatter: (value: number) => String(Math.round(value)) + " MB"
+			});
+		}
 		this.elt.parentElement?.appendChild(this.stats.container);
-		
+		this.stats.hide();
 		this.render();
 		
 		setTimeout(() => { this.needsToRender = true; }, 100);
 		
 	}
 	
-	
+	onOrbitControlsChange(e) {
+		if (this.orientationControl) {
+			const pos = this.camera.position
+				.clone()
+				.sub(this.controls.target)
+				.normalize()
+				.multiplyScalar(this.orientationControl.cameraDistance);
+			this.orientationControl.setCameraTransforms(pos, this.camera.quaternion);
+			this.orientationControl.axis = "none";
+		}
+	}
 	
 	storeCameraState() {
 		const obj = this.camera.toJSON();
@@ -775,12 +806,15 @@ export default class Renderer {
 	}
 	
 	resetControls() {
+		const target = this.controls.target.clone();
 		this.controls.dispose();
 		this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+		this.controls.target.set(target.x, target.y, target.z);
     this.controls.mouseButtons = this.mouseConfigSet.Default;
 		this.controls.screenSpacePanning = true;
-		
-
+		this.controls.update();
+		this.controls.addEventListener("change", this.onOrbitControlsChange);
+		this.needsToRender = true;
     // console.log(this.controls)
 	}
 
@@ -1112,6 +1146,10 @@ export default class Renderer {
 		}
 		
 		this.stats.update();
+		this.overlays.global.setCellValue("fps", this.stats.fpsPanelValue);
+		if (this.stats.memPanel) {
+			this.overlays.global.setCellValue("heap", this.stats.memPanelValue!);
+		}
 		
 	}
 	updateCursorSize() {
@@ -1129,18 +1167,16 @@ export default class Renderer {
 		
 
 		
-		if (this.needsToRender || this.shouldAnimate) {
-		
-			this.composer.render();
-			
-			this.updateCursorSize();
+		if (this.needsToRender || this.shouldAnimate || this.orientationControl.shouldRender) {
+      this.composer.render();
 
+      this.updateCursorSize();
 
-			this.orientationControl.shouldRender = true;
+      this.orientationControl.shouldRender = true;
 
-			this.messenger.postMessage("RENDERER_UPDATED");
-			this.needsToRender = false;
-		}
+      this.messenger.postMessage("RENDERER_UPDATED");
+      this.needsToRender = false;
+    }
 		if (this.orientationControl.shouldRender) {
 			this.orientationControl.render();
 		}

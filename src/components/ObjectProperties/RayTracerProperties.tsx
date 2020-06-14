@@ -1,4 +1,4 @@
-import React, { Fragment } from "react";
+import React from "react";
 import TextInput from "../text-input/TextInput";
 import NumberInput from "../number-input/NumberInput";
 import { ObjectPropertyInputEvent } from '.';
@@ -242,6 +242,32 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
                 props.object.reflectionLossFrequencies
               )
             }
+          />
+        </GridRow>
+        <GridRowSeperator />
+        {props.object.hasOwnProperty("intensitySampleRate") && (
+          <GridRow label={"Sample Rate"}>
+            <NumberInput name="intensitySampleRate" value={props.object.intensitySampleRate} {...XYZProps} min={32} step={1} />
+          </GridRow>
+        )}
+        <GridRow span={2}>
+          <Button text="Calculate Response by Intensity" onClick={(e) => props.object.calculateResponseByIntensity()} />
+        </GridRow>
+        <GridRow span={2}>
+          <Button text="Show Plot" onClick={(e) => props.object.showPlot()} />
+        </GridRow>
+        <GridRow span={2}>
+          <Button text="Hide Plot" onClick={(e) => props.object.hidePlot()} />
+        </GridRow>
+
+        <GridRow span={2}>
+          <Button text="Plot Response by Intensity" onClick={(e) => props.object.plotResponseByIntensity()} />
+        </GridRow>
+        <GridRowSeperator />
+        <GridRow span={2}>
+          <Button
+            text="Quick Estimate"
+            onClick={(e) => props.messenger.postMessage("RAYTRACER_QUICK_ESTIMATE", props.object.uuid)}
           />
         </GridRow>
 

@@ -38,7 +38,9 @@
     "experimentalDecorators": true
   },
   "include": [
-    "src", "src/.ts", "types/bvh.d.ts, types/three-mesh-bvh.d.ts"
+    "src",
+    "src/.ts",
+    "types/bvh.d.ts, types/three-mesh-bvh.d.ts"
   ],
   "exclude": [
     "node_modules/**",

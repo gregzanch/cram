@@ -26,10 +26,14 @@ const typescriptFormatter = require('react-dev-utils/typescriptFormatter');
 
 
 // Source maps are resource heavy and can cause out of memory issue for large source files.
-const shouldUseSourceMap = process.env.GENERATE_SOURCEMAP !== 'false';
+const shouldUseSourceMap = false;
+// process.env.GENERATE_SOURCEMAP !== 'false';
+
+
 // Some apps do not need the benefits of saving a web request, so not inlining the chunk
 // makes for a smoother build process.
-const shouldInlineRuntimeChunk = process.env.INLINE_RUNTIME_CHUNK !== 'false';
+const shouldInlineRuntimeChunk = false;
+// process.env.INLINE_RUNTIME_CHUNK !== 'false';
 
 // Check if TypeScript is setup
 const useTypeScript = fs.existsSync(paths.appTsConfig);
@@ -474,24 +478,24 @@ module.exports = function(webpackEnv) {
           {
             inject: true,
             template: paths.appHtml
-          },
-          isEnvProduction
-            ? {
-                minify: {
-                  removeComments: true,
-                  collapseWhitespace: true,
-                  removeRedundantAttributes: true,
-                  useShortDoctype: true,
-                  removeEmptyAttributes: true,
-                  removeStyleLinkTypeAttributes: true,
-                  keepClosingSlash: true,
-                  minifyJS: true,
-                  minifyCSS: true,
-                  minifyURLs: true
-                }
-              }
-            : undefined
-        )
+          }, undefined)
+        //   isEnvProduction
+        //     ? {
+        //         minify: {
+        //           removeComments: true,
+        //           collapseWhitespace: true,
+        //           removeRedundantAttributes: true,
+        //           useShortDoctype: true,
+        //           removeEmptyAttributes: true,
+        //           removeStyleLinkTypeAttributes: true,
+        //           keepClosingSlash: true,
+        //           minifyJS: true,
+        //           minifyCSS: true,
+        //           minifyURLs: true
+        //         }
+        //       }
+        //     : undefined
+        // )
       ),
       // Inlines the webpack runtime script. This script is too small to warrant
       // a network request.

@@ -1,6 +1,7 @@
 // user interface
 import React from "react";
 import ReactDOM from "react-dom";
+import Themes from './themes';
 import App from "./components/App";
 import { IToastProps } from "@blueprintjs/core";
 
@@ -11,7 +12,7 @@ import { History, Moment, Directions } from './history';
 
 // objects
 import Container from "./objects/container";
-import Source from "./objects/source";
+import Source, { SourceSaveObject } from "./objects/source";
 import Receiver from "./objects/receiver";
 import Polygon from "./objects/polygon";
 import Room from "./objects/room";
@@ -35,7 +36,7 @@ import { fileType, allowed } from "./common/file-type";
 
 // data structures / storage
 import { uuid } from "uuidv4";
-import { KeyValuePair } from "./common/key-value-pair";
+import { KeyValuePair, KVP } from "./common/key-value-pair";
 import { Setting } from "./setting";
 import { defaultSettings, ApplicationSettings, SettingsCategories } from './default-settings';
 import { SettingsManager, StoredSetting } from "./settings-manager";
@@ -52,6 +53,7 @@ import { AcousticMaterial } from './db/acoustic-material';
 // utility
 import { Searcher } from "fast-fuzzy";
 import browserReport from "./common/browser-report";
+import { chunk } from './common/chunk';
 
 // TODO remove these imports for prod
 //@ts-ignore
@@ -65,6 +67,7 @@ import { CSG, CAG } from '@jscad/csg';
 import * as THREE from "three";
 import FileSaver from "file-saver";
 import { BufferGeometry } from "three";
+import { Theme } from "@material-ui/core";
 
 
 
@@ -78,6 +81,7 @@ materials.forEach(x => {
 });
 
 const layout = JSON.parse(localStorage.getItem("layout") || defaultLayout);
+
 
 
 const state = {
@@ -351,6 +355,10 @@ state.messenger.addMessageHandler("SHOULD_ADD_FDTD_2D", (acc, args) => {
 
 state.messenger.addMessageHandler("RAYTRACER_CALCULATE_RESPONSE", (acc, id, frequencies) => {
   (state.solvers[id] instanceof RayTracer) && (state.solvers[id] as RayTracer).calculateReflectionLoss(frequencies);
+});
+
+state.messenger.addMessageHandler("RAYTRACER_QUICK_ESTIMATE", (acc, id) => {
+  (state.solvers[id] instanceof RayTracer) && (state.solvers[id] as RayTracer).startQuickEstimate();
 });
 
 // state.messenger.addMessageHandler("RAYTRACER_TEST_WASM", (acc, id, value) => {
@@ -803,11 +811,25 @@ state.messenger.addMessageHandler("GET_PROCESS", (acc, ...args) => {
 state.messenger.addMessageHandler("SHOULD_ADD_SKETCH", (acc, ...args) => {
   // state.messenger.postMessage("PHASE_OUT");
   // state.messenger.postMessage("SET_PROCESS", Processes.PICKING_SURFACE)
-  const sketch = new Sketch({
-    normal: new THREE.Vector3(0, 0, 1),
-    point: new THREE.Vector3(0, 0, 0)
-  });
-  state.sketches[sketch.uuid] = sketch;
+  const selectedObjects = state.messenger.postMessage("GET_SELECTED_OBJECTS")[0];
+  if (selectedObjects && selectedObjects[selectedObjects.length - 1]) {
+    const surface = selectedObjects[selectedObjects.length - 1];
+    if (surface instanceof Surface) {
+      const sketch = new Sketch({
+        normal: surface._triangles[0].getNormal(new THREE.Vector3()),
+        point: surface.center
+      });
+      state.sketches[sketch.uuid] = sketch;
+      state.renderer.sketches.add(state.sketches[sketch.uuid]);
+    }
+  }
+});
+
+state.messenger.addMessageHandler("SHOULD_REMOVE_SKETCH", (acc, id) => {
+  if (state.sketches[id]) {
+    state.renderer.sketches.remove(state.sketches[id]);
+    delete state.sketches[id];
+  }
 });
 
 state.messenger.addMessageHandler("SAVE_CONTAINERS", (acc, ...args) => {
@@ -832,6 +854,7 @@ state.messenger.addMessageHandler("RESTORE_CONTAINERS", (acc, ...args) => {
   });
   if (args && args[0] && args[0] instanceof Array) {
     // console.log(args[0]);
+    console.log(args[0]);
     args[0].forEach(saveObj => {
       switch (saveObj["kind"]) {
         case "source":
@@ -939,6 +962,7 @@ state.messenger.addMessageHandler("OPEN", (acc, ...args) => {
 
 
 
+
 function addHotKey(keybinding, scopes, message, ...args) {
   scopes.forEach(scope => {
     hotkeys(keybinding, scope, () => state.messenger.postMessage(message, args));  
@@ -975,10 +999,48 @@ window.addEventListener('resize', e => {
 
 
 // the main app
-ReactDOM.render(<App {...state} />, document.getElementById("root"));
+ReactDOM.render(
+    <App {...state} />,
+  document.getElementById("root")
+);
 
-// This is to simulate user uploading a mesh file and adding source + receiver
-// setTimeout(() => {
+
+setTimeout(async () => {
+  const filepath = "/res/saves/concord.json";
+  const filename = filepath.split("/").slice(-1)[0];
+  const savedStateFetchResult = await fetch(filepath);
+  const savedState = await savedStateFetchResult.json();
+  console.log(filename, savedState)
+  state.messenger.postMessage("RESTORE_CONTAINERS", savedState);
+  state.messenger.postMessage("SET_PROJECT_NAME", filename.replace(".json", ""));
+  
+  // const rooms = state.messenger.postMessage("FETCH_ROOMS");
+  // if (rooms && rooms[0] && rooms[0][0]) {
+  //   const room = rooms[0][0] as Room;
+  //   const blocks = new Container("blocks");
+  //   console.log(room)
+  //   room.surfaces.children
+  //     .filter(x => x.name.match(/ceiling-block/gim))
+  //     .forEach((x) => {
+  //       blocks.add(x);
+  //       room.surfaces.remove(x);
+  //     });
+  //   room.surfaces.add(blocks);
+    
+  // }
+  
+  
+  
+  // const raytracer = state.messenger.postMessage("SHOULD_ADD_RAYTRACER", {
+  //   passes: 500,
+  //   reflectionOrder: 6,
+  //   pointSize: 2
+  // } as RayTracerParams)[0] as RayTracer;
+  // raytracer.raysVisible = false;
+  // raytracer.pointsVisible = false;
+  // // const rt60 = state.messenger.postMessage("SHOULD_ADD_RT60")[0];
+  // expose({ raytracer });
+}, 200);
 
 
   // const models = importHandlers.obj(rect); 
@@ -1020,11 +1082,7 @@ ReactDOM.render(<App {...state} />, document.getElementById("root"));
   // rec.name = "rec";
   // rec.position.set(5, 6.5, 1);
   
-  // const raytracer = state.messenger.postMessage("SHOULD_ADD_RAYTRACER", {
-  //   passes: 100,
-  //   reflectionOrder: 100,
-  //   pointSize: 2
-  // } as RayTracerParams)[0];
+
   
   
   
@@ -1037,6 +1095,7 @@ ReactDOM.render(<App {...state} />, document.getElementById("root"));
   expose({
     // fdtd,
     // raytracer,
+    Container,
     r: state.renderer,
     Polygon,
     Sketch,
@@ -1044,7 +1103,8 @@ ReactDOM.render(<App {...state} />, document.getElementById("root"));
     CSG,
     CAG,
     ac,
-    THREE
+    THREE,
+    chunk
   });
 
   state.history.clear();

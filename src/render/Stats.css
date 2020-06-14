@@ -5,7 +5,7 @@
   left: 1em;
   cursor: pointer;
   opacity: 0.9;
-  z-index: 10000;
+  z-index: 1;
   border: solid 1px rgba(0, 0, 0, 0.2);
   height: max-content;
   
