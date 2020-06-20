@@ -56,6 +56,214 @@ import SaveDialog from "./SaveDialog";
 import OpenWarning from "./OpenWarning";
 
 
+export interface AddMenuProps{
+  messenger: Messenger
+}
+
+export function AddMenu(props: AddMenuProps) {
+
+  return (
+  <Popover minimal={true} transitionDuration={10} position={Position.BOTTOM_LEFT}>
+    <Button text="Add" className={"main-nav_bar-left_menu-button"} />
+    <Menu>
+      <MenuItem
+        text={<NavbarMenuItemLabel label="Source" />}
+        onClick={() => props.messenger.postMessage("SHOULD_ADD_SOURCE")}
+      />
+      <MenuItem
+        text={<NavbarMenuItemLabel label="Receiver" />}
+        onClick={() => props.messenger.postMessage("SHOULD_ADD_RECEIVER")}
+      />
+
+      <MenuDivider />
+
+      <MenuItem
+        text={<NavbarMenuItemLabel label="Sketch" />}
+        onClick={() => props.messenger.postMessage("SHOULD_ADD_SKETCH")}
+      />
+
+      <MenuDivider />
+
+      <MenuItem
+        text={
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between"
+            }}
+          >
+            <div>Ray Tracer</div>
+            <div style={{ color: Colors.LIGHT_GRAY1 }}></div>
+          </div>
+        }
+        onClick={() => props.messenger.postMessage("SHOULD_ADD_RAYTRACER")}
+      />
+
+      <MenuItem
+        text={
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between"
+            }}
+          >
+            <div>2D-FDTD</div>
+            <div style={{ color: Colors.LIGHT_GRAY1 }}></div>
+          </div>
+        }
+        onClick={() => props.messenger.postMessage("SHOULD_ADD_FDTD_2D")}
+      />
+      <MenuItem
+        text={
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between"
+            }}
+          >
+            <div>RT60</div>
+            <div style={{ color: Colors.LIGHT_GRAY1 }}></div>
+          </div>
+        }
+        onClick={() => props.messenger.postMessage("SHOULD_ADD_RT60")}
+      />
+    </Menu>
+    </Popover>
+  );
+}
+
+export interface NavBarComponentProps {
+  messenger: Messenger;
+  canUndo: boolean;
+  canRedo: boolean;
+  canDuplicate: boolean;
+  rendererStatsVisible: boolean;
+  projectName: string;
+}
+
+export function NavBarComponent(props: NavBarComponentProps) {
+  return (
+    <Navbar className="main-nav_bar">
+      <Navbar.Group className="main-nav_bar-left_group">
+        <Navbar.Group className="main-nav_bar-logo_text">cram.ui</Navbar.Group>
+        <Navbar.Divider />
+        <Menu className="main-nav_bar-left_menu">
+          <ButtonGroup minimal={true}>
+            {/* FILE */}
+            <Popover
+              minimal={true}
+              transitionDuration={10}
+              position={Position.BOTTOM_LEFT}
+              className="main-nav_bar-left_menu-popover-file"
+            >
+              <Button text="File" className={"main-nav_bar-left_menu-button"} />
+              <Menu>
+                <MenuItem
+                  text={<MenuItemText text="New" hotkey={Characters.SHIFT + "N"} />}
+                  onClick={(e) => props.messenger.postMessage("SHOW_NEW_WARNING")}
+                />
+                <MenuItem
+                  text={<MenuItemText text="Open" hotkey={Characters.COMMAND + "O"} />}
+                  onClick={(e) => props.messenger.postMessage("SHOW_OPEN_WARNING")}
+                />
+                <MenuItem
+                  text={<MenuItemText text="Save" hotkey={Characters.COMMAND + "S"} />}
+                  onClick={(e) => props.messenger.postMessage("SHOW_SAVE_DIALOG")}
+                />
+                <MenuDivider />
+                <MenuItem text="Import" onClick={(e) => props.messenger.postMessage("SHOW_IMPORT_DIALOG")} />
+              </Menu>
+            </Popover>
+
+            {/* EDIT */}
+            <Popover minimal={true} transitionDuration={10} position={Position.BOTTOM_LEFT}>
+              <Button text="Edit" className={"main-nav_bar-left_menu-button"} />
+              <Menu>
+                <MenuItem
+                  text={<MenuItemText text="Undo" hotkey={Characters.COMMAND + "Z"} />}
+                  onClick={(e) => {
+                    props.messenger.postMessage("UNDO");
+                  }}
+                  disabled={!props.canUndo}
+                />
+                <MenuItem
+                  text={<MenuItemText text="Redo" hotkey={Characters.SHIFT + Characters.COMMAND + "Z"} />}
+                  onClick={(e) => {
+                    props.messenger.postMessage("REDO");
+                  }}
+                  disabled={!props.canRedo}
+                />
+                <MenuDivider />
+                <MenuItem
+                  text="Duplicate"
+                  disabled={!props.canDuplicate}
+                  onClick={(e) => {
+                    props.messenger.postMessage("SHOULD_DUPLICATE_SELECTED_OBJECTS");
+                  }}
+                ></MenuItem>
+                <MenuItem text="Cut" disabled></MenuItem>
+                <MenuItem text="Copy" disabled></MenuItem>
+                <MenuItem text="Paste" disabled></MenuItem>
+              </Menu>
+            </Popover>
+
+            <AddMenu messenger={props.messenger} />
+
+            {/* VIEW */}
+            <Popover minimal={true} transitionDuration={10} position={Position.BOTTOM_LEFT}>
+              <Button text="View" className={"main-nav_bar-left_menu-button"} />
+              <Menu>
+                <MenuItem
+                  text={
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between"
+                      }}
+                    >
+                      <div>Clear Local Storage</div>
+                      <div style={{ color: Colors.LIGHT_GRAY1 }}></div>
+                    </div>
+                  }
+                  onClick={() => localStorage.clear()}
+                />
+                <MenuItem
+                  text={
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between"
+                      }}
+                    >
+                      <div>{props.rendererStatsVisible ? "Hide Renderer Stats" : "Show Renderer Stats"}</div>
+                      <div style={{ color: Colors.LIGHT_GRAY1 }}></div>
+                    </div>
+                  }
+                  onClick={(e) => {
+                    props.messenger.postMessage("SET_RENDERER_STATS_VISIBLE", !props.rendererStatsVisible);
+                   
+                  }}
+                />
+              </Menu>
+            </Popover>
+          </ButtonGroup>
+        </Menu>
+      </Navbar.Group>
+      <Navbar.Group className="main-nav_bar-left_group main-nav_bar-projectname_text">
+        {props.projectName}
+      </Navbar.Group>
+      <Navbar.Group className="main-nav_bar-right_group">
+        <Button
+          icon="cog"
+          minimal={true}
+          className={"main-nav_bar-right_menu-button"}
+          onClick={(e) => props.messenger.postMessage("SHOW_SETTINGS_DRAWER")}
+        ></Button>
+      </Navbar.Group>
+    </Navbar>
+  );
+}
+
 
 const AppToaster = Toaster.create({
   className: "app-toaster",
@@ -304,10 +512,15 @@ export default class App extends React.Component<AppProps, AppState> {
     });
 		this.addMessageHandler("OPEN_MATERIAL_SEARCH",
 			(acc, ...args) => {
-			return ({
-				materialDrawerOpen: true
-			});
-		});
+			return {
+        materialDrawerOpen: true
+      };
+    });
+    this.addMessageHandler("SHOW_SETTINGS_DRAWER", () => {
+      return {
+        settingsDrawerVisible: true
+      };
+    });
     
 
 		// this.addMessageHandler("ASSIGN_MATERIAL",
@@ -329,7 +542,11 @@ export default class App extends React.Component<AppProps, AppState> {
 		// 		selectedObject: this.state.selectedObject
 		// 	})
 		// });
-		
+    this.addMessageHandler("SET_RENDERER_STATS_VISIBLE", (acc, ...args) => {
+      return {
+        rendererStatsVisible: !args[0]
+      };
+    })
 		this.addMessageHandler("TOGGLE_MATERIAL_SEARCH",
 			(acc, ...args) => {
       return {
@@ -676,193 +893,14 @@ export default class App extends React.Component<AppProps, AppState> {
 		return (
       <div>
         <div>
-          <Navbar className="main-nav_bar">
-            <Navbar.Group className="main-nav_bar-left_group">
-              <Navbar.Group className="main-nav_bar-logo_text">cram.ui</Navbar.Group>
-              <Navbar.Divider />
-              <Menu className="main-nav_bar-left_menu">
-                <ButtonGroup minimal={true}>
-                  {/* FILE */}
-                  <Popover
-                    minimal={true}
-                    transitionDuration={10}
-                    position={Position.BOTTOM_LEFT}
-                    className="main-nav_bar-left_menu-popover-file"
-                  >
-                    <Button text="File" className={"main-nav_bar-left_menu-button"} />
-                    <Menu>
-                      <MenuItem
-                        text={<MenuItemText text="New" hotkey={Characters.SHIFT + "N"} />}
-                        onClick={(e) => this.props.messenger.postMessage("SHOW_NEW_WARNING")}
-                      />
-                      <MenuItem
-                        text={<MenuItemText text="Open" hotkey={Characters.COMMAND + "O"} />}
-                        onClick={(e) => this.props.messenger.postMessage("SHOW_OPEN_WARNING")}
-                      />
-                      <MenuItem
-                        text={<MenuItemText text="Save" hotkey={Characters.COMMAND + "S"} />}
-                        onClick={(e) => this.props.messenger.postMessage("SHOW_SAVE_DIALOG")}
-                      />
-                      <MenuDivider />
-                      <MenuItem text="Import" onClick={this.showImportDialog}></MenuItem>
-                    </Menu>
-                  </Popover>
-
-                  {/* EDIT */}
-                  <Popover minimal={true} transitionDuration={10} position={Position.BOTTOM_LEFT}>
-                    <Button text="Edit" className={"main-nav_bar-left_menu-button"} />
-                    <Menu>
-                      <MenuItem
-                        text={<MenuItemText text="Undo" hotkey={Characters.COMMAND + "Z"} />}
-                        onClick={(e) => {
-                          this.props.messenger.postMessage("UNDO");
-                        }}
-                        disabled={!this.state.canUndo}
-                      />
-                      <MenuItem
-                        text={<MenuItemText text="Redo" hotkey={Characters.SHIFT + Characters.COMMAND + "Z"} />}
-                        onClick={(e) => {
-                          this.props.messenger.postMessage("REDO");
-                        }}
-                        disabled={!this.state.canRedo}
-                      />
-                      <MenuDivider />
-                      <MenuItem
-                        text="Duplicate"
-                        disabled={!this.state.canDuplicate}
-                        onClick={(e) => {
-                          this.props.messenger.postMessage("SHOULD_DUPLICATE_SELECTED_OBJECTS");
-                        }}
-                      ></MenuItem>
-                      <MenuItem text="Cut" disabled></MenuItem>
-                      <MenuItem text="Copy" disabled></MenuItem>
-                      <MenuItem text="Paste" disabled></MenuItem>
-                    </Menu>
-                  </Popover>
-
-                  {/* ADD */}
-                  <Popover minimal={true} transitionDuration={10} position={Position.BOTTOM_LEFT}>
-                    <Button text="Add" className={"main-nav_bar-left_menu-button"} />
-                    <Menu>
-                      <MenuItem
-                        text={<NavbarMenuItemLabel label="Source" />}
-                        onClick={() => this.props.messenger.postMessage("SHOULD_ADD_SOURCE")}
-                      />
-                      <MenuItem
-                        text={<NavbarMenuItemLabel label="Receiver" />}
-                        onClick={() => this.props.messenger.postMessage("SHOULD_ADD_RECEIVER")}
-                      />
-
-                      <MenuDivider />
-
-                      <MenuItem
-                        text={<NavbarMenuItemLabel label="Sketch" />}
-                        onClick={() => this.props.messenger.postMessage("SHOULD_ADD_SKETCH")}
-                      />
-
-                      <MenuDivider />
-
-                      <MenuItem
-                        text={
-                          <div
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between"
-                            }}
-                          >
-                            <div>Ray Tracer</div>
-                            <div style={{ color: Colors.LIGHT_GRAY1 }}></div>
-                          </div>
-                        }
-                        onClick={() => this.props.messenger.postMessage("SHOULD_ADD_RAYTRACER")}
-                      />
-
-                      <MenuItem
-                        text={
-                          <div
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between"
-                            }}
-                          >
-                            <div>2D-FDTD</div>
-                            <div style={{ color: Colors.LIGHT_GRAY1 }}></div>
-                          </div>
-                        }
-                        onClick={() => this.props.messenger.postMessage("SHOULD_ADD_FDTD_2D")}
-                      />
-                      <MenuItem
-                        text={
-                          <div
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between"
-                            }}
-                          >
-                            <div>RT60</div>
-                            <div style={{ color: Colors.LIGHT_GRAY1 }}></div>
-                          </div>
-                        }
-                        onClick={() => this.props.messenger.postMessage("SHOULD_ADD_RT60")}
-                      />
-                    </Menu>
-                  </Popover>
-
-                  {/* VIEW */}
-                  <Popover minimal={true} transitionDuration={10} position={Position.BOTTOM_LEFT}>
-                    <Button text="View" className={"main-nav_bar-left_menu-button"} />
-                    <Menu>
-                      <MenuItem
-                        text={
-                          <div
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between"
-                            }}
-                          >
-                            <div>Clear Local Storage</div>
-                            <div style={{ color: Colors.LIGHT_GRAY1 }}></div>
-                          </div>
-                        }
-                        onClick={() => localStorage.clear()}
-                      />
-                      <MenuItem
-                        text={
-                          <div
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between"
-                            }}
-                          >
-                            <div>{this.state.rendererStatsVisible ? "Hide Renderer Stats" : "Show Renderer Stats"}</div>
-                            <div style={{ color: Colors.LIGHT_GRAY1 }}></div>
-                          </div>
-                        }
-                        onClick={(e) => {
-                          this.props.messenger.postMessage(
-                            "SET_RENDERER_STATS_VISIBLE",
-                            !this.state.rendererStatsVisible
-                          );
-                          this.setState({ rendererStatsVisible: !this.state.rendererStatsVisible });
-                        }}
-                      />
-                    </Menu>
-                  </Popover>
-                </ButtonGroup>
-              </Menu>
-            </Navbar.Group>
-            <Navbar.Group className="main-nav_bar-left_group main-nav_bar-projectname_text">
-              {this.state.projectName}
-            </Navbar.Group>
-            <Navbar.Group className="main-nav_bar-right_group">
-              <Button
-                icon="cog"
-                minimal={true}
-                className={"main-nav_bar-right_menu-button"}
-                onClick={this.handleSettingsButtonClick}
-              ></Button>
-            </Navbar.Group>
-          </Navbar>
+          <NavBarComponent
+            messenger={this.props.messenger}
+            canUndo={this.state.canUndo}
+            canRedo={this.state.canRedo}
+            canDuplicate={this.state.canDuplicate}
+            projectName={this.state.projectName}
+            rendererStatsVisible={this.state.rendererStatsVisible}
+          />
         </div>
         <Alert
           isOpen={this.state.newWarningVisible}

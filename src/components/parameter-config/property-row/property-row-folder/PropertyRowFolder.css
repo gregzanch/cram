@@ -5,7 +5,7 @@
 }
 
 .property-row-folder-container > *{
-  --transition-time: 50ms;
+  --transition-time: 1000ms;
   --folder-contents-shadow-top: inset 0px 15px 10px -15px rgba(221,226,230,0.5);
   --folder-contents-shadow-bottom: inset 0px -15px 10px -15px rgba(221,226,230,0.5);
   --transition-function: cubic-bezier(0.250, 0.100, 0.250, 1.000);

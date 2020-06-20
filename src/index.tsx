@@ -5,6 +5,7 @@ import Themes from './themes';
 import App from "./components/App";
 import { IToastProps } from "@blueprintjs/core";
 
+
 // command handling
 import hotkeys from "hotkeys-js";
 import Messenger from "./messenger";
@@ -54,6 +55,7 @@ import { AcousticMaterial } from './db/acoustic-material';
 import { Searcher } from "fast-fuzzy";
 import browserReport from "./common/browser-report";
 import { chunk } from './common/chunk';
+import { sizeof } from './common/sizeof';
 
 // TODO remove these imports for prod
 //@ts-ignore
@@ -613,6 +615,11 @@ state.messenger.addMessageHandler("IMPORT_FILE", (acc, ...args) => {
           state.renderer.addRoom(room);
           state.messenger.postMessage("ADDED_ROOM", room);
         } break;
+        case 'dae': {
+          const result = await (await fetch(objectURL)).arrayBuffer();
+          const models = importHandlers.dae(result);
+          console.log(models);
+        } break;
         case 'wav': {
           try {
             const result = await (await fetch(objectURL)).arrayBuffer();
@@ -1005,14 +1012,14 @@ ReactDOM.render(
 );
 
 
-setTimeout(async () => {
-  const filepath = "/res/saves/concord.json";
-  const filename = filepath.split("/").slice(-1)[0];
-  const savedStateFetchResult = await fetch(filepath);
-  const savedState = await savedStateFetchResult.json();
-  console.log(filename, savedState)
-  state.messenger.postMessage("RESTORE_CONTAINERS", savedState);
-  state.messenger.postMessage("SET_PROJECT_NAME", filename.replace(".json", ""));
+// setTimeout(async () => {
+//   const filepath = "/res/saves/concord.json";
+//   const filename = filepath.split("/").slice(-1)[0];
+//   const savedStateFetchResult = await fetch(filepath);
+//   const savedState = await savedStateFetchResult.json();
+//   console.log(filename, savedState)
+//   state.messenger.postMessage("RESTORE_CONTAINERS", savedState);
+//   state.messenger.postMessage("SET_PROJECT_NAME", filename.replace(".json", ""));
   
   // const rooms = state.messenger.postMessage("FETCH_ROOMS");
   // if (rooms && rooms[0] && rooms[0][0]) {
@@ -1038,9 +1045,9 @@ setTimeout(async () => {
   // } as RayTracerParams)[0] as RayTracer;
   // raytracer.raysVisible = false;
   // raytracer.pointsVisible = false;
-  // // const rt60 = state.messenger.postMessage("SHOULD_ADD_RT60")[0];
+  // const rt60 = state.messenger.postMessage("SHOULD_ADD_RT60")[0];
   // expose({ raytracer });
-}, 200);
+// }, 200);
 
 
   // const models = importHandlers.obj(rect); 
@@ -1095,6 +1102,7 @@ setTimeout(async () => {
   expose({
     // fdtd,
     // raytracer,
+    sizeof,
     Container,
     r: state.renderer,
     Polygon,

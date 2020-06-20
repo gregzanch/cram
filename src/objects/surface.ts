@@ -318,7 +318,8 @@ class Surface extends Container {
     (this.mesh.material as THREE.MeshLambertMaterial) = this.normalMaterial;
     (this.mesh.material as THREE.MeshLambertMaterial).needsUpdate = true;
   }
-  flipNormals() {}
+  flipNormals() {
+  }
 
   resetHits() {
     this.numHits = 0;

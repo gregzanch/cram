@@ -18,7 +18,7 @@ export const allowed = {
 	wav: true,
 	stl: true,
 	obj: true,
-	gltf: true
+	dae: true,
 }
 export const assoc = {
 	html: ICONS.CODE,

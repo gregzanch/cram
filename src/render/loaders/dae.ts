@@ -1,21 +1,21 @@
+//@ts-nocheck
+
 /**
  * @author mrdoob / http://mrdoob.com/
  * @author Mugen87 / https://github.com/Mugen87
+ * modified by Greg Zanchelli https://gihub.com/gregzanch
  */
 
- 
+import * as THREE from "three";
+import { TGALoader } from './tga';
 
-THREE.ColladaLoader = function ( manager ) {
 
-	THREE.Loader.call( this, manager );
-
-};
-
-THREE.ColladaLoader.prototype = Object.assign( Object.create( THREE.Loader.prototype ), {
-
-	constructor: THREE.ColladaLoader,
-
-	load: function ( url, onLoad, onProgress, onError ) {
+export class DAELoader extends THREE.Loader {
+	constructor(manager?: THREE.LoadingManager) {
+		super(manager);
+		
+	}
+	load( url, onLoad, onProgress, onError ) {
 
 		var scope = this;
 
@@ -29,19 +29,9 @@ THREE.ColladaLoader.prototype = Object.assign( Object.create( THREE.Loader.proto
 
 		}, onProgress, onError );
 
-	},
-
-	options: {
-
-		set convertUpAxis( value ) {
-
-			console.warn( 'THREE.ColladaLoader: options.convertUpAxis() has been removed. Up axis is converted automatically.' );
-
-		}
-
-	},
-
-	parse: function ( text, path ) {
+	}
+	
+	parse( text, path ) {
 
 		function getElementsByTagName( xml, name ) {
 
@@ -426,15 +416,15 @@ THREE.ColladaLoader.prototype = Object.assign( Object.create( THREE.Loader.proto
 					break;
 
 				case 'translate':
-					console.warn( 'THREE.ColladaLoader: Animation transform type "%s" not yet implemented.', transform );
+					console.warn( 'THREE.DAELoader: Animation transform type "%s" not yet implemented.', transform );
 					break;
 
 				case 'rotate':
-					console.warn( 'THREE.ColladaLoader: Animation transform type "%s" not yet implemented.', transform );
+					console.warn( 'THREE.DAELoader: Animation transform type "%s" not yet implemented.', transform );
 					break;
 
 				case 'scale':
-					console.warn( 'THREE.ColladaLoader: Animation transform type "%s" not yet implemented.', transform );
+					console.warn( 'THREE.DAELoader: Animation transform type "%s" not yet implemented.', transform );
 					break;
 
 			}
@@ -735,7 +725,7 @@ THREE.ColladaLoader.prototype = Object.assign( Object.create( THREE.Loader.proto
 
 					case 'morph':
 						data.id = parseId( child.getAttribute( 'source' ) );
-						console.warn( 'THREE.ColladaLoader: Morph target animation not supported yet.' );
+						console.warn( 'THREE.DAELoader: Morph target animation not supported yet.' );
 						break;
 
 				}
@@ -1023,7 +1013,7 @@ THREE.ColladaLoader.prototype = Object.assign( Object.create( THREE.Loader.proto
 
 			}
 
-			console.warn( 'THREE.ColladaLoader: Couldn\'t find image with ID:', id );
+			console.warn( 'THREE.DAELoader: Couldn\'t find image with ID:', id );
 
 			return null;
 
@@ -1501,7 +1491,7 @@ THREE.ColladaLoader.prototype = Object.assign( Object.create( THREE.Loader.proto
 
 				} else {
 
-					console.warn( 'THREE.ColladaLoader: Undefined sampler. Access image directly (see #12530).' );
+					console.warn( 'THREE.DAELoader: Undefined sampler. Access image directly (see #12530).' );
 					image = getImage( textureObject.id );
 
 				}
@@ -1539,7 +1529,7 @@ THREE.ColladaLoader.prototype = Object.assign( Object.create( THREE.Loader.proto
 
 					} else {
 
-						console.warn( 'THREE.ColladaLoader: Loader for texture %s not found.', image );
+						console.warn( 'THREE.DAELoader: Loader for texture %s not found.', image );
 
 						return null;
 
@@ -1547,7 +1537,7 @@ THREE.ColladaLoader.prototype = Object.assign( Object.create( THREE.Loader.proto
 
 				} else {
 
-					console.warn( 'THREE.ColladaLoader: Couldn\'t create texture with ID:', textureObject.id );
+					console.warn( 'THREE.DAELoader: Couldn\'t create texture with ID:', textureObject.id );
 
 					return null;
 
@@ -1645,7 +1635,7 @@ THREE.ColladaLoader.prototype = Object.assign( Object.create( THREE.Loader.proto
 							material.opacity = color[ 0 ] * transparency.float;
 							break;
 						default:
-							console.warn( 'THREE.ColladaLoader: Invalid opaque type "%s" of transparent tag.', transparent.opaque );
+							console.warn( 'THREE.DAELoader: Invalid opaque type "%s" of transparent tag.', transparent.opaque );
 
 					}
 
@@ -1829,7 +1819,7 @@ THREE.ColladaLoader.prototype = Object.assign( Object.create( THREE.Loader.proto
 
 			}
 
-			console.warn( 'THREE.ColladaLoader: Couldn\'t find camera with ID:', id );
+			console.warn( 'THREE.DAELoader: Couldn\'t find camera with ID:', id );
 
 			return null;
 
@@ -1964,7 +1954,7 @@ THREE.ColladaLoader.prototype = Object.assign( Object.create( THREE.Loader.proto
 
 			}
 
-			console.warn( 'THREE.ColladaLoader: Couldn\'t find light with ID:', id );
+			console.warn( 'THREE.DAELoader: Couldn\'t find light with ID:', id );
 
 			return null;
 
@@ -2006,7 +1996,7 @@ THREE.ColladaLoader.prototype = Object.assign( Object.create( THREE.Loader.proto
 						break;
 
 					case 'polygons':
-						console.warn( 'THREE.ColladaLoader: Unsupported primitive type: ', child.nodeName );
+						console.warn( 'THREE.DAELoader: Unsupported primitive type: ', child.nodeName );
 						break;
 
 					case 'lines':
@@ -2273,7 +2263,7 @@ THREE.ColladaLoader.prototype = Object.assign( Object.create( THREE.Loader.proto
 						break;
 
 					default:
-						console.warn( 'THREE.ColladaLoader: Unknow primitive type:', primitive.type );
+						console.warn( 'THREE.DAELoader: Unknow primitive type:', primitive.type );
 
 				}
 
@@ -2353,7 +2343,7 @@ THREE.ColladaLoader.prototype = Object.assign( Object.create( THREE.Loader.proto
 										break;
 
 									default:
-										console.warn( 'THREE.ColladaLoader: Semantic "%s" not handled in geometry build process.', key );
+										console.warn( 'THREE.DAELoader: Semantic "%s" not handled in geometry build process.', key );
 
 								}
 
@@ -2959,7 +2949,7 @@ THREE.ColladaLoader.prototype = Object.assign( Object.create( THREE.Loader.proto
 
 					} else {
 
-						console.warn( 'THREE.ColladaLoader: Joint ' + jointIndex + ' doesn\'t exist.' );
+						console.warn( 'THREE.DAELoader: Joint ' + jointIndex + ' doesn\'t exist.' );
 
 					}
 
@@ -2975,11 +2965,11 @@ THREE.ColladaLoader.prototype = Object.assign( Object.create( THREE.Loader.proto
 
 						if ( value > joint.limits.max || value < joint.limits.min ) {
 
-							console.warn( 'THREE.ColladaLoader: Joint ' + jointIndex + ' value ' + value + ' outside of limits (min: ' + joint.limits.min + ', max: ' + joint.limits.max + ').' );
+							console.warn( 'THREE.DAELoader: Joint ' + jointIndex + ' value ' + value + ' outside of limits (min: ' + joint.limits.min + ', max: ' + joint.limits.max + ').' );
 
 						} else if ( joint.static ) {
 
-							console.warn( 'THREE.ColladaLoader: Joint ' + jointIndex + ' is static.' );
+							console.warn( 'THREE.DAELoader: Joint ' + jointIndex + ' is static.' );
 
 						} else {
 
@@ -3010,7 +3000,7 @@ THREE.ColladaLoader.prototype = Object.assign( Object.create( THREE.Loader.proto
 											break;
 
 										default:
-											console.warn( 'THREE.ColladaLoader: Unknown joint type: ' + joint.type );
+											console.warn( 'THREE.DAELoader: Unknown joint type: ' + joint.type );
 											break;
 
 									}
@@ -3050,7 +3040,7 @@ THREE.ColladaLoader.prototype = Object.assign( Object.create( THREE.Loader.proto
 
 					} else {
 
-						console.log( 'THREE.ColladaLoader: ' + jointIndex + ' does not exist.' );
+						console.log( 'THREE.DAELoader: ' + jointIndex + ' does not exist.' );
 
 					}
 
@@ -3228,7 +3218,7 @@ THREE.ColladaLoader.prototype = Object.assign( Object.create( THREE.Loader.proto
 
 			if ( hasNode( data.id ) ) {
 
-				console.warn( 'THREE.ColladaLoader: There is already a node with ID %s. Exclude current node from further processing.', data.id );
+				console.warn( 'THREE.DAELoader: There is already a node with ID %s. Exclude current node from further processing.', data.id );
 
 			} else {
 
@@ -3327,7 +3317,7 @@ THREE.ColladaLoader.prototype = Object.assign( Object.create( THREE.Loader.proto
 
 				} else {
 
-					console.error( 'THREE.ColladaLoader: Unable to find root bone of skeleton with ID:', skeleton );
+					console.error( 'THREE.DAELoader: Unable to find root bone of skeleton with ID:', skeleton );
 
 				}
 
@@ -3582,7 +3572,7 @@ THREE.ColladaLoader.prototype = Object.assign( Object.create( THREE.Loader.proto
 
 				if ( id === undefined ) {
 
-					console.warn( 'THREE.ColladaLoader: Material with key %s not found. Apply fallback material.', keys[ i ] );
+					console.warn( 'THREE.DAELoader: Material with key %s not found. Apply fallback material.', keys[ i ] );
 					materials.push( fallbackMaterial );
 
 				} else {
@@ -3850,7 +3840,7 @@ THREE.ColladaLoader.prototype = Object.assign( Object.create( THREE.Loader.proto
 
 			}
 
-			console.error( 'THREE.ColladaLoader: Failed to parse collada file.\n', errorText );
+			console.error( 'THREE.DAELoader: Failed to parse collada file.\n', errorText );
 
 			return null;
 
@@ -3859,7 +3849,7 @@ THREE.ColladaLoader.prototype = Object.assign( Object.create( THREE.Loader.proto
 		// metadata
 
 		var version = collada.getAttribute( 'version' );
-		console.log( 'THREE.ColladaLoader: File version', version );
+		console.log( 'THREE.DAELoader: File version', version );
 
 		var asset = parseAsset( getElementsByTagName( collada, 'asset' )[ 0 ] );
 		var textureLoader = new THREE.TextureLoader( this.manager );
@@ -3867,9 +3857,9 @@ THREE.ColladaLoader.prototype = Object.assign( Object.create( THREE.Loader.proto
 
 		var tgaLoader;
 
-		if ( THREE.TGALoader ) {
+		if ( TGALoader ) {
 
-			tgaLoader = new THREE.TGALoader( this.manager );
+			tgaLoader = new TGALoader( this.manager );
 			tgaLoader.setPath( this.resourcePath || path );
 
 		}
@@ -3947,4 +3937,5 @@ THREE.ColladaLoader.prototype = Object.assign( Object.create( THREE.Loader.proto
 
 	}
 
-} );
+}
+

@@ -32,12 +32,20 @@ class Sketch extends THREE.Group {
     planeGeometry.translate(coplanarPoint.x, coplanarPoint.y, coplanarPoint.z);
 
     // Create mesh with the geometry
-    this.sketchPlaneMaterial = new THREE.MeshLambertMaterial({ color: 0xBC7904, side: THREE.DoubleSide, transparent: true, opacity: 0.05 });
+    this.sketchPlaneMaterial = new THREE.MeshLambertMaterial({
+      color: 0xBC7904,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.05
+    });
     this.sketchPlaneMesh = new THREE.Mesh(planeGeometry, this.sketchPlaneMaterial);
     
     this.add(this.sketchPlaneMesh);
     
   }
+  
+  
+  
 }
 
 export { Sketch }

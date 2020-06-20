@@ -21,6 +21,8 @@ import * as ac from '../acoustics';
 // import loader from "@assemblyscript/loader";
 import { clamp } from "../../common/clamp";
 import { lerp } from "../../common/lerp";
+import { movingAverage } from "../../common/moving-average";
+import linearRegression, { LinearRegressionResult } from "../../common/linear-regression";
 
 
 export interface QuickEstimateStepResult {
@@ -48,6 +50,9 @@ export interface ResponseByIntensity{
   response: RayPathResult[];
   sampleRate?: number;
   resampledResponse?: Float32Array[];
+  t20?: LinearRegressionResult[];
+  t30?: LinearRegressionResult[];
+  t60?: LinearRegressionResult[];
 }
 
 export interface Chain {
@@ -189,7 +194,7 @@ class RayTracer extends Solver {
   plotData: Plotly.Data[];
   intensitySampleRate: number;
   validRayCount: number;
-  
+
   constructor(params: RayTracerParams) {
     super(params);
     this.kind = "ray-tracer";
@@ -362,20 +367,17 @@ class RayTracer extends Solver {
   }
 
   mapIntersectableObjects() {
-    
     function mapSurfaces(container: Container, surfaces: THREE.Mesh[] = [] as THREE.Mesh[]) {
       if (container instanceof Surface) {
         surfaces.push(container.mesh);
-      }
-      else {
+      } else {
         container.children.forEach((x: Container) => {
           mapSurfaces(x, surfaces);
         });
       }
       return surfaces;
     }
-    
-    
+
     if (this.runningWithoutReceivers) {
       this.intersectableObjects = mapSurfaces(this.room.surfaces);
     } else {
@@ -771,7 +773,7 @@ class RayTracer extends Solver {
           (this.containers[this.sourceIDs[i]] as Source).numRays += 1;
         }
       }
-      
+
       (this.stats.numRaysShot.value as number)++;
     }
 
@@ -1163,10 +1165,10 @@ class RayTracer extends Solver {
         this.responseByIntensity[receiverKey][sourceKey].response.sort((a, b) => a.time - b.time);
       }
     }
-    
+
     return this.resampleResponseByIntensity();
   }
-  
+
   resampleResponseByIntensity(sampleRate: number = this.intensitySampleRate) {
     // if response has been calculated
     if (this.responseByIntensity) {
@@ -1176,13 +1178,13 @@ class RayTracer extends Solver {
           const maxTime = response[response.length - 1].time;
           const numSamples = floor(sampleRate * maxTime);
           this.responseByIntensity[recKey][srcKey].resampledResponse = Array(freqs.length)
-              .fill(0)
-              .map((x) => new Float32Array(numSamples)) as Array<Float32Array>
-          
+            .fill(0)
+            .map((x) => new Float32Array(numSamples)) as Array<Float32Array>;
+
           this.responseByIntensity[recKey][srcKey].sampleRate = sampleRate;
           let sampleArrayIndex = 0;
           let zeroIndices = [] as number[];
-          let lastNonZeroPoint = freqs.map(x => 0);
+          let lastNonZeroPoint = freqs.map((x) => 0);
           let seenFirstPointYet = false;
           for (let i = 0, j = 0; i < numSamples; i++) {
             let sampleTime = (i / numSamples) * maxTime;
@@ -1223,21 +1225,21 @@ class RayTracer extends Solver {
                 if (zeroIndices.length > 0) {
                   zeroIndices = [] as number[];
                 }
-                
+
                 seenFirstPointYet = true;
                 sampleArrayIndex++;
                 continue;
               }
             }
           }
-          
+          this.calculateT20(recKey,srcKey);
+          this.calculateT30(recKey,srcKey);
+          this.calculateT60(recKey,srcKey);
         }
       }
+
       
       
-
-
-
       // return the sample array
       return this.responseByIntensity;
     }
@@ -1273,9 +1275,8 @@ class RayTracer extends Solver {
       const resampledResponse = this.responseByIntensity[recid][srcid].resampledResponse;
       const sampleRate = this.responseByIntensity[recid][srcid].sampleRate;
       const freqs = this.responseByIntensity[recid][srcid].freqs;
-      
-      if (resampledResponse && sampleRate) {
 
+      if (resampledResponse && sampleRate) {
         const resampleTime = new Float32Array(resampledResponse[0].length);
         for (let i = 0; i < resampledResponse[0].length; i++) {
           resampleTime[i] = i / sampleRate;
@@ -1291,7 +1292,7 @@ class RayTracer extends Solver {
             }
           } as Partial<Plotly.PlotData>;
         });
-        
+
         const layout = {
           title: `<b>${this.containers[recid].name}</b> from <b>${this.containers[srcid].name}</b>`
         };
@@ -1308,13 +1309,129 @@ class RayTracer extends Solver {
           //@ts-ignore
           Plotly.update(this.responseOverlayElement.id, { x: xs, y: ys }, is);
           // Plotly.extendTraces(this.responseOverlayElement.id, { x: xs, y: ys }, is);
-        }
-        else {
+        } else {
           Plotly.newPlot(this.responseOverlayElement.id, this.plotData, layout);
         }
       }
-
     }
+  }
+
+  calculateT30(receiverId?: string, sourceId?: string) {
+    const reckeys = this.receiverIDs;
+    const srckeys = this.sourceIDs;
+    if (reckeys.length > 0 && srckeys.length > 0) {
+      const recid = receiverId || reckeys[0];
+      const srcid = sourceId || srckeys[0];
+      const resampledResponse = this.responseByIntensity[recid][srcid].resampledResponse;
+      const sampleRate = this.responseByIntensity[recid][srcid].sampleRate;
+      const freqs = this.responseByIntensity[recid][srcid].freqs;
+
+      if (resampledResponse && sampleRate) {
+        const resampleTime = new Float32Array(resampledResponse[0].length);
+        for (let i = 0; i < resampledResponse[0].length; i++) {
+          resampleTime[i] = i / sampleRate;
+        }
+        
+        this.responseByIntensity[recid][srcid].t30 = resampledResponse.map(resp => {
+          let i = 0;
+          let val = resp[i];
+          while (val == 0) {
+            val = resp[i++];
+          }
+          for (let j = i; j >= 0; j--) {
+            resp[j] = val;
+          }
+          const cutoffLevel = val - 30;
+          const avg = movingAverage(resp, 2).filter(x => x >= cutoffLevel);
+          const len = avg.length;
+          
+          return linearRegression(resampleTime.slice(0, len), resp.slice(0, len));
+          
+        });
+        
+        
+        
+      }
+    } 
+    return this.responseByIntensity;
+  }
+  calculateT20(receiverId?: string, sourceId?: string) {
+    const reckeys = this.receiverIDs;
+    const srckeys = this.sourceIDs;
+    if (reckeys.length > 0 && srckeys.length > 0) {
+      const recid = receiverId || reckeys[0];
+      const srcid = sourceId || srckeys[0];
+      const resampledResponse = this.responseByIntensity[recid][srcid].resampledResponse;
+      const sampleRate = this.responseByIntensity[recid][srcid].sampleRate;
+      const freqs = this.responseByIntensity[recid][srcid].freqs;
+
+      if (resampledResponse && sampleRate) {
+        const resampleTime = new Float32Array(resampledResponse[0].length);
+        for (let i = 0; i < resampledResponse[0].length; i++) {
+          resampleTime[i] = i / sampleRate;
+        }
+        
+        this.responseByIntensity[recid][srcid].t20 = resampledResponse.map(resp => {
+          let i = 0;
+          let val = resp[i];
+          while (val == 0) {
+            val = resp[i++];
+          }
+          for (let j = i; j >= 0; j--) {
+            resp[j] = val;
+          }
+          const cutoffLevel = val - 20;
+          const avg = movingAverage(resp, 2).filter(x => x >= cutoffLevel);
+          const len = avg.length;
+          
+          return linearRegression(resampleTime.slice(0, len), resp.slice(0, len));
+          
+        });
+        
+        
+        
+      }
+    } 
+    return this.responseByIntensity;
+  }
+  calculateT60(receiverId?: string, sourceId?: string) {
+    const reckeys = this.receiverIDs;
+    const srckeys = this.sourceIDs;
+    if (reckeys.length > 0 && srckeys.length > 0) {
+      const recid = receiverId || reckeys[0];
+      const srcid = sourceId || srckeys[0];
+      const resampledResponse = this.responseByIntensity[recid][srcid].resampledResponse;
+      const sampleRate = this.responseByIntensity[recid][srcid].sampleRate;
+      const freqs = this.responseByIntensity[recid][srcid].freqs;
+
+      if (resampledResponse && sampleRate) {
+        const resampleTime = new Float32Array(resampledResponse[0].length);
+        for (let i = 0; i < resampledResponse[0].length; i++) {
+          resampleTime[i] = i / sampleRate;
+        }
+        
+        this.responseByIntensity[recid][srcid].t60 = resampledResponse.map(resp => {
+          let i = 0;
+          let val = resp[i];
+          while (val == 0) {
+            val = resp[i++];
+          }
+          for (let j = i; j >= 0; j--) {
+            resp[j] = val;
+          }
+          const cutoffLevel = val - 60;
+          const avg = movingAverage(resp, 2).filter(x => x >= cutoffLevel);
+          const len = avg.length;
+          
+          return linearRegression(resampleTime.slice(0, len), resp.slice(0, len));
+          
+        });
+        
+        
+        
+      }
+    } 
+    return this.responseByIntensity;
   }
 
   computeImageSources(source, previousReflector, maxOrder) {
@@ -1329,12 +1446,12 @@ class RayTracer extends Solver {
     const surfaces = this.room.surfaces.children;
   }
   onParameterConfigFocus() {
-    console.log('focus');
+    console.log("focus");
     console.log(this.renderer.overlays.global.cells);
     this.renderer.overlays.global.showCell(this.uuid + "-valid-ray-count");
   }
   onParameterConfigBlur() {
-    console.log('blur');
+    console.log("blur");
     this.renderer.overlays.global.hideCell(this.uuid + "-valid-ray-count");
   }
   get sources() {
