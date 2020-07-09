@@ -503,7 +503,7 @@ class FDTD_2D extends Solver {
         const pixels = new Float32Array(this.readLevelImage.buffer);
         const normal = [pixels[1], pixels[2]];
         const level = pixels[0];
-        this.receivers[key].fdtdSamples.push(level);
+        this.receivers[key].fdtdSamples.push((level-127.5)/127.5);
       }
     }
   }
@@ -527,6 +527,9 @@ class FDTD_2D extends Solver {
       this.gpuCompute.compute();
 
       if (this.recording) {
+        for (let j = 0; j < this.sourceKeys.length; j++){
+          this.sources[this.sourceKeys[j]].recordSample();
+        }
         this.readReceiverLevels();
       }
 

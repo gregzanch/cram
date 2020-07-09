@@ -55,214 +55,7 @@ import NavbarMenuItemLabel from "./NavbarMenuItemLabel";
 import SaveDialog from "./SaveDialog";
 import OpenWarning from "./OpenWarning";
 
-
-export interface AddMenuProps{
-  messenger: Messenger
-}
-
-export function AddMenu(props: AddMenuProps) {
-
-  return (
-  <Popover minimal={true} transitionDuration={10} position={Position.BOTTOM_LEFT}>
-    <Button text="Add" className={"main-nav_bar-left_menu-button"} />
-    <Menu>
-      <MenuItem
-        text={<NavbarMenuItemLabel label="Source" />}
-        onClick={() => props.messenger.postMessage("SHOULD_ADD_SOURCE")}
-      />
-      <MenuItem
-        text={<NavbarMenuItemLabel label="Receiver" />}
-        onClick={() => props.messenger.postMessage("SHOULD_ADD_RECEIVER")}
-      />
-
-      <MenuDivider />
-
-      <MenuItem
-        text={<NavbarMenuItemLabel label="Sketch" />}
-        onClick={() => props.messenger.postMessage("SHOULD_ADD_SKETCH")}
-      />
-
-      <MenuDivider />
-
-      <MenuItem
-        text={
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between"
-            }}
-          >
-            <div>Ray Tracer</div>
-            <div style={{ color: Colors.LIGHT_GRAY1 }}></div>
-          </div>
-        }
-        onClick={() => props.messenger.postMessage("SHOULD_ADD_RAYTRACER")}
-      />
-
-      <MenuItem
-        text={
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between"
-            }}
-          >
-            <div>2D-FDTD</div>
-            <div style={{ color: Colors.LIGHT_GRAY1 }}></div>
-          </div>
-        }
-        onClick={() => props.messenger.postMessage("SHOULD_ADD_FDTD_2D")}
-      />
-      <MenuItem
-        text={
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between"
-            }}
-          >
-            <div>RT60</div>
-            <div style={{ color: Colors.LIGHT_GRAY1 }}></div>
-          </div>
-        }
-        onClick={() => props.messenger.postMessage("SHOULD_ADD_RT60")}
-      />
-    </Menu>
-    </Popover>
-  );
-}
-
-export interface NavBarComponentProps {
-  messenger: Messenger;
-  canUndo: boolean;
-  canRedo: boolean;
-  canDuplicate: boolean;
-  rendererStatsVisible: boolean;
-  projectName: string;
-}
-
-export function NavBarComponent(props: NavBarComponentProps) {
-  return (
-    <Navbar className="main-nav_bar">
-      <Navbar.Group className="main-nav_bar-left_group">
-        <Navbar.Group className="main-nav_bar-logo_text">cram.ui</Navbar.Group>
-        <Navbar.Divider />
-        <Menu className="main-nav_bar-left_menu">
-          <ButtonGroup minimal={true}>
-            {/* FILE */}
-            <Popover
-              minimal={true}
-              transitionDuration={10}
-              position={Position.BOTTOM_LEFT}
-              className="main-nav_bar-left_menu-popover-file"
-            >
-              <Button text="File" className={"main-nav_bar-left_menu-button"} />
-              <Menu>
-                <MenuItem
-                  text={<MenuItemText text="New" hotkey={Characters.SHIFT + "N"} />}
-                  onClick={(e) => props.messenger.postMessage("SHOW_NEW_WARNING")}
-                />
-                <MenuItem
-                  text={<MenuItemText text="Open" hotkey={Characters.COMMAND + "O"} />}
-                  onClick={(e) => props.messenger.postMessage("SHOW_OPEN_WARNING")}
-                />
-                <MenuItem
-                  text={<MenuItemText text="Save" hotkey={Characters.COMMAND + "S"} />}
-                  onClick={(e) => props.messenger.postMessage("SHOW_SAVE_DIALOG")}
-                />
-                <MenuDivider />
-                <MenuItem text="Import" onClick={(e) => props.messenger.postMessage("SHOW_IMPORT_DIALOG")} />
-              </Menu>
-            </Popover>
-
-            {/* EDIT */}
-            <Popover minimal={true} transitionDuration={10} position={Position.BOTTOM_LEFT}>
-              <Button text="Edit" className={"main-nav_bar-left_menu-button"} />
-              <Menu>
-                <MenuItem
-                  text={<MenuItemText text="Undo" hotkey={Characters.COMMAND + "Z"} />}
-                  onClick={(e) => {
-                    props.messenger.postMessage("UNDO");
-                  }}
-                  disabled={!props.canUndo}
-                />
-                <MenuItem
-                  text={<MenuItemText text="Redo" hotkey={Characters.SHIFT + Characters.COMMAND + "Z"} />}
-                  onClick={(e) => {
-                    props.messenger.postMessage("REDO");
-                  }}
-                  disabled={!props.canRedo}
-                />
-                <MenuDivider />
-                <MenuItem
-                  text="Duplicate"
-                  disabled={!props.canDuplicate}
-                  onClick={(e) => {
-                    props.messenger.postMessage("SHOULD_DUPLICATE_SELECTED_OBJECTS");
-                  }}
-                ></MenuItem>
-                <MenuItem text="Cut" disabled></MenuItem>
-                <MenuItem text="Copy" disabled></MenuItem>
-                <MenuItem text="Paste" disabled></MenuItem>
-              </Menu>
-            </Popover>
-
-            <AddMenu messenger={props.messenger} />
-
-            {/* VIEW */}
-            <Popover minimal={true} transitionDuration={10} position={Position.BOTTOM_LEFT}>
-              <Button text="View" className={"main-nav_bar-left_menu-button"} />
-              <Menu>
-                <MenuItem
-                  text={
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between"
-                      }}
-                    >
-                      <div>Clear Local Storage</div>
-                      <div style={{ color: Colors.LIGHT_GRAY1 }}></div>
-                    </div>
-                  }
-                  onClick={() => localStorage.clear()}
-                />
-                <MenuItem
-                  text={
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between"
-                      }}
-                    >
-                      <div>{props.rendererStatsVisible ? "Hide Renderer Stats" : "Show Renderer Stats"}</div>
-                      <div style={{ color: Colors.LIGHT_GRAY1 }}></div>
-                    </div>
-                  }
-                  onClick={(e) => {
-                    props.messenger.postMessage("SET_RENDERER_STATS_VISIBLE", !props.rendererStatsVisible);
-                   
-                  }}
-                />
-              </Menu>
-            </Popover>
-          </ButtonGroup>
-        </Menu>
-      </Navbar.Group>
-      <Navbar.Group className="main-nav_bar-left_group main-nav_bar-projectname_text">
-        {props.projectName}
-      </Navbar.Group>
-      <Navbar.Group className="main-nav_bar-right_group">
-        <Button
-          icon="cog"
-          minimal={true}
-          className={"main-nav_bar-right_menu-button"}
-          onClick={(e) => props.messenger.postMessage("SHOW_SETTINGS_DRAWER")}
-        ></Button>
-      </Navbar.Group>
-    </Navbar>
-  );
-}
+import { NavBarComponent } from './NavBarComponent';
 
 
 const AppToaster = Toaster.create({
@@ -417,6 +210,9 @@ export default class App extends React.Component<AppProps, AppState> {
 	}
   setupMessageHandlers() {
     
+    this.props.messenger.addMessageHandler("CAN_DUPLICATE", () => {
+      return this.state.canDuplicate;
+    })
     
     this.addMessageHandler("UNDO", (acc, ...args) => {
       const [canUndo, canRedo] = acc[0];
@@ -542,11 +338,7 @@ export default class App extends React.Component<AppProps, AppState> {
 		// 		selectedObject: this.state.selectedObject
 		// 	})
 		// });
-    this.addMessageHandler("SET_RENDERER_STATS_VISIBLE", (acc, ...args) => {
-      return {
-        rendererStatsVisible: !args[0]
-      };
-    })
+
 		this.addMessageHandler("TOGGLE_MATERIAL_SEARCH",
 			(acc, ...args) => {
       return {
@@ -892,16 +684,13 @@ export default class App extends React.Component<AppProps, AppState> {
 	render() {
 		return (
       <div>
-        <div>
-          <NavBarComponent
-            messenger={this.props.messenger}
-            canUndo={this.state.canUndo}
-            canRedo={this.state.canRedo}
-            canDuplicate={this.state.canDuplicate}
-            projectName={this.state.projectName}
-            rendererStatsVisible={this.state.rendererStatsVisible}
-          />
-        </div>
+        <NavBarComponent
+          canUndo={this.state.canUndo}
+          canRedo={this.state.canRedo}
+          canDuplicate={this.state.canDuplicate}
+          projectName={this.state.projectName}
+          rendererStatsVisible={this.state.rendererStatsVisible}
+        />
         <Alert
           isOpen={this.state.newWarningVisible}
           transitionDuration={100}
@@ -920,8 +709,7 @@ export default class App extends React.Component<AppProps, AppState> {
             this.setState({
               newWarningVisible: false
             });
-          }}
-        >
+          }}>
           Are you sure you want to start over?
         </Alert>
         <OpenWarning
@@ -988,8 +776,7 @@ export default class App extends React.Component<AppProps, AppState> {
             this.setState({
               settings: this.props.messenger.postMessage("SUBMIT_ALL_SETTINGS")[0]
             });
-          }}
-        >
+          }}>
           <Tabs selectedIndex={this.state.selectedSettingsDrawerTab} onSelect={this.handleSettingsTabChange}>
             <TabList>
               <Tab disabled />
@@ -1019,8 +806,7 @@ export default class App extends React.Component<AppProps, AppState> {
           canEscapeKeyClose={true}
           isCloseButtonShown={true}
           title="Material Selection"
-          isOpen={this.state.materialDrawerOpen}
-        >
+          isOpen={this.state.materialDrawerOpen}>
           <MaterialDrawer
             messenger={this.props.messenger}
             object={
@@ -1096,7 +882,7 @@ export default class App extends React.Component<AppProps, AppState> {
             }}
           >
             {/* webgl canvas & gutter*/}
-            <SplitterLayout
+            {/* <SplitterLayout
               vertical={true}
               primaryMinSize={100}
               secondaryMinSize={1}
@@ -1127,7 +913,17 @@ export default class App extends React.Component<AppProps, AppState> {
               <PanelContainer className="panel full-bottom gutter-panel" margin>
                 <Gutter messenger={this.props.messenger} />
               </PanelContainer>
-            </SplitterLayout>
+            </SplitterLayout> */}
+            <div className="webgl-canvas">
+              <div
+                id="response-overlay"
+                className={"response_overlay response_overlay-hidden"}
+                ref={this.responseOverlay}
+              ></div>
+              <div id="canvas_overlay" ref={this.canvasOverlay}></div>
+              <div id="orientation-overlay" ref={this.orientationOverlay}></div>
+              <canvas id="renderer-canvas" ref={this.canvas} />
+            </div>
             <SplitterLayout
               vertical={true}
               primaryMinSize={40}
@@ -1157,7 +953,7 @@ export default class App extends React.Component<AppProps, AppState> {
                   }
                 })()}
               </PanelContainer>
-              <PanelContainer className="panel full-bottom parameter-config-panel">
+              <PanelContainer className="panel full parameter-config-panel">
                 <ParameterConfig
                   messenger={this.props.messenger}
                   solvers={this.state.solvers}

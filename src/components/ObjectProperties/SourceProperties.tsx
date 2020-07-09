@@ -13,6 +13,7 @@ import PropertyRowLabel from "../parameter-config/property-row/property-row-labe
 import PropertyRowButton from "../parameter-config/property-row/property-row-button/PropertyRowButton";
 import PropertyRowCheckbox from "../parameter-config/property-row/property-row-checkbox/PropertyRowCheckbox";
 import { ObjectPropertyInputEvent } from ".";
+import { IToastProps } from "@blueprintjs/core/lib/esm/components/toast/toast";
 
 export interface SourcePropertiesProps {
   object: Source;
@@ -122,13 +123,14 @@ export default function SourceProperties(props: SourcePropertiesProps) {
         <select
           value={props.object.signalSource}
           name="signalSource"
-          onChange={e => {
+          onChange={(e) => {
             props.onPropertyChange({
               value: e.currentTarget.selectedIndex,
               name: e.currentTarget.name,
               type: "select"
-            })
-        }}>
+            });
+          }}
+        >
           <option value={SignalSource.NONE}>None</option>
           <option value={SignalSource.OSCILLATOR}>Oscillator</option>
           <option value={SignalSource.PINK_NOISE}>Pink Noise</option>
@@ -149,9 +151,29 @@ export default function SourceProperties(props: SourcePropertiesProps) {
             name: "frequency",
             type: "number",
             value: e.value
-          })
+          });
         }}
       />
+      <PropertyRow>
+        <PropertyRowLabel label="Signal Data" tooltip="The signal sources signal data" />
+        <div>
+          <PropertyRowButton
+            onClick={(e) => {
+              if (props.object.fdtdSamples.length > 0) {
+                props.object.saveSamples();
+              } else {
+                props.messenger.postMessage("SHOW_TOAST", {
+                  message: `No signal data.`,
+                  intent: "warning",
+                  timeout: 1750,
+                  icon: "issue"
+                } as IToastProps);
+              }
+            }}
+            label="Download"
+          />
+        </div>
+      </PropertyRow>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 // user interface
-import React from "react";
+import React, { createContext, useReducer } from "react";
 import ReactDOM from "react-dom";
 import Themes from './themes';
 import App from "./components/App";
@@ -26,6 +26,7 @@ import Solver from "./compute/solver";
 import RayTracer, { RayTracerParams } from "./compute/raytracer";
 import RT60 from './compute/rt';
 import { FDTD_2D, FDTD_2D_Defaults } from "./compute/2d-fdtd";
+import FDTD_3D from "./compute/3d-fdtd";
 import * as ac from "./compute/acoustics";
 
 // rendering
@@ -772,6 +773,14 @@ state.messenger.addMessageHandler("NEW", (acc, ...args) => {
   
 });
 
+state.messenger.addMessageHandler("CAN_UNDO", () => {
+  return state.history.canUndo;
+})
+
+state.messenger.addMessageHandler("CAN_REDO", () => {
+  return state.history.canRedo;
+})
+
 state.messenger.addMessageHandler("UNDO", (acc, ...args) => {
   state.history.undo();
   return [state.history.canUndo, state.history.canRedo];
@@ -1001,16 +1010,57 @@ window.addEventListener('resize', e => {
   state.renderer.needsToRender = true;
 })
 
+export default function GlobalReducer(state, action){
+  switch (action.type) {
+    case "DELETE_TRANSACTION":
+      return {
+        ...state,
+        transactions: state.transactions.filter((transaction) => transaction.id !== action.payload)
+      };
+    case "ADD_TRANSACTION":
+      return {
+        ...state,
+        transactions: [action.payload, ...state.transactions]
+      };
+    default:
+      return state;
+  }
+};
 
 
+
+const initialState = {
+  messenger: state.messenger
+}
+
+// Create context
+export const GlobalContext = createContext(initialState);
+
+// Provider component
+export const GlobalProvider = ({ children }) => {
+  const [state, dispatch] = useReducer(GlobalReducer, initialState);
+
+  return (
+    <GlobalContext.Provider value={state}>
+      {children}
+    </GlobalContext.Provider>
+  );
+};
 
 
 // the main app
 ReactDOM.render(
-    <App {...state} />,
+  <GlobalProvider>
+    <App {...state} />
+  </GlobalProvider>,
   document.getElementById("root")
 );
 
+
+
+// setTimeout(() => {
+//   expose({ fdtd: new FDTD_3D() });
+// }, 200);
 
 // setTimeout(async () => {
 //   const filepath = "/res/saves/concord.json";

@@ -1,3 +1,4 @@
+
 .splitter-layout {
   position: absolute;
   display: flex;
@@ -7,12 +8,6 @@
   overflow: hidden;
   background: #F5F8FA;
 }
-/* 
-.splitter-layout .layout-pane {
-  position: relative;
-  flex: 0 0 auto;
-  overflow: auto;
-} */
 
 .splitter-layout .layout-pane {
   position: relative;
@@ -25,23 +20,33 @@
   flex: 1 1 auto;
 }
 
-.splitter-layout > .layout-splitter {
-  --border-size: 10px;
-  flex: 0 0 auto;
-  width: 4px;
-  height: calc(100%-20px);
-  border-top: solid var(--border-size, 10px) #f6f6f6;
-  border-bottom: solid var(--border-size, 10px) #f6f6f6;
-  border-left: none;
-  border-right: none;
-  overflow: hidden;
-  cursor: col-resize;
-  background-color: #bbbbbb33;
+.splitter-layout{
+  --layout-splitter-thickness: 4px;
+  --layout-splitter-color-normal: #bbbbbb33;
+  --layout-splitter-color-active: #bbbbbbbb; 
 }
 
+.splitter-layout > .layout-splitter {
+    width: var(--layout-splitter-thickness);
+    height: 100%;
+    overflow: hidden;
+    cursor: col-resize;
+    background-color: var(--layout-splitter-color-normal);
+}
+.splitter-layout-vertical > .layout-splitter {
+  width: 100%;
+  height: 0px;
+  cursor: row-resize;
+  overflow: hidden;
+  background-color: var(--layout-splitter-color-normal);
+  border: solid calc(var(--layout-splitter-thickness) / 2) var(--layout-splitter-color-normal);
+  box-sizing: content-box;
+}
 .splitter-layout .layout-splitter:hover,
-.splitter-layout .layout-splitter:active {
-  background-color: #bbbbbbdd;
+.splitter-layout .layout-splitter:active,
+.splitter-layout.splitter-layout-vertical > .layout-splitter:hover,
+.splitter-layout.splitter-layout-vertical > .layout-splitter:active {
+  background-color: var(--layout-splitter-color-active);
 }
 
 .splitter-layout.layout-changing {
@@ -60,26 +65,7 @@
   cursor: row-resize;
 }
 
-.splitter-layout.splitter-layout-vertical > .layout-splitter {
-  /* width: calc(100%-20px); */
 
-  --border-size: 10px;
-
-  width: auto;
-  height: 4px;
-  cursor: row-resize;
-  flex: 0 0 auto;
-  border-top: none;
-  border-bottom: none;
-  border-left: solid var(--border-size, 10px) #f6f6f6;
-  border-right: solid var(--border-size, 10px) #f6f6f6;
-  overflow: hidden;
-  background-color: #bbbbbb33;
-}
-.splitter-layout.splitter-layout-vertical > .layout-splitter:hover,
-.splitter-layout.splitter-layout-vertical > .layout-splitter:active {
-  background-color: #bbbbbbdd;
-}
 
 .overflow-hidden {
   overflow: hidden;

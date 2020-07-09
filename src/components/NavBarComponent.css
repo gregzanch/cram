@@ -1,0 +1,37 @@
+:root{
+  --main-nav_bar__height: 25px;
+}
+.main-nav_bar{
+  height: var(--main-nav_bar__height);
+  display: flex;
+  justify-content: space-between;
+}
+.main-nav_bar-logo_text{
+  font-size: 12pt;
+  vertical-align: text-top;
+  margin: 0 0 .25em;
+  height: var(--main-nav_bar__height);
+}
+
+.main-nav_bar-left_group, .main-nav_bar-right_group, .main-nav_bar-center_group{
+  height: var(--main-nav_bar__height);
+  font-size: 12pt;
+  float: none;
+}
+.main-nav_bar-projectname_text{
+  font-size: 10pt;
+  vertical-align: text-top;
+  margin: 0 0 .25em;
+  height: var(--main-nav_bar__height);
+  font-weight: 200;
+}
+.main-nav_bar-right_group{
+  float: none;
+  justify-content: flex-end;
+}
+
+.main-nav_bar-left_menu,.main-nav_bar-right_menu{
+  height: var(--main-nav_bar__height);
+  font-size: 12pt;
+  padding: 0 5px;
+}

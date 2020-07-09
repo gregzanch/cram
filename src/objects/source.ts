@@ -5,6 +5,7 @@ import map from "../common/map";
 import { MATCAP_PORCELAIN_WHITE, MATCAP_UNDER_SHADOW } from "./asset-store";
 import { EditorModes } from "../constants/editor-modes";
 import { P2I, Lp2P } from '../compute/acoustics';
+import FileSaver from "file-saver";
 
 
 const defaults = {
@@ -60,6 +61,7 @@ export default class Source extends Container {
   signalSource: SignalSource;
   _initialSPL: number;
   _initialIntensity: number;
+  fdtdSamples: number[];
   constructor(name: string, props?: SourceProps) {
     super(name);
     this.kind = "source";
@@ -77,7 +79,7 @@ export default class Source extends Container {
     this.previousValue = 0;
     this.velocity = 0;
     this.rgba = [0, 0, 0, 1];
-    
+    this.fdtdSamples = [] as number[];
     
 
     this.selectedMaterial = new THREE.MeshMatcapMaterial({
@@ -212,6 +214,9 @@ export default class Source extends Container {
     this.rgba[1] = map(this.velocity, -2, 2, 0, 255);
     this.rgba[3] = 0;
   }
+  recordSample() {
+    this.fdtdSamples.push(this.value);
+  }
   getWhiteNoiseSample() {
     return Math.random() * 2 - 1;
   }
@@ -245,6 +250,17 @@ export default class Source extends Container {
       b6 = white * 0.115926;
     }
     // console.log(Array.from(this.pinkNoiseSamples));
+  }
+  clearSamples() {
+    this.fdtdSamples = [] as number[];
+  }
+  saveSamples() {
+    if (this.fdtdSamples.length>0) {
+      const blob = new Blob([this.fdtdSamples.join("\n")], {
+        type: "text/plain;charset=utf-8"
+      });
+      FileSaver.saveAs(blob, `fdtdsamples-source-${this.name}.txt`);
+    } else return;
   }
   getColorAsNumber() {
     return (this.mesh.material as THREE.MeshBasicMaterial).color.getHex();

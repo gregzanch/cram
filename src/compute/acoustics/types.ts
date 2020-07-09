@@ -4,6 +4,4 @@ export type NumericArray =
   | Float64Array
   | Uint16Array
   | Uint32Array
-  | Uint8Array
-  | BigInt64Array
-  | BigUint64Array;
+  | Uint8Array;

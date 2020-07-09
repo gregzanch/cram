@@ -117,7 +117,7 @@ export default class Receiver extends Container{
       const blob = new Blob([this.fdtdSamples.join("\n")], {
         type: "text/plain;charset=utf-8"
       });
-      FileSaver.saveAs(blob, `fdtdsamples-${this.uuid}.txt`);
+      FileSaver.saveAs(blob, `fdtdsamples-receiver-${this.name}.txt`);
     } else return;
   }
 

@@ -572,15 +572,17 @@ export default class Renderer {
       this.needsToRender = true;
 		})
 
-		this.messenger.addMessageHandler("SET_RENDERER_STATS_VISIBLE", (acc, ...args) => {
-			if (args && args.length > 0) {
-				if (args[0]) {
-					this.stats.unhide();
-				} else {
-					this.stats.hide();
-				}
+		
+		
+		this.messenger.addMessageHandler("TOGGLE_RENDERER_STATS_VISIBLE", () => {
+			if (this.stats.hidden) {
+				this.stats.unhide();
+			} else {
+				this.stats.hide();
 			}
     });
+
+		this.messenger.addMessageHandler("GET_RENDERER_STATS_VISIBLE", () => !this.stats.hidden);
 
 		// save the state of the camera
 		window.addEventListener("mouseup", (e) => {
