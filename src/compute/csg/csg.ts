@@ -1,5 +1,11 @@
+//@ts-nocheck
+
 // flatten the given argument into a single flat array
 // the argument can be composed of multiple depths of values and arrays
+
+import { CSG } from '@jscad/csg';
+
+const { Plane, Vector3D, Line2D, Line3D } = CSG;
 
 const flatten = (arr) => {
    return arr.reduce((acc, val) => Array.isArray(val) ? acc.concat(flatten(val)) : acc.concat(val), []);
@@ -1608,7 +1614,7 @@ const intersect = (p1, p2, p3, p4) => {
     return undefined
   }
 
-  denominator = ((p4[1] - p3[1]) * (p2[0] - p1[0]) - (p4[0] - p3[0]) * (p2[1] - p1[1]));
+  let denominator = ((p4[1] - p3[1]) * (p2[0] - p1[0]) - (p4[0] - p3[0]) * (p2[1] - p1[1]));
 
   // Lines are parallel
   if (Math.abs(denominator) < Number.MIN_VALUE) {
@@ -2883,6 +2889,7 @@ var add_1$2 = add$2;
  */
 const clone$4 = (...params) => {
   let out;
+  let a;
   if (params.length == 1) {
     out = create_1$5();
     a = params[0];
@@ -4048,6 +4055,7 @@ var create_1$6 = create$6;
  */
 const clone$5 = (...params) => {
   let out;
+  let vec;
   if (params.length === 1) {
     out = create_1$6();
     vec = params[0];
@@ -4086,6 +4094,7 @@ var equals_1$5 = equals$5;
  */
 const flip = (...params) => {
   let out;
+  let vec;
   if (params.length === 1) {
     out = create_1$6();
     vec = params[0];
@@ -4327,7 +4336,7 @@ var plane = {
   transform: transform_1$6
 };
 
-var math = {
+export const math = {
   constants: constants,
   line2: line2,
   line3: line3,
@@ -4608,7 +4617,7 @@ const transformationBetween = (options, from, to) => {
 
 var transformationBetween_1 = transformationBetween;
 
-var connectors = {
+export const connectors = {
   create: create_1$1,
   // extends: require('./extends'),
   fromPointAxisNormal: fromPointAxisNormal_1,
@@ -6223,7 +6232,7 @@ var poly2 = {
   measureArea: measureArea_1$1
 };
 
-var geometry = {
+export const geometry = {
   geom2: geom2,
   geom3: geom3,
   path2: path2,
@@ -7481,7 +7490,7 @@ const star = (options) => {
 
 var star_1 = star;
 
-var primitives = {
+export const primitives = {
   arc: arc_1,
   circle: ellipse_1.circle,
   cube: cuboid_1.cube,
@@ -7672,6 +7681,8 @@ function vectorChar (options, char) {
   let width = glyph.shift() * ratio;
   let segments = [];
   let polyline = [];
+  let gx;
+  let gy;
   for (let i = 0, il = glyph.length; i < il; i += 2) {
     gx = ratio * glyph[i] + xOffset;
     gy = ratio * glyph[i + 1] + yOffset + extrudeYOffset;
@@ -7789,7 +7800,7 @@ function vectorText (options, text) {
 
 var vectorText_1 = vectorText;
 
-var text = {
+export const text = {
   vectorChar: vectorChar_1,
   vectorText: vectorText_1
 };
@@ -7863,7 +7874,7 @@ const interpolateBetween2DPointsForY = (point1, point2, y) => {
 
 var interpolateBetween2DPointsForY_1 = interpolateBetween2DPointsForY;
 
-var utils$1 = {
+const utils$1 = {
   areAllShapesTheSameType: areAllShapesTheSameType_1,
   flatten: flatten_1,
   fnNumberSort: fnNumberSort_1,
@@ -9443,7 +9454,7 @@ const union$2 = (...geometries) => {
 
 var union_1 = union$2;
 
-var booleans = {
+export const booleans = {
   intersect: intersect_1$1,
   subtract: subtract_1$3,
   union: union_1
@@ -10150,7 +10161,7 @@ const offset = (options, ...objects) => {
 
 var offset_1 = offset;
 
-var expansions = {
+export const expansions = {
   expand: expand_1,
   offset: offset_1
 };
@@ -10980,7 +10991,7 @@ const extrudeRotate = (options, geometry) => {
 
 var extrudeRotate_1 = extrudeRotate;
 
-var extrusions = {
+export const extrusions = {
   extrudeFromSlices: extrudeFromSlices_1,
   extrudeLinear: extrudeLinear_1,
   extrudeRectangular: extrudeRectangular_1,
@@ -11248,7 +11259,7 @@ const hullChain = (...geometries) => {
 
 var hullChain_1 = hullChain;
 
-var hulls = {
+export const hulls = {
   hull: hull_1,
   hullChain: hullChain_1
 };
@@ -11367,7 +11378,7 @@ const measureVolume = (...geometries) => {
 
 var measureVolume_1 = measureVolume;
 
-var measurements = {
+export const measurements = {
   measureArea: measureArea_1$2,
   measureBounds: measureBounds_1,
   measureVolume: measureVolume_1
@@ -11658,7 +11669,7 @@ const transform$c = function (matrix, ...objects) {
 
 var transform_1$c = transform$c;
 
-var transforms = {
+export const transforms = {
   center: center_1.center,
   centerX: center_1.centerX,
   centerY: center_1.centerY,
@@ -11687,21 +11698,8 @@ var transforms = {
   translateZ: translate_1$1.translateZ
 };
 
-var src = {
+export const extra = {
   color: color$1,
-  connectors: connectors,
-  geometry: geometry,
-  math: math,
-  primitives: primitives,
-  text: text,
-  utils: utils$1,
+  utils: utils$1
+}
 
-  booleans: booleans,
-  expansions: expansions,
-  extrusions: extrusions,
-  hulls: hulls,
-  measurements: measurements,
-  transforms: transforms
-};
-
-export default src;
