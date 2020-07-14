@@ -17,7 +17,7 @@ var flatten_1 = flatten;
  * Apply the given color to the given objects.
  * @param {Array} color - RGBA color values, where each value is between 0 and 1.0
  * @param {Object|Array} objects - the objects of which to color
- * @returns {Object|Array} the same objects with an additional attribute 'color'
+ * @returns {Object|Array} the same
  * @alias module:color.color
  *
  * @example
@@ -5298,9 +5298,56 @@ var transform_1$8 = transform$8;
 
 var poly3 = {
   clone: clone_1$7,
+  
+  /**
+  * Represents a convex polygon. The vertices used to initialize a polygon must
+  *   be coplanar and form a convex loop. They do not have to be `vec3`
+  *   instances but they must behave similarly.
+  *
+  * Each convex polygon has a `shared` property, which is shared between all
+  *   polygons that are clones of each other or were split from the same polygon.
+  *   This can be used to define per-polygon properties (such as surface color).
+  *
+  * The plane of the polygon is calculated from the vertex coordinates if not provided.
+  *   The plane can alternatively be passed as the third argument to avoid calculations.
+  *
+  * @constructor
+  * @param {vec3[]} vertices - list of vertices
+  * @param {shared} [shared=defaultShared] - shared property to apply
+  * @param {plane} [plane] - plane of the polygon
+  *
+  * @example
+  * const vertices = [ [0, 0, 0], [0, 10, 0], [0, 10, 10] ]
+  * let observed = poly3.fromPoints(vertices)
+  */
+
+  /**
+   * Creates a new poly3 (polygon) with initial values
+   *
+   * @returns {poly3} a new poly3
+   */
   create: create_1$8,
   flip: flip_1$1,
+  
+  /**
+  * Create a polygon from the given points.
+  *
+  * @param {Array[]} points - list of points
+  *
+  * @example
+  * const points = [
+  *   [0,  0, 0],
+  *   [0, 10, 0],
+  *   [0, 10, 10]
+  * ]
+  * const polygon = fromPoints(points)
+  */
   fromPoints: fromPoints_1$4,
+
+  /**
+   * @param {Array[]} vertices - list of vertices
+   * @param {plane} [plane] - plane of the polygon
+   */
   fromPointsAndPlane: fromPointsAndPlane_1,
   isA: isA_1$1,
   isConvex: isConvex_1,
@@ -8659,6 +8706,8 @@ const splitLineSegmentByPlane$1 = (plane, p1, p2) => {
 
 var splitLineSegmentByPlane_1$1 = splitLineSegmentByPlane$1;
 
+
+
 const { EPS: EPS$c } = constants;
 
 const { plane: plane$3, vec3: vec3$9 } = math;
@@ -8679,9 +8728,15 @@ const { poly3: poly3$8 } = geometry;
 // .back: a Polygon3 of the back part
 const splitPolygonByPlane = (splane, polygon) => {
   let result = {
-    type: null,
-    front: null,
-    back: null
+    type: 0,
+    front:  {
+      vertices: [] as any,
+      plane: [] as any
+    },
+    back: {
+      vertices: [] as any,
+      plane: [] as any
+    },
   };
   // cache in local lets (speedup):
   let vertices = polygon.vertices;
@@ -9041,6 +9096,7 @@ PolygonTreeNode.prototype = {
 };
 
 var PolygonTreeNode_1 = PolygonTreeNode;
+
 
 // # class Tree
 // This is the root of a BSP tree
@@ -11703,3 +11759,13 @@ export const extra = {
   utils: utils$1
 }
 
+export const split = {
+  lineSegmentByPlane: splitLineSegmentByPlane_1,
+  polygonByPlane: splitPolygonByPlane_1,
+}
+
+export const bsp = {
+  Tree: Tree$3,
+  PolygonTreeNode: PolygonTreeNode_1,
+  Node: Node_1
+}

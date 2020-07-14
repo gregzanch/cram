@@ -8,10 +8,11 @@ import reflectionCoefficient from "../compute/acoustics/reflection-coefficient";
 import { AcousticMaterial } from "../db/acoustic-material";
 import { BRDF } from "../compute/raytracer/brdf";
 import Room from "./room";
-import { CSG } from '@jscad/csg';
+import csg from '../compute/csg';
 import { numbersEqualWithinTolerence, equalWithinTolerenceFactory } from "../common/equal-within-range";
 
-const v3eq = equalWithinTolerenceFactory<THREE.Vector3 | CSG.Vector3D>(["x", "y", "z"]);
+const v3eq = equalWithinTolerenceFactory(["x", "y", "z"])(csg.math.constants.EPS as number);
+
 
 const defaults = {
   materials: {
@@ -131,6 +132,11 @@ interface KeepLine {
   triangle_index: number;
 }
 
+type poly3type = {
+  vertices: any;
+  plane: any;
+};
+
 class Surface extends Container {
   // for render
   mesh!: THREE.Mesh;
@@ -158,7 +164,7 @@ class Surface extends Container {
   area!: number;
   isPlanar!: boolean;
   edgeLoop!: THREE.Vector3[];
-  polygon!: CSG.Polygon;
+  polygon!: poly3type
   normal!: THREE.Vector3;
   // renderer: Renderer;
   constructor(name: string, props?: SurfaceProps) {
@@ -196,11 +202,11 @@ class Surface extends Container {
       (x) => new THREE.Triangle(new THREE.Vector3(...x[0]), new THREE.Vector3(...x[1]), new THREE.Vector3(...x[2]))
     );
     
-    const eq = v3eq(CSG.EPS);
+
 
     this.isPlanar = this._triangles
       .map((x) => x.getNormal(new THREE.Vector3()))
-      .reduce((a, b, i, arr) => a && eq(b, arr[0]), true);
+      .reduce((a, b, i, arr) => a && v3eq(b, arr[0]), true);
     
     if (!this.isPlanar) {
       console.error(new Error(`Surface '${this.name}' is not planar`));
@@ -299,27 +305,30 @@ class Surface extends Container {
     
     this.edgeLoop = this.calculateEdgeLoop();
     
-    this.polygon = new CSG.Polygon(
-      this.edgeLoop.map(x => {
-        return new CSG.Vertex(new CSG.Vector3D([x.x, x.y, x.z]));
-      })
-    );
     
+    const points = this.edgeLoop.map(x => csg.math.vec3.fromArray([x.x, x.y, x.z]));
+    const plane = csg.math.plane.fromPoints(points[0], points[1], points[2])
     
+    this.polygon = csg.geometry.poly3.fromPointsAndPlane(points, plane);
     
-    const eqeps = numbersEqualWithinTolerence(CSG.EPS);
+
     
+    const eqeps = numbersEqualWithinTolerence(csg.math.constants.EPS as number);
     const n0 = this.normal;
-    const n1 = () => this.polygon.plane.normal;
-    if (!eqeps(n0.x, n1().x) || !eqeps(n0.y, n1().y) || !eqeps(n0.z, n1().z)) {
-      this.polygon.plane = this.polygon.plane.flipped();
-      if (!eqeps(n0.x, n1().x) || !eqeps(n0.y, n1().y) || !eqeps(n0.z, n1().z)) {
+    const n1 = this.polygon.plane;
+    if (!eqeps(n0.x, n1[0]) || !eqeps(n0.y, n1[1]) || !eqeps(n0.z, n1[2])) {
+      
+      this.polygon.plane[0] *= -1;
+      this.polygon.plane[1] *= -1;
+      this.polygon.plane[2] *= -1;
+      
+      if (!eqeps(n0.x, n1[0]) || !eqeps(n0.y, n1[1]) || !eqeps(n0.z, n1[2])) {
         console.error(new Error(`Surface '${this.name}' has a normal vector issue`));
       }
     }
    
     
-    this.polygon.parentSurface = this;
+    // this.polygon.parentSurface = this;
   }
   save() {
     return {

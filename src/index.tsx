@@ -71,6 +71,7 @@ import rect from "!raw-loader!./res/models/rect10x13.obj";
 import plane from "!raw-loader!./res/models/plane.stl";
 import expose from "./common/expose";
 import { CSG, CAG } from '@jscad/csg';
+import csg from './compute/csg';
 import * as THREE from "three";
 import FileSaver from "file-saver";
 import { BufferGeometry } from "three";
@@ -1146,6 +1147,7 @@ setTimeout(async () => {
     state,
     CSG,
     CAG,
+    csg,
     ac,
     THREE,
     chunk
