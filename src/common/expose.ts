@@ -1,3 +1,5 @@
-export default function expose(item: any, target=window) {
+export function expose(item: any, target=window) {
     Object.assign(target, item);
 }
+
+export default expose;

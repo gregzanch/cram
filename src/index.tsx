@@ -36,6 +36,8 @@ import Renderer from "./render/renderer";
 import * as importHandlers from './import-handlers';
 import { fileType, allowed } from "./common/file-type";
 
+
+
 // data structures / storage
 import { uuid } from "uuidv4";
 import { KeyValuePair, KVP } from "./common/key-value-pair";
@@ -57,6 +59,8 @@ import { Searcher } from "fast-fuzzy";
 import browserReport from "./common/browser-report";
 import { chunk } from './common/chunk';
 import { sizeof } from './common/sizeof';
+import { addToGlobalVars } from './common/global-vars';
+import { gt, lt, gte, lte } from 'semver';
 
 // TODO remove these imports for prod
 //@ts-ignore
@@ -73,8 +77,9 @@ import { BufferGeometry } from "three";
 import { Theme } from "@material-ui/core";
 
 
-
-
+expose({
+  vars: {}
+});
 
 
 const materialsIndex = {} as KeyValuePair<AcousticMaterial>;
@@ -205,6 +210,10 @@ state.messenger.addMessageHandler("FETCH_ROOMS", () => {
   }
 });
 
+state.messenger.addMessageHandler("FETCH_CONTAINER", (acc, ...args) => {
+  return args && args[0] && state.containers[args[0]];
+});
+
 state.messenger.addMessageHandler("FETCH_ALL_SETTINGS", () => {
   return state.settings;
 })
@@ -261,19 +270,14 @@ state.messenger.addMessageHandler("SEARCH_ALL_MATERIALS", (acc, ...args) => {
 });
 
 state.messenger.addMessageHandler("SHOULD_ADD_RAYTRACER", (acc, ...args) => {
-  const props = args && args[0];
+  const props = args && args[0] || {};
   const raytracer = new RayTracer({
+    ...props[0],
+    renderer: state.renderer,
     messenger: state.messenger,
-    name: (props && props.name) || "Ray Tracer",
-    containers: state.containers,
-    reflectionOrder: (props && props.reflectionOrder) || 6,
-    updateInterval: (props && props.updateInterval) || 5,
-    passes: (props && props.passes) || 500,
-    pointSize: (props && props.pointSize) || 2,
-    renderer: state.renderer
+    containers: state.containers
   });
   state.solvers[raytracer.uuid] = raytracer;
-  raytracer.runningWithoutReceivers = false;
   return raytracer;
 });
 
@@ -285,15 +289,13 @@ state.messenger.addMessageHandler("SHOULD_REMOVE_SOLVER", (acc, id) => {
 });
 
 state.messenger.addMessageHandler("SHOULD_ADD_RT60", (acc, ...args) => {
-  const rooms = Object.keys(state.containers).filter(x => state.containers[x] instanceof Room);
-  if (rooms.length>0) {
-    const rt60 = new RT60({
-      room: state.containers[rooms[0]] as Room,
-      name: 'rt60'
-    });
-    state.solvers[rt60.uuid] = rt60;
-    return rt60;
-  }
+  const props = (args && args[0]) || {};
+  const rt60 = new RT60({
+    ...props,
+    messenger: state.messenger,
+  });
+  state.solvers[rt60.uuid] = rt60;
+  return state.solvers[rt60.uuid];
 });
 
 state.messenger.addMessageHandler("SHOULD_ADD_FDTD_2D", (acc, args) => {
@@ -363,10 +365,6 @@ state.messenger.addMessageHandler("RAYTRACER_CALCULATE_RESPONSE", (acc, id, freq
 state.messenger.addMessageHandler("RAYTRACER_QUICK_ESTIMATE", (acc, id) => {
   (state.solvers[id] instanceof RayTracer) && (state.solvers[id] as RayTracer).startQuickEstimate();
 });
-
-// state.messenger.addMessageHandler("RAYTRACER_TEST_WASM", (acc, id, value) => {
-//   (state.solvers[id] instanceof RayTracer) && (state.solvers[id] as RayTracer).testWasm(value);
-// });
 
 state.messenger.addMessageHandler("FETCH_ALL_SOURCES", (acc, ...args) => {
   return state.sources.map(x => {
@@ -557,10 +555,10 @@ state.messenger.addMessageHandler("SHOULD_DUPLICATE_SELECTED_OBJECTS", (acc, ...
   state.messenger.postMessage("SET_SELECTION", objs);
 });
 
-
 state.messenger.addMessageHandler("GET_CONTAINERS", (acc, ...args) => {
   return state.containers;
 });
+
 state.messenger.addMessageHandler("ADDED_ROOM", (acc, ...args) => {
   args[0];
 });
@@ -854,6 +852,12 @@ state.messenger.addMessageHandler("SAVE_CONTAINERS", (acc, ...args) => {
   return saveObjects;
 });
 
+state.messenger.addMessageHandler("SAVE_SOLVERS", (acc, ...args) => {
+  const keys = Object.keys(state.solvers);
+  const saveObjects = keys.map((key) => state.solvers[key].save());
+  return saveObjects;
+});
+
 state.messenger.addMessageHandler("SET_PROJECT_NAME", (acc, ...args) => {
   state.projectName = (args && args[0]) || state.projectName;
   document.title = state.projectName + " | cram.ui";
@@ -934,8 +938,47 @@ state.messenger.addMessageHandler("RESTORE_CONTAINERS", (acc, ...args) => {
   }
 });
 
+state.messenger.addMessageHandler("RESTORE_SOLVERS", (acc, ...args) => {
+  const keys = Object.keys(state.solvers);
+  keys.forEach(key => {
+    state.messenger.postMessage("SHOULD_REMOVE_SOLVER", key);
+  });
+  if (args && args[0] && args[0] instanceof Array) {
+    // console.log(args[0]);
+    console.log(args[0]);
+    args[0].forEach(saveObj => {
+      switch (saveObj["kind"]) {
+        case "ray-tracer":
+          {
+            const props = args && args[0];
+            state.messenger.postMessage("SHOULD_ADD_RAYTRACER", props);
+          }
+          break;
+        case "rt60":
+          {
+            const props = args && args[0];
+            state.messenger.postMessage("SHOULD_ADD_RT60", props);
+          }
+          break;
+        default:
+          break;
+      }
+    });
+  }
+});
+
 state.messenger.addMessageHandler("SAVE", (acc, ...args) => {
-  const savedState = state.messenger.postMessage("SAVE_CONTAINERS")[0];
+  const savedState = {
+    meta: {
+      version: process.env.VERSION,
+      name: state.projectName,
+      timestamp: new Date().toISOString()
+    },
+    containers: state.messenger.postMessage("SAVE_CONTAINERS")[0],
+    solvers: state.messenger.postMessage("SAVE_SOLVERS")[0]
+  };
+  // console.log(savedState);
+  // return;
   const blob = new Blob([JSON.stringify(savedState)], {
     type: "text/plain;charset=utf-8"
   });
@@ -962,9 +1005,9 @@ state.messenger.addMessageHandler("OPEN", (acc, ...args) => {
     const objectURL = URL.createObjectURL(file);
     try {
       const result = await (await fetch(objectURL)).text();
-      const savedState = JSON.parse(result);
-      state.messenger.postMessage("RESTORE_CONTAINERS", savedState);
-      state.messenger.postMessage("SET_PROJECT_NAME", file.name.replace('.json',''));
+      const json = JSON.parse(result);
+      state.messenger.postMessage("RESTORE", { file, json });
+     
       tempinput.remove();
     }
     catch (e) {
@@ -975,8 +1018,31 @@ state.messenger.addMessageHandler("OPEN", (acc, ...args) => {
   tempinput.click();
 })
 
+state.messenger.addMessageHandler("RESTORE", (acc, ...args) => {
+  
+  const props = args && args[0];
+  const file = props.file;
+  const json = props.json;
+  const version = (json.meta && json.meta.version) || "0.0.0";
+  console.log(version);
+  if (gte(version, "0.2.1")) {
+    state.messenger.postMessage("RESTORE_CONTAINERS", json.containers);
+    state.messenger.postMessage("RESTORE_SOLVERS", json.solvers);
+    state.messenger.postMessage("SET_PROJECT_NAME", json.meta.name);
+  } else {
+    state.messenger.postMessage("RESTORE_CONTAINERS", json);
+    state.messenger.postMessage("SET_PROJECT_NAME", file.name.replace(".json", ""));
+  }
+})
 
-
+state.messenger.addMessageHandler("ADD_SELECTED_OBJECTS_TO_GLOBAL_VARIABLES", (acc, ...args) => {
+  const selectedObjects = state.messenger.postMessage("GET_SELECTED_OBJECTS")[0];
+  if (selectedObjects && selectedObjects.length) {
+    selectedObjects.forEach((x, i, a) => {
+      addToGlobalVars(a[i], a[i].name);
+    });
+  }
+});
 
 
 function addHotKey(keybinding, scopes, message, ...args) {
@@ -997,7 +1063,7 @@ function registerHotKeys() {
   addHotKey("m", ["editor"], "MOVE_SELECTED_OBJECTS");
   addHotKey("f", ["editor"], "FOCUS_ON_SELECTED_OBJECTS");
   addHotKey("shift+f", ["editor"], "FOCUS_ON_CURSOR");
-  
+  addHotKey("shift+g", ["editor"], "ADD_SELECTED_OBJECTS_TO_GLOBAL_VARIABLES")
   addHotKey("escape", ["editor", "editor-moving"], "PHASE_OUT");
   
 }
@@ -1058,100 +1124,20 @@ ReactDOM.render(
 
 
 
-// setTimeout(() => {
-//   expose({ fdtd: new FDTD_3D() });
-// }, 200);
+setTimeout(async () => {
+  const filepath = "/res/saves/concord3.json";
+  const filename = filepath.split("/").slice(-1)[0];
+  const savedStateFetchResult = await fetch(filepath);
+  const json = await savedStateFetchResult.json();
+  
+  state.messenger.postMessage("RESTORE", { json, file: { name: filename } });
 
-// setTimeout(async () => {
-//   const filepath = "/res/saves/concord.json";
-//   const filename = filepath.split("/").slice(-1)[0];
-//   const savedStateFetchResult = await fetch(filepath);
-//   const savedState = await savedStateFetchResult.json();
-//   console.log(filename, savedState)
-//   state.messenger.postMessage("RESTORE_CONTAINERS", savedState);
-//   state.messenger.postMessage("SET_PROJECT_NAME", filename.replace(".json", ""));
-  
-  // const rooms = state.messenger.postMessage("FETCH_ROOMS");
-  // if (rooms && rooms[0] && rooms[0][0]) {
-  //   const room = rooms[0][0] as Room;
-  //   const blocks = new Container("blocks");
-  //   console.log(room)
-  //   room.surfaces.children
-  //     .filter(x => x.name.match(/ceiling-block/gim))
-  //     .forEach((x) => {
-  //       blocks.add(x);
-  //       room.surfaces.remove(x);
-  //     });
-  //   room.surfaces.add(blocks);
-    
-  // }
-  
-  
-  
-  // const raytracer = state.messenger.postMessage("SHOULD_ADD_RAYTRACER", {
-  //   passes: 500,
-  //   reflectionOrder: 6,
-  //   pointSize: 2
-  // } as RayTracerParams)[0] as RayTracer;
-  // raytracer.raysVisible = false;
-  // raytracer.pointsVisible = false;
-  // const rt60 = state.messenger.postMessage("SHOULD_ADD_RT60")[0];
-  // expose({ raytracer });
-// }, 200);
+}, 200);
 
 
-  // const models = importHandlers.obj(rect); 
-
-  
-  // const models = importHandlers.stl(plane);
-  
-  // const surfaces = models.map(
-  //   (model, i) =>
-  //     new Surface(model.name, {
-  //       geometry: model.geometry,
-  //       // acousticMaterial: state.materialsIndex[savedSurfaces[i]]
-  //       acousticMaterial: state.materialsIndex["ROU1k4g0cgMC5b1N"]
-  //     })
-  // );
-  // const room = new Room("room", {
-  //   surfaces,
-  //   originalFileData: rect,
-  //   originalFileName: "rect10x13.obj"
-  // });
-  // state.containers[room.uuid] = room;
-  // state.renderer.addRoom(room);
-
-  // state.messenger.postMessage("ADDED_ROOM", room);
-  
-  // const src = state.messenger.postMessage("SHOULD_ADD_SOURCE")[0] as Source;
-  // src.name = "src";
-  // src.position.set(0.5, 0.5, 1);
-  
-  // const recsrc = state.messenger.postMessage("SHOULD_ADD_RECEIVER")[0] as Receiver;
-  // recsrc.name = "recsrc";
-  // recsrc.position.set(0.5, 0.5, 0.5);
-
-  // const srcL = state.messenger.postMessage("SHOULD_ADD_SOURCE")[0] as Source;
-  // srcL.name = "L";
-  // srcL.position.set(48, 6.4, 3.5);
-  
-  // const rec = state.messenger.postMessage("SHOULD_ADD_RECEIVER")[0] as Receiver;
-  // rec.name = "rec";
-  // rec.position.set(5, 6.5, 1);
-  
-
-  
-  
-  
-  // const fdtd = state.messenger.postMessage("SHOULD_ADD_FDTD_2D")[0];
-  
-
-// }, 200);
 
 
   expose({
-    // fdtd,
-    // raytracer,
     sizeof,
     Container,
     r: state.renderer,

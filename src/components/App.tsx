@@ -15,11 +15,11 @@ import {
   Alert,
   Intent,
   Toaster,
-  IToastProps,
+  IToastProps
 } from "@blueprintjs/core";
 import MenuItemText from './menu-item-text/MenuItemText';
 import { ItemListRenderer, IItemListRendererProps } from "@blueprintjs/select";
-
+import ContextMenu from "./context-menu/ContextMenu";
 import ImportDialog from "./import-dialog/ImportDialog";
 import ObjectView from "./object-view/ObjectView";
 import ConstructionsView from "./ConstructionsView";
@@ -709,7 +709,8 @@ export default class App extends React.Component<AppProps, AppState> {
             this.setState({
               newWarningVisible: false
             });
-          }}>
+          }}
+        >
           Are you sure you want to start over?
         </Alert>
         <OpenWarning
@@ -776,7 +777,8 @@ export default class App extends React.Component<AppProps, AppState> {
             this.setState({
               settings: this.props.messenger.postMessage("SUBMIT_ALL_SETTINGS")[0]
             });
-          }}>
+          }}
+        >
           <Tabs selectedIndex={this.state.selectedSettingsDrawerTab} onSelect={this.handleSettingsTabChange}>
             <TabList>
               <Tab disabled />
@@ -806,7 +808,8 @@ export default class App extends React.Component<AppProps, AppState> {
           canEscapeKeyClose={true}
           isCloseButtonShown={true}
           title="Material Selection"
-          isOpen={this.state.materialDrawerOpen}>
+          isOpen={this.state.materialDrawerOpen}
+        >
           <MaterialDrawer
             messenger={this.props.messenger}
             object={
@@ -914,16 +917,18 @@ export default class App extends React.Component<AppProps, AppState> {
                 <Gutter messenger={this.props.messenger} />
               </PanelContainer>
             </SplitterLayout> */}
-            <div className="webgl-canvas">
-              <div
-                id="response-overlay"
-                className={"response_overlay response_overlay-hidden"}
-                ref={this.responseOverlay}
-              ></div>
-              <div id="canvas_overlay" ref={this.canvasOverlay}></div>
-              <div id="orientation-overlay" ref={this.orientationOverlay}></div>
-              <canvas id="renderer-canvas" ref={this.canvas} />
-            </div>
+
+              <div className="webgl-canvas">
+                <div
+                  id="response-overlay"
+                  className={"response_overlay response_overlay-hidden"}
+                  ref={this.responseOverlay}
+                ></div>
+                <div id="canvas_overlay" ref={this.canvasOverlay}></div>
+                <div id="orientation-overlay" ref={this.orientationOverlay}></div>
+                <canvas id="renderer-canvas" ref={this.canvas} />
+              </div>
+
             <SplitterLayout
               vertical={true}
               primaryMinSize={40}

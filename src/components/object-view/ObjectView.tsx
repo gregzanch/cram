@@ -31,7 +31,7 @@ import {
 } from '../icons';
 import "./ObjectView.css";
 import Messenger from "../../messenger";
-
+import { addToGlobalVars } from "../../common/global-vars";
 
 export interface ObjectViewProps {
   containers: KeyValuePair<Container>;
@@ -83,6 +83,9 @@ function MapChildren(props: MapChildrenProps) {
             case "Log to Console": {
               console.log(container);
             } break;
+            case "Add To Global Variables": {
+              addToGlobalVars(container, container.name);
+            } break;
             case "Merge Surfaces": {
               if (container instanceof Surface) {
                 const selection = objectViewProps.messenger.postMessage("GET_SELECTED_OBJECTS")[0];
@@ -125,7 +128,7 @@ function MapChildren(props: MapChildrenProps) {
     switch (container["kind"]) {
       case "surface":
         {
-          let items = ["Show", "Hide", "Delete", "!seperator", "Log to Console"];
+          let items = ["Show", "Hide", "Delete", "!seperator", "Add To Global Variables", "Log to Console"];
           const selectedObjectTypes = objectViewProps.messenger.postMessage("GET_SELECTED_OBJECT_TYPES")[0];
           if (selectedObjectTypes.length > 1 && selectedObjectTypes.filter((x: string) => x !== "surface").length == 0) {
             items = ["Merge Surfaces", "!seperator"].concat(items);
@@ -142,7 +145,7 @@ function MapChildren(props: MapChildrenProps) {
 
       case "source":
         {
-          let items = ["Show", "Hide", "Delete", "!seperator", "Log to Console"];
+          let items = ["Show", "Hide", "Delete", "!seperator", "Add To Global Variables", "Log to Console"];
           return (
             <ContextMenu items={items} {...ContextMenuSharedProps}>
               <TreeItem
@@ -162,7 +165,7 @@ function MapChildren(props: MapChildrenProps) {
         } break;
       case "receiver":
         {
-          let items = ["Show", "Hide", "Delete", "!seperator", "Log to Console"];
+          let items = ["Show", "Hide", "Delete", "!seperator", "Add To Global Variables", "Log to Console"];
           return (
             <ContextMenu items={items} {...ContextMenuSharedProps}>
               <TreeItem

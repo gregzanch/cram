@@ -8,6 +8,10 @@ import reflectionCoefficient from "../compute/acoustics/reflection-coefficient";
 import { AcousticMaterial } from "../db/acoustic-material";
 import { BRDF } from "../compute/raytracer/brdf";
 import Room from "./room";
+import { CSG } from '@jscad/csg';
+import { numbersEqualWithinTolerence, equalWithinTolerenceFactory } from "../common/equal-within-range";
+
+const v3eq = equalWithinTolerenceFactory<THREE.Vector3 | CSG.Vector3D>(["x", "y", "z"]);
 
 const defaults = {
   materials: {
@@ -134,7 +138,7 @@ class Surface extends Container {
   edges!: THREE.LineSegments;
 
   center!: THREE.Vector3;
-  
+
   triangles!: number[][][];
   fillSurface!: boolean;
   vertexNormals!: THREE.VertexNormalsHelper;
@@ -152,6 +156,10 @@ class Surface extends Container {
   _acousticMaterial!: AcousticMaterial;
   brdf!: BRDF[];
   area!: number;
+  isPlanar!: boolean;
+  edgeLoop!: THREE.Vector3[];
+  polygon!: CSG.Polygon;
+  normal!: THREE.Vector3;
   // renderer: Renderer;
   constructor(name: string, props?: SurfaceProps) {
     super(name);
@@ -159,15 +167,13 @@ class Surface extends Container {
     props && this.init(props, true);
   }
   init(props: SurfaceProps, fromConstructor: boolean = false) {
-    
     if (!fromConstructor) {
       this.remove(this.mesh);
       this.remove(this.wire);
       this.remove(this.edges);
       this.remove(this.vertexNormals);
     }
-    
-    
+
     this.fillSurface = props.fillSurface || defaults.fillSurface;
     this.wire = new THREE.Mesh(props.geometry, defaults.materials.wire);
     this.wire.geometry.name = "surface-wire-geometry";
@@ -190,33 +196,43 @@ class Surface extends Container {
       (x) => new THREE.Triangle(new THREE.Vector3(...x[0]), new THREE.Vector3(...x[1]), new THREE.Vector3(...x[2]))
     );
     
+    const eq = v3eq(CSG.EPS);
+
+    this.isPlanar = this._triangles
+      .map((x) => x.getNormal(new THREE.Vector3()))
+      .reduce((a, b, i, arr) => a && eq(b, arr[0]), true);
+    
+    if (!this.isPlanar) {
+      console.error(new Error(`Surface '${this.name}' is not planar`));
+      debugger;
+    }
+    
+    this.normal = new THREE.Vector3();
+    this._triangles[0].getNormal(this.normal);
+
     this.center = new THREE.Vector3();
     let area = 0;
-    this._triangles.forEach(tri => {
+    this._triangles.forEach((tri) => {
       const a = tri.getArea();
       area += a;
       this.center.add(tri.getMidpoint(new THREE.Vector3()).multiplyScalar(a));
     });
     this.center.divideScalar(area);
 
-
     this.selectedMaterial = defaults.materials.selected;
     this.normalMaterial = defaults.materials.mesh;
     this.normalColor = new THREE.Color(0xaaaaaa);
 
     const dict = {} as KeyValuePair<KeepLine>;
-    
-    
+
     // for each triangle
     this.triangles.forEach((tri, index) => {
-      
-      
       // get the triangles normal
       const normal = this._triangles[index]
         .getNormal(new THREE.Vector3())
         .toArray()
-        .map(x=>roundTo(x,5));
-  
+        .map((x) => roundTo(x, 5));
+
       // for each of the triangles vertices
       for (let i = 0; i < 3; i++) {
         // construct line from current vertex to the vertex
@@ -236,11 +252,10 @@ class Surface extends Container {
           // make sure we dont keep this edge
           dict[linekey].keep = false;
           const otherIndex = dict[linekey].triangle_index;
-          
         }
       }
     });
-    
+
     const segments = new THREE.Geometry();
     const edges = Object.keys(dict)
       .reduce((a, b: string) => {
@@ -281,6 +296,30 @@ class Surface extends Container {
       );
     }
     this.getArea();
+    
+    this.edgeLoop = this.calculateEdgeLoop();
+    
+    this.polygon = new CSG.Polygon(
+      this.edgeLoop.map(x => {
+        return new CSG.Vertex(new CSG.Vector3D([x.x, x.y, x.z]));
+      })
+    );
+    
+    
+    
+    const eqeps = numbersEqualWithinTolerence(CSG.EPS);
+    
+    const n0 = this.normal;
+    const n1 = () => this.polygon.plane.normal;
+    if (!eqeps(n0.x, n1().x) || !eqeps(n0.y, n1().y) || !eqeps(n0.z, n1().z)) {
+      this.polygon.plane = this.polygon.plane.flipped();
+      if (!eqeps(n0.x, n1().x) || !eqeps(n0.y, n1().y) || !eqeps(n0.z, n1().z)) {
+        console.error(new Error(`Surface '${this.name}' has a normal vector issue`));
+      }
+    }
+   
+    
+    this.polygon.parentSurface = this;
   }
   save() {
     return {
@@ -302,7 +341,7 @@ class Surface extends Container {
   restore(state: SurfaceSaveObject) {
     this.init({ ...state });
     this.visible = state.visible;
-    this.position.set(state.position[0], state.position[1],state.position[2]);
+    this.position.set(state.position[0], state.position[1], state.position[2]);
     this.rotation.set(state.rotation[0], state.rotation[1], state.rotation[2], "XYZ");
     this.scale.set(state.scale[0], state.scale[1], state.scale[2]);
     this.uuid = state.uuid;
@@ -318,8 +357,7 @@ class Surface extends Container {
     (this.mesh.material as THREE.MeshLambertMaterial) = this.normalMaterial;
     (this.mesh.material as THREE.MeshLambertMaterial).needsUpdate = true;
   }
-  flipNormals() {
-  }
+  flipNormals() {}
 
   resetHits() {
     this.numHits = 0;
@@ -334,7 +372,37 @@ class Surface extends Container {
   getEdges() {
     return this.edges;
   }
+  calculateEdgeLoop() {
 
+    const verts = (this.edges.geometry as THREE.Geometry).vertices;
+    const edgePairs = chunk(verts, 2);
+    const edgeLoop = [] as THREE.Vector3[];
+    
+    let j = 0;
+    edgeLoop.push(edgePairs[j][0]);
+    edgeLoop.push(edgePairs[j][1]);
+    while (edgeLoop.length < edgePairs.length) {
+      for (let i = 0; i < edgePairs.length; i++) {
+        if (i != j) {
+          if (edgeLoop[edgeLoop.length - 1].equals(edgePairs[i][0])) {
+            edgeLoop.push(edgePairs[i][1]);
+            j = i;
+            break;
+          }
+          else if (edgeLoop[edgeLoop.length - 1].equals(edgePairs[i][1])) {
+            edgeLoop.push(edgePairs[i][0]);
+            j = i;
+            break;
+          }
+        }
+      }
+    }
+
+    return edgeLoop;
+  }
+
+  
+  
   mergeSurfaces(surfaces: Surface[]) {
     const name = this.name + "-merged";
     const acousticMaterial = this.acousticMaterial;

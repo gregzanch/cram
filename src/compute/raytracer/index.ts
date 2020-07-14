@@ -13,7 +13,7 @@ import { Stat } from "../../components/parameter-config/Stats";
 import Messenger from "../../messenger";
 import sort from "fast-sort";
 import FileSaver from "file-saver";
-import Plotly from 'plotly.js';
+import Plotly, { PlotData } from 'plotly.js';
 import { scatteredEnergy } from "./scattered-energy";
 import PointShader from "./shaders/points";
 import * as ac from '../acoustics';
@@ -23,6 +23,12 @@ import { clamp } from "../../common/clamp";
 import { lerp } from "../../common/lerp";
 import { movingAverage } from "../../common/moving-average";
 import linearRegression, { LinearRegressionResult } from "../../common/linear-regression";
+import { BSP } from './bsp';
+
+import expose from "../../common/expose";
+import { reverseTraverse } from "../../common/reverse-traverse";
+
+expose({ Plotly });
 
 
 export interface QuickEstimateStepResult {
@@ -62,19 +68,23 @@ export interface Chain {
   time_rec: number;
   angle_rec: number;
   distance: number;
-  point: THREE.Vector3;
-  object: THREE.Object3D;
-  face: THREE.Face3;
+  // point: THREE.Vector3;
+  point: [number, number, number];
+  object: string;
+  faceNormal: [number,number,number];
   faceIndex: number;
+  faceMaterialIndex: number;
   angle: number;
+  energy: number;
 }
 const { abs, floor, asin } = Math;
 
 export interface RayPath {
   intersectedReceiver: boolean;
   chain: Chain[];
+  chainLength: number;
   energy: number;
-  time?: number;
+  time: number;
   source: string;
 }
 export interface EnergyTime {
@@ -102,8 +112,12 @@ export class ReceiverData {
     this.data = [] as EnergyTime[];
   }
 }
+
+
+
 export interface RayTracerParams {
   renderer;
+  messenger: Messenger;
   name?: string;
   roomID?: string;
   sourceIDs?: string[];
@@ -115,14 +129,16 @@ export interface RayTracerParams {
   pointSize?: number;
   reflectionOrder?: number;
   isRunning?: boolean;
-  messenger: Messenger;
   runningWithoutReceivers?: boolean;
   raysVisible?: boolean;
   pointsVisible?: boolean;
   invertedDrawStyle?: boolean;
+  plotStyle?: Partial<PlotData>;
+  uuid?: string;
+  paths?: KVP<RayPath[]>;
 }
 export const defaults = {
-  name: "ray-tracer",
+  name: "Ray Tracer",
   roomID: "",
   sourceIDs: [] as string[],
   surfaceIDs: [] as string[],
@@ -136,8 +152,13 @@ export const defaults = {
   pointSize: 2,
   raysVisible: true,
   pointsVisible: true,
-  invertedDrawStyle: false
+  invertedDrawStyle: false,
+  paths: {} as KVP<RayPath[]>,
+  plotStyle: {
+    mode: "lines"
+  } as Partial<PlotData>
 };
+
 export enum DRAWSTYLE {
   ENERGY = 0.0,
   ANGLE = 1.0,
@@ -194,11 +215,15 @@ class RayTracer extends Solver {
   plotData: Plotly.Data[];
   intensitySampleRate: number;
   validRayCount: number;
-
+  plotStyle: Partial<PlotData>;
+  bsp: BSP;
   constructor(params: RayTracerParams) {
     super(params);
     this.kind = "ray-tracer";
+    this.uuid = params.uuid || this.uuid;
+    this.name = params.name || defaults.name;
     this.responseOverlayElement = document.querySelector("#response-overlay") || document.createElement("div");
+    this.responseOverlayElement.style.backgroundColor = "#FFFFFF";
     this.sourceIDs = params.sourceIDs || defaults.sourceIDs;
     this.surfaceIDs = params.surfaceIDs || defaults.surfaceIDs;
     this.roomID = params.roomID || defaults.roomID;
@@ -212,12 +237,13 @@ class RayTracer extends Solver {
     this.reflectionLossFrequencies = [4000];
     this.intervals = [];
     this.plotData = [] as Plotly.Data[];
+    this.plotStyle = params.plotStyle || defaults.plotStyle;
     this.lastTime = Date.now();
     this.statsUpdatePeriod = 100;
     this._pointSize = params.pointSize || defaults.pointSize;
     this.validRayCount = 0;
-    this.defaultFrequencies = [250, 500, 1000, 2000, 4000, 8000];
-    this.intensitySampleRate = 512;
+    this.defaultFrequencies = [1000];
+    this.intensitySampleRate = 256;
     this.quickEstimateResults = {} as KVP<QuickEstimateStepResult[]>;
 
     const paramsHasRaysVisible = typeof params.raysVisible === "boolean";
@@ -290,11 +316,13 @@ class RayTracer extends Solver {
       writable: true
     });
 
+    this.bsp = new BSP();
+    
     // raycaster.intersectObjects([mesh]);
     this.intersections = [] as THREE.Intersection[];
     this.findIDs();
     this.intersectableObjects = [] as Array<THREE.Mesh | THREE.Object3D | Container>;
-    this.paths = {} as KVP<RayPath[]>;
+    this.paths = params.paths || defaults.paths;
     this.stats = {
       numRaysShot: {
         name: "# of rays shot",
@@ -342,9 +370,51 @@ class RayTracer extends Solver {
       })
     );
     this.step = this.step.bind(this);
+    
+    
+    
   }
   update = () => {};
-
+  save() {
+    const {
+      name,
+      kind,
+      uuid,
+      roomID,
+      sourceIDs,
+      surfaceIDs,
+      receiverIDs,
+      updateInterval,
+      passes,
+      pointSize,
+      reflectionOrder,
+      runningWithoutReceivers,
+      raysVisible,
+      pointsVisible,
+      invertedDrawStyle,
+      plotStyle,
+      paths
+    } = this;
+    return {
+      name,
+      kind,
+      uuid,
+      roomID,
+      sourceIDs,
+      surfaceIDs,
+      receiverIDs,
+      updateInterval,
+      passes,
+      pointSize,
+      reflectionOrder,
+      runningWithoutReceivers,
+      raysVisible,
+      pointsVisible,
+      invertedDrawStyle,
+      plotStyle,
+      paths
+    };
+  }
   removeMessageHandlers() {
     this.messageHandlerIDs.forEach((x) => {
       this.messenger.removeMessageHandler(x[0], x[1]);
@@ -416,15 +486,15 @@ class RayTracer extends Solver {
     this.renderer.needsToRender = true;
   }
 
-  appendRay(p1: THREE.Vector3, p2: THREE.Vector3, energy: number = 1.0, angle: number = 1.0) {
+  appendRay(p1: [number, number, number], p2: [number, number, number], energy: number = 1.0, angle: number = 1.0) {
     // set p1
-    this.rayBufferAttribute.setXYZ(this.rayPositionIndex++, p1.x, p1.y, p1.z);
+    this.rayBufferAttribute.setXYZ(this.rayPositionIndex++, p1[0], p1[1], p1[2]);
 
     // set the color
     this.colorBufferAttribute.setXY(this.rayPositionIndex, energy, angle);
 
     // set p2
-    this.rayBufferAttribute.setXYZ(this.rayPositionIndex++, p2.x, p2.y, p2.z);
+    this.rayBufferAttribute.setXYZ(this.rayPositionIndex++, p2[0], p2[1], p2[2]);
 
     // set the color
     this.colorBufferAttribute.setXY(this.rayPositionIndex, energy, angle);
@@ -461,7 +531,7 @@ class RayTracer extends Solver {
     energy: number,
     source: string,
     iter: number = 1,
-    chain: THREE.Intersection[] = [],
+    chain: Partial<Chain>[] = [],
     frequency = 4000
   ) {
     // normalize the ray
@@ -488,15 +558,26 @@ class RayTracer extends Solver {
         const angle = intersections[0].face && rd.clone().multiplyScalar(-1).angleTo(intersections[0].face.normal);
 
         // push the intersection data onto the chain
+
         chain.push({
-          energy,
-          angle,
-          ...intersections[0]
-        } as THREE.Intersection);
+          object: intersections[0].object.parent!.uuid,
+          angle: angle!,
+          distance: intersections[0].distance,
+          faceNormal: [
+            intersections[0].face!.normal.x,
+            intersections[0].face!.normal.y,
+            intersections[0].face!.normal.z
+          ],
+          faceMaterialIndex: intersections[0].face!.materialIndex,
+          faceIndex: intersections[0].faceIndex!,
+          point: [intersections[0].point.x, intersections[0].point.y, intersections[0].point.z],
+          energy: energy!
+        });
 
         // end the chain here
         return {
           chain,
+          chainLength: chain.length,
           intersectedReceiver: true,
           energy,
           source
@@ -507,10 +588,19 @@ class RayTracer extends Solver {
 
         // push the intersection onto the chain
         chain.push({
-          energy,
-          angle,
-          ...intersections[0]
-        } as THREE.Intersection);
+          object: intersections[0].object.parent!.uuid,
+          angle: angle!,
+          distance: intersections[0].distance,
+          faceNormal: [
+            intersections[0].face!.normal.x,
+            intersections[0].face!.normal.y,
+            intersections[0].face!.normal.z
+          ],
+          faceMaterialIndex: intersections[0].face!.materialIndex,
+          faceIndex: intersections[0].faceIndex!,
+          point: [intersections[0].point.x, intersections[0].point.y, intersections[0].point.z],
+          energy: energy!
+        });
 
         if (intersections[0].object.parent instanceof Surface) {
           intersections[0].object.parent.numHits += 1;
@@ -543,7 +633,7 @@ class RayTracer extends Solver {
           );
         }
       }
-      return { chain, source, intersectedReceiver: false } as RayPath;
+      return { chain, chainLength: chain.length, source, intersectedReceiver: false } as RayPath;
     }
   }
 
@@ -706,22 +796,17 @@ class RayTracer extends Solver {
         //  ignoring receiver intersections
         if (this._runningWithoutReceivers) {
           // add the first ray onto the buffer
-          this.appendRay(
-            position,
-            (path.chain[0] as THREE.Intersection).point,
-            path.chain[0].energy || 1.0,
-            path.chain[0].angle
-          );
+          this.appendRay([position.x, position.y, position.z], path.chain[0].point, path.chain[0].energy || 1.0, path.chain[0].angle);
 
           // add the rest of the rays onto the buffer
           for (let j = 1; j < path.chain.length; j++) {
             // starting at i=1 to avoid an if statement in here
             this.appendRay(
               // the previous point
-              (path.chain[j - 1] as THREE.Intersection).point,
+              path.chain[j - 1].point,
 
               // the current point
-              (path.chain[j] as THREE.Intersection).point,
+              path.chain[j].point,
 
               // the energy content displayed as a color + alpha
               path.chain[j].energy || 1.0,
@@ -730,7 +815,7 @@ class RayTracer extends Solver {
           }
 
           // get the uuid of the intersected receiver that way we can filter by receiver
-          const index = ((path.chain[path.chain.length - 1] as THREE.Intersection).object.parent as Receiver).uuid;
+          const index = path.chain[path.chain.length - 1].object;
 
           // if the receiver uuid is already defined, push the path on, else define it
           this.paths[index] ? this.paths[index].push(path) : (this.paths[index] = [path]);
@@ -743,8 +828,8 @@ class RayTracer extends Solver {
         else if (path["intersectedReceiver"]) {
           // add the ray to the buffer
           this.appendRay(
-            position,
-            (path.chain[0] as THREE.Intersection).point,
+            [position.x, position.y, position.z],
+            path.chain[0].point,
             path.chain[0].energy || 1.0,
             path.chain[0].angle
           );
@@ -753,10 +838,10 @@ class RayTracer extends Solver {
           for (let i = 1; i < path.chain.length; i++) {
             this.appendRay(
               // the previous point
-              (path.chain[i - 1] as THREE.Intersection).point,
+              path.chain[i - 1].point,
 
               // the current point
-              (path.chain[i] as THREE.Intersection).point,
+              path.chain[i].point,
 
               // the energy content displayed as a color + alpha
               path.chain[i].energy || 1.0,
@@ -766,7 +851,7 @@ class RayTracer extends Solver {
           (this.stats.numValidRayPaths.value as number)++;
           this.validRayCount += 1;
           this.renderer.overlays.global.setCellValue(this.uuid + "-valid-ray-count", this.validRayCount);
-          const index = ((path.chain[path.chain.length - 1] as THREE.Intersection).object.parent as Receiver).uuid;
+          const index = path.chain[path.chain.length - 1].object;
           this.paths[index] ? this.paths[index].push(path) : (this.paths[index] = [path]);
 
           // increment the sources ray counter
@@ -856,7 +941,9 @@ class RayTracer extends Solver {
         } as EnergyTime;
         let intersectedReceiver = false;
         path.chain.forEach((segment) => {
-          const container = segment.object.parent as Container;
+          const container = this.receiverIDs.includes(segment.object)
+            ? this.containers[segment.object]
+            : (this.room.surfaceMap[segment.object] as Container);
           if (container && container.kind) {
             if (container.kind === "receiver") {
               intersectedReceiver = true;
@@ -877,8 +964,13 @@ class RayTracer extends Solver {
                 } else {
                   energytime.energy[index].value *= reflectionloss;
                   energytime.time = segment.total_time;
-                  const d = new THREE.Vector3().subVectors(receiverPosition, segment.point);
-                  const theta = segment.face.normal.angleTo(d);
+                  const d = new THREE.Vector3(
+                    receiverPosition.x - segment.point[0],
+                    receiverPosition.y - segment.point[1],
+                    receiverPosition.z - segment.point[2]
+                  );
+                  const theta = new THREE.Vector3().fromArray(segment.faceNormal).angleTo(d);
+
                   const r = receiverRadius;
                   energytime_diffuse.energy[index] = {
                     frequency,
@@ -958,8 +1050,8 @@ class RayTracer extends Solver {
           if (chain && chain.length > 0) {
             let magnitude = 1;
             for (let k = 0; k < chain.length; k++) {
-              const intersection = chain[k] as THREE.Intersection;
-              const surface = intersection.object.parent as Surface;
+              const intersection = chain[k];
+              const surface = this.room.surfaceMap[intersection.object] as Surface;
               const angle = intersection["angle"] || 0;
               magnitude = magnitude * abs(surface.reflectionFunction(frequency, angle));
             }
@@ -1093,7 +1185,9 @@ class RayTracer extends Solver {
   }
   getReceiverIntersectionPoints(id: string) {
     if (this.paths && this.paths[id] && this.paths[id].length > 0) {
-      return this.paths[id].map((x) => x.chain[x.chain.length - 1].point) as THREE.Vector3[];
+      return this.paths[id].map((x) =>
+        new THREE.Vector3().fromArray(x.chain[x.chain.length - 1].point)
+      ) as THREE.Vector3[];
     } else return [] as THREE.Vector3[];
   }
   calculateResponseByIntensity(freqs: number[] = this.defaultFrequencies, temperature: number = 20) {
@@ -1140,18 +1234,21 @@ class RayTracer extends Solver {
             time += distance / soundSpeed;
 
             // the intersected surface
-            const surface = paths[receiverKey][sourceKey][i].chain[j].object.parent as Surface;
+            // const surface = paths[receiverKey][sourceKey][i].chain[j].object.parent as Surface;
+            const id = paths[receiverKey][sourceKey][i].chain[j].object;
+
+            const surface = this.containers[id] || this.room.surfaceMap[id] || null;
 
             // for each frequency
             for (let f = 0; f < freqs.length; f++) {
               const freq = freqs[f];
               let coefficient = 1;
-              if (surface.kind === "surface") {
+              if (surface && surface.kind === "surface") {
                 // coefficient = surface.reflectionFunction(freq, angle);
-                coefficient = 1 - surface.absorptionFunction(freq);
+                coefficient = 1 - (surface as Surface).absorptionFunction(freq);
               }
               IrayArray[f] = ac.P2I(
-                ac.Lp2P((ac.P2Lp(ac.I2P(IrayArray[f] * coefficient)) as number) - airAttenuationdB[f])
+                ac.Lp2P((ac.P2Lp(ac.I2P(IrayArray[f] * coefficient)) as number) - airAttenuationdB[f] * distance)
               ) as number;
             }
           }
@@ -1170,7 +1267,6 @@ class RayTracer extends Solver {
   }
 
   resampleResponseByIntensity(sampleRate: number = this.intensitySampleRate) {
-    // if response has been calculated
     if (this.responseByIntensity) {
       for (const recKey in this.responseByIntensity) {
         for (const srcKey in this.responseByIntensity[recKey]) {
@@ -1232,14 +1328,12 @@ class RayTracer extends Solver {
               }
             }
           }
-          this.calculateT20(recKey,srcKey);
-          this.calculateT30(recKey,srcKey);
-          this.calculateT60(recKey,srcKey);
+          this.calculateT20(recKey, srcKey);
+          this.calculateT30(recKey, srcKey);
+          this.calculateT60(recKey, srcKey);
         }
       }
 
-      
-      
       // return the sample array
       return this.responseByIntensity;
     }
@@ -1285,7 +1379,7 @@ class RayTracer extends Solver {
           return {
             x: resampleTime,
             y: resampledResponse[i],
-            mode: "lines",
+            mode: this.plotStyle.mode,
             name: freq.toString() + " Hz",
             line: {
               width: 1
@@ -1308,11 +1402,31 @@ class RayTracer extends Solver {
           });
           //@ts-ignore
           Plotly.update(this.responseOverlayElement.id, { x: xs, y: ys }, is);
+
           // Plotly.extendTraces(this.responseOverlayElement.id, { x: xs, y: ys }, is);
         } else {
-          Plotly.newPlot(this.responseOverlayElement.id, this.plotData, layout);
+          Plotly.newPlot(this.responseOverlayElement.id, this.plotData, layout, { responsive: true });
+          const { responseOverlayElement } = this;
+          const traverseFunction = reverseTraverse((elt) => elt && elt.classList.contains("splitter-layout"));
+          const splitterLayout = traverseFunction(this.responseOverlayElement);
+          console.log(splitterLayout);
+          if (splitterLayout) {
+            const splitter = splitterLayout.querySelector(".layout-splitter");
+            if (splitter) {
+              (splitter as HTMLDivElement).addEventListener("mouseup", (e) => {
+                Plotly.Plots.resize(responseOverlayElement);
+              });
+            }
+          }
         }
       }
+    }
+  }
+
+  updatePlotStyle(plotStyle: Partial<PlotData>) {
+    Object.assign(this.plotStyle, plotStyle);
+    if (this.responseOverlayElement.childElementCount > 0) {
+      Plotly.restyle(this.responseOverlayElement, this.plotStyle);
     }
   }
 
@@ -1331,8 +1445,8 @@ class RayTracer extends Solver {
         for (let i = 0; i < resampledResponse[0].length; i++) {
           resampleTime[i] = i / sampleRate;
         }
-        
-        this.responseByIntensity[recid][srcid].t30 = resampledResponse.map(resp => {
+
+        this.responseByIntensity[recid][srcid].t30 = resampledResponse.map((resp) => {
           let i = 0;
           let val = resp[i];
           while (val == 0) {
@@ -1342,17 +1456,13 @@ class RayTracer extends Solver {
             resp[j] = val;
           }
           const cutoffLevel = val - 30;
-          const avg = movingAverage(resp, 2).filter(x => x >= cutoffLevel);
+          const avg = movingAverage(resp, 2).filter((x) => x >= cutoffLevel);
           const len = avg.length;
-          
+
           return linearRegression(resampleTime.slice(0, len), resp.slice(0, len));
-          
         });
-        
-        
-        
       }
-    } 
+    }
     return this.responseByIntensity;
   }
   calculateT20(receiverId?: string, sourceId?: string) {
@@ -1370,8 +1480,8 @@ class RayTracer extends Solver {
         for (let i = 0; i < resampledResponse[0].length; i++) {
           resampleTime[i] = i / sampleRate;
         }
-        
-        this.responseByIntensity[recid][srcid].t20 = resampledResponse.map(resp => {
+
+        this.responseByIntensity[recid][srcid].t20 = resampledResponse.map((resp) => {
           let i = 0;
           let val = resp[i];
           while (val == 0) {
@@ -1381,17 +1491,13 @@ class RayTracer extends Solver {
             resp[j] = val;
           }
           const cutoffLevel = val - 20;
-          const avg = movingAverage(resp, 2).filter(x => x >= cutoffLevel);
+          const avg = movingAverage(resp, 2).filter((x) => x >= cutoffLevel);
           const len = avg.length;
-          
+
           return linearRegression(resampleTime.slice(0, len), resp.slice(0, len));
-          
         });
-        
-        
-        
       }
-    } 
+    }
     return this.responseByIntensity;
   }
   calculateT60(receiverId?: string, sourceId?: string) {
@@ -1409,8 +1515,8 @@ class RayTracer extends Solver {
         for (let i = 0; i < resampledResponse[0].length; i++) {
           resampleTime[i] = i / sampleRate;
         }
-        
-        this.responseByIntensity[recid][srcid].t60 = resampledResponse.map(resp => {
+
+        this.responseByIntensity[recid][srcid].t60 = resampledResponse.map((resp) => {
           let i = 0;
           let val = resp[i];
           while (val == 0) {
@@ -1420,17 +1526,13 @@ class RayTracer extends Solver {
             resp[j] = val;
           }
           const cutoffLevel = val - 60;
-          const avg = movingAverage(resp, 2).filter(x => x >= cutoffLevel);
+          const avg = movingAverage(resp, 2).filter((x) => x >= cutoffLevel);
           const len = avg.length;
-          
+
           return linearRegression(resampleTime.slice(0, len), resp.slice(0, len));
-          
         });
-        
-        
-        
       }
-    } 
+    }
     return this.responseByIntensity;
   }
 
@@ -1454,6 +1556,122 @@ class RayTracer extends Solver {
     console.log("blur");
     this.renderer.overlays.global.hideCell(this.uuid + "-valid-ray-count");
   }
+  
+  pathsToLinearBuffer() {
+    const uuidToLinearBuffer = uuid => uuid.split('').map(x => x.charCodeAt(0));
+    const chainArrayToLinearBuffer = (chainArray) => {
+      return chainArray.map((chain: Chain) => [
+          ...uuidToLinearBuffer(chain.object), // 36x8
+          chain.angle, // 1x32
+          chain.distance, // 1x32
+          chain.energy, // 1x32
+          chain.faceIndex, // 1x8
+          chain.faceMaterialIndex, // 1x8
+          ...chain.faceNormal, // 3x32
+          ...chain.point // 3x32
+        ]).flat();
+    };
+    const pathOrder = [
+      "source",
+      "chainLength",
+      "time",
+      "intersectedReceiver",
+      "energy",
+      "chain"
+    ];
+    const chainOrder = [
+      "object",
+      "angle",
+      "distance",
+      "energy",
+      "faceIndex",
+      "faceMaterialIndex",
+      "faceNormal",
+      "point"
+    ];
+    
+    const buffer = new Float32Array(Object.keys(this.paths).map(key => {
+      const pathBuffer = this.paths[key].map(path => {
+        return [
+          ...uuidToLinearBuffer(path.source),
+          path.chainLength,
+          path.time,
+          Number(path.intersectedReceiver),
+          path.energy,
+          ...chainArrayToLinearBuffer(path.chain)
+        ];
+      }).flat();
+      return [
+        ...uuidToLinearBuffer(key),
+        pathBuffer.length,
+        ...pathBuffer
+      ]
+    }).flat());
+    return buffer;
+  }
+  
+  linearBufferToPaths(linearBuffer: Float32Array) {
+    const uuidLength = 36;
+    const chainItemLength = 47;
+    const decodeUUID = (buffer) => String.fromCharCode(...buffer);
+    const decodeChainItem = (chainItem: Float32Array) => {
+      let o = 0;
+      const object = decodeUUID(chainItem.slice(o, o += uuidLength));
+      const angle = chainItem[o++];
+      const distance = chainItem[o++];
+      const energy = chainItem[o++];
+      const faceIndex = chainItem[o++];
+      const faceMaterialIndex = chainItem[o++];
+      const faceNormal = [chainItem[o++], chainItem[o++], chainItem[o++]];
+      const point = [chainItem[o++], chainItem[o++], chainItem[o++]];
+      return {
+        object,
+        angle,
+        distance,
+        energy,
+        faceIndex,
+        faceMaterialIndex,
+        faceNormal,
+        point
+      } as Chain;
+    };
+    const decodePathBuffer = buffer => {
+      const paths = [] as RayPath[];
+      let o = 0;
+      while (o < buffer.length) {
+        const source = decodeUUID(buffer.slice(o, o += uuidLength));
+        const chainLength = buffer[o++];
+        const time = buffer[o++];
+        const intersectedReceiver = Boolean(buffer[o++]);
+        const energy = buffer[o++];
+        const chain = [] as Chain[];
+        for (let i = 0; i < chainLength; i++) {
+          chain.push(decodeChainItem(buffer.slice(o, o += chainItemLength)));
+        }
+        paths.push({
+          source,
+          chainLength,
+          time,
+          intersectedReceiver,
+          energy,
+          chain
+        });
+      }
+      return paths as RayPath[];
+    };
+    let offset = 0;
+    const pathsObj = {} as KVP<RayPath[]>;
+    while (offset < linearBuffer.length) {
+      const uuid = decodeUUID(linearBuffer.slice(offset, offset += uuidLength));
+      const pathBufferLength = linearBuffer[offset++];
+      const paths = decodePathBuffer(linearBuffer.slice(offset, offset += pathBufferLength));
+      pathsObj[uuid] = paths;
+    }
+    return pathsObj;
+  }
+  
+  
+  
   get sources() {
     if (this.sourceIDs.length > 0) {
       return this.sourceIDs.map((x) => this.containers[x]);

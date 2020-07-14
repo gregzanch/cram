@@ -18,7 +18,7 @@ export class ContextMenu extends React.Component<ContextMenuProps, {}> {
  
     public renderContextMenu() {
         // return a single element, or nothing to use default browser behavior
-        const items = this.props.items || ["Delete", "!seperator", "Log to Console"];
+        const items = this.props.items || ["Delete", "!seperator", "Add To Global Variables",  "Log to Console"];
         return (
             <Menu>
                 {items.map((x, i) => {

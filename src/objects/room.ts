@@ -5,6 +5,8 @@ import Surface, { SurfaceSaveObject } from "./surface";
 import { UNITS } from "../enums/units";
 import { RT_CONSTANTS } from "../constants/rt-constants";
 import { third_octave } from "../compute/acoustics";
+import { KVP } from "../common/key-value-pair";
+import RT60 from "../compute/rt";
 
 export interface RoomProps extends ContainerProps {
   surfaces: Surface[];
@@ -35,6 +37,8 @@ export default class Room extends Container {
   units!: UNITS;
   originalFileName!: string;
   originalFileData!: string;
+  surfaceMap!: KVP<Surface>;
+  rt!: RT60;
   constructor(name: string, props: RoomProps) {
     super(name);
     this.kind = "room";
@@ -55,6 +59,13 @@ export default class Room extends Container {
     this.add(this.surfaces);
     this.calculateBoundingBox();
     this.volume = this.volumeOfMesh();
+    this.surfaceMap = this.surfaces.children.reduce((a, b) => {
+      a[b.uuid] = b as Surface;
+      return a;
+    }, {} as KVP<Surface>);
+    this.rt = new RT60({
+      name: this.name + "rt60"
+    });
   }
 
 	save() {

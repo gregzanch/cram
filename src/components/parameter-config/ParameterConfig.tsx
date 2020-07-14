@@ -20,6 +20,7 @@ import RayTracer from '../../compute/raytracer';
 import RendererTab from './renderer-tab/RendererTab';
 import FDTD_2DTab from './fdtd-2d-tab/FDTD_2DTab';
 import { FDTD_2D } from '../../compute/2d-fdtd';
+import { addToGlobalVars } from '../../common/global-vars';
 
 
 export interface ParameterConfigProps {
@@ -98,6 +99,9 @@ export default class ParameterConfig extends React.Component<ParameterConfigProp
                         } break;
                         case "Log to Console": {
                           console.log(this.props.solvers[x]);
+                        } break;
+                        case "Add To Global Variables": {
+                          addToGlobalVars(this.props.solvers[x], this.props.solvers[x].name);
                         } break;
                         default:
                           break;

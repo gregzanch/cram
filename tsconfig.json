@@ -21,8 +21,8 @@
     "sourceMap": true,
     "typeRoots": [
       "@types",
-      "./types"
     ],
+
     "lib": [
       "dom",
       "esnext.asynciterable",
@@ -37,10 +37,14 @@
     "isolatedModules": true,
     "experimentalDecorators": true
   },
+  
   "include": [
     "src",
     "src/.ts",
-    "types/bvh.d.ts, types/three-mesh-bvh.d.ts"
+    "types/bvh.d.ts", 
+    "types/three-mesh-bvh.d.ts",
+    "types/global.d.ts",
+    "types/csg.d.ts"
   ],
   "exclude": [
     "node_modules/**",

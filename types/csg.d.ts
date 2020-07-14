@@ -4,6 +4,8 @@
 // Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped
 // TypeScript Version: 3.6
 
+import { Surface } from "../src/objects/surface";
+
 
 declare namespace OpenJsCad {
     interface ILog {
@@ -421,6 +423,7 @@ declare namespace CSG {
 		mirrorPoint(point3d: Vector3D): Vector3D;
 	}
 	class Polygon extends CxG {
+		parentSurface: Surface;
 		vertices: Vertex[];
 		shared: Polygon.Shared;
 		plane: Plane;

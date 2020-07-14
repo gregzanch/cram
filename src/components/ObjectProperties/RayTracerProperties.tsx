@@ -8,6 +8,7 @@ import GridRow from '../grid-row/GridRow';
 import GridRowSeperator from '../grid-row/GridRowSeperator';
 import RayTracer from "../../compute/raytracer";
 import { Button } from "@blueprintjs/core";
+
 import Select, { components } from "react-select";
 import Messenger from "../../messenger";
 
@@ -30,6 +31,42 @@ const RayTracerPropertiesContainerStyle: React.CSSProperties = {
 };
 
 export default function RayTracerProperties(props: RayTracerPropertiesProps) {
+  
+  const [plotMode, setPlotMode] = React.useState(
+    props.object.plotStyle.mode
+      ? props.object.plotStyle.mode.split("+").map((x) => {
+          return {
+            value: x,
+            label: x,
+            key: x,
+            id: x
+          };
+        })
+      : [
+          {
+            value: "lines",
+            label: "lines",
+            key: "lines",
+            id: "lines"
+          }
+        ]
+  );
+  
+  const plotModeOptions = [
+    {
+      value: "lines",
+      label: "lines",
+      key: "lines",
+      id: "lines"
+    },
+    {
+      value: "markers",
+      label: "markers",
+      key: "markers",
+      id: "markers"
+    }
+  ];
+  
   const XYZProps = {
     style: {
       width: "30%"
@@ -38,14 +75,18 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
   };
 
   const onSourceChange = (e) => {
-    console.log(e);
     props.messenger.postMessage("RAYTRACER_SOURCE_CHANGE", !e ? [] : e, props.object.uuid);
-    
   }
 
   const onReceiverChange = e => {
-    console.log(e);
     props.messenger.postMessage("RAYTRACER_RECEIVER_CHANGE", !e? [] : e, props.object.uuid);
+  };
+
+  const onPlotModeChange = e => {
+    setPlotMode(e);
+    props.object.updatePlotStyle({
+      mode: e ? e.map(x => x.value).join("+") : "none"
+    })
   };
 
   let sources = props.messenger.postMessage("FETCH_ALL_SOURCES")[0];
@@ -244,10 +285,18 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
             }
           />
         </GridRow>
+
         <GridRowSeperator />
+
         {props.object.hasOwnProperty("intensitySampleRate") && (
           <GridRow label={"Sample Rate"}>
-            <NumberInput name="intensitySampleRate" value={props.object.intensitySampleRate} {...XYZProps} min={32} step={1} />
+            <NumberInput
+              name="intensitySampleRate"
+              value={props.object.intensitySampleRate}
+              {...XYZProps}
+              min={32}
+              step={1}
+            />
           </GridRow>
         )}
         <GridRow span={2}>
@@ -263,6 +312,22 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
         <GridRow span={2}>
           <Button text="Plot Response by Intensity" onClick={(e) => props.object.plotResponseByIntensity()} />
         </GridRow>
+        <GridRow label="Plot Mode"></GridRow>
+        
+        <GridRow span={2}>
+          <Select
+            defaultValue={plotMode}
+            isMulti
+            name="plotMode"
+            options={plotModeOptions}
+            className="basic-multi-select"
+            classNamePrefix="select"
+            key={"plotMode"}
+            styles={customStyles}
+            onChange={onPlotModeChange}
+          />
+        </GridRow>
+
         <GridRowSeperator />
         <GridRow span={2}>
           <Button

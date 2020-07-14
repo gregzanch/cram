@@ -17,6 +17,7 @@ import {
 
 import "./ConstructionsView.css";
 import Messenger from "../messenger";
+import { addToGlobalVars } from "../common/global-vars";
 
 export interface ConstructionsViewProps {
   constructions: KeyValuePair<Container>;
@@ -53,7 +54,7 @@ export default function ConstructionsView(props: ConstructionsViewProps) {
       defaultCollapseIcon={<ChevronRightIcon fontSize="inherit" />}
     >
       <ContextMenu
-        items={["Show All", "Hide All", "!seperator", "Log to Console"]}
+        items={["Show All", "Hide All", "!seperator", "Add To Global Variables", "Log to Console"]}
         handleMenuItemClick={e => {
           if (e.target.textContent) {
             switch (e.target.textContent) {
@@ -78,6 +79,9 @@ export default function ConstructionsView(props: ConstructionsViewProps) {
                   console.log(props.constructions);
                 }
                 break;
+              case "Add To Global Variables": {
+                addToGlobalVars(props.constructions, "constructions");
+              } break;
 
               default:
                 break;
@@ -96,7 +100,7 @@ export default function ConstructionsView(props: ConstructionsViewProps) {
             const construction = props.constructions[x];
 
             const ContextMenuSharedProps = {
-              items: ["Show", "Hide", "Delete", "!seperator", "Log to Console"],
+              items: ["Show", "Hide", "Delete", "!seperator", "Add To Global Variables", "Log to Console"],
               handleMenuItemClick: (e) => {
                 if (e.target.textContent) {
                   switch (e.target.textContent) {
@@ -121,6 +125,12 @@ export default function ConstructionsView(props: ConstructionsViewProps) {
                     case "Log to Console":
                       {
                         console.log(construction);
+                      }
+                      break;
+
+                    case "Add To Global Variables":
+                      {
+                        addToGlobalVars(construction, construction.name);
                       }
                       break;
 
