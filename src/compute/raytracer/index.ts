@@ -23,7 +23,11 @@ import { clamp } from "../../common/clamp";
 import { lerp } from "../../common/lerp";
 import { movingAverage } from "../../common/moving-average";
 import linearRegression, { LinearRegressionResult } from "../../common/linear-regression";
-import { BSP } from './bsp';
+// import { BSP } from './bsp';
+import { BVHBuilderAsync, BVHVector3, BVHNode } from './bvh';
+import { BVH } from './bvh/BVH';
+
+
 
 import expose from "../../common/expose";
 import { reverseTraverse } from "../../common/reverse-traverse";
@@ -216,7 +220,7 @@ class RayTracer extends Solver {
   intensitySampleRate: number;
   validRayCount: number;
   plotStyle: Partial<PlotData>;
-  bsp: BSP;
+  bvh!: BVH;
   constructor(params: RayTracerParams) {
     super(params);
     this.kind = "ray-tracer";
@@ -316,7 +320,7 @@ class RayTracer extends Solver {
       writable: true
     });
 
-    this.bsp = new BSP();
+   
     
     // raycaster.intersectObjects([mesh]);
     this.intersections = [] as THREE.Intersection[];
@@ -371,6 +375,7 @@ class RayTracer extends Solver {
     );
     this.step = this.step.bind(this);
     
+    this.setBVH().catch(console.error);
     
     
   }
@@ -415,6 +420,56 @@ class RayTracer extends Solver {
       paths
     };
   }
+  
+  async setBVH() {
+    // this.bsp = new BSP();
+    // Have an array of faces (array of stride 9)
+    
+    const faces = this.room.surfaces.children.map((x: Surface) => x.triangles).flat(3);
+    
+    // Generate  the Bounding Volume Hierachy from an array of faces
+    const maxTrianglesPerNode = 5;
+    const res = await BVHBuilderAsync(
+      faces,
+      maxTrianglesPerNode,
+      { steps: 1 },
+      (obj: BVHProgress) => { }
+    );
+    
+    this.bvh = new BVH(res.rootNode, res.bboxArray, res.trianglesArray);
+    
+    // this.bvh.rootNode.extentsMin, this.bvh.rootNode.extentsMax;
+    
+  //  this.bvh.rootNode.children = [vars.ra.bvh.rootNode.node0, vars.ra.bvh.rootNode.node1]
+    
+    
+    // let node = this.bvh.rootNode;
+    // while(node)
+    
+    console.log(this.mapBVHTree());
+    
+    
+
+    // Find ray intersections
+    // const intersections = this.bvh.intersectRay(new BVHVector3(0.25, 1, 0.25), new BVHVector3(0, -1, 0));
+  }
+  
+  mapBVHTree() {
+    function mapTree(node: BVHNode | null) {
+      if (node && node.children[0] && node.children[1]) {
+        return {
+          name: `${node.startIndex},${node.endIndex}`,
+          children: node.children.map((n: BVHNode | null) => mapTree(n)).filter(x=>x)
+        };
+      }
+      else {
+        return null;
+      }
+    };
+    const mappedTree = mapTree(this.bvh.rootNode);
+    return mappedTree;
+  }
+  
   removeMessageHandlers() {
     this.messageHandlerIDs.forEach((x) => {
       this.messenger.removeMessageHandler(x[0], x[1]);

@@ -60,6 +60,7 @@ import ConstructionAxis from "../objects/construction-axis";
 import ConstructionPoint from "../objects/construction-point";
 import { Processes } from "../constants/processes";
 import roundTo from "../common/round-to";
+import { Markup } from "./Markup";
 
 const colored_number_html = (num: number) => /*html*/`<span style="color: ${num < 0 ? "#E68380" : "#A2C982"};">${num.toFixed(3)}</span>`;
 
@@ -150,6 +151,7 @@ export default class Renderer {
 	interactables!: Container;
 	workspace!: Container;
 	sketches!: Container;
+	markup!: Markup;
 	
 	/** Container for constructions (axis, planes, points) */
 	constructions!: Container;
@@ -210,7 +212,7 @@ export default class Renderer {
 	
 	currentProcess!: Processes
 	
-	
+		
 
 	constructor(params: RendererParams) {
 		[
@@ -267,6 +269,10 @@ export default class Renderer {
 		this.interactables = new Container("interactables");
 		this.sketches = new Container("sketches");
 		this.constructions = new Container("constructions");
+		this.markup = new Markup();
+		
+		
+		
 		this.addDefaultConstructions();
 		this.hoveredConstruction = undefined;
 		
@@ -294,7 +300,15 @@ export default class Renderer {
 		// scene
 		this.scene = new THREE.Scene();
 		this.scene.background = new THREE.Color(background);
-		this.scene.add(this.env, this.workspace, this.interactables, this.fdtdItems, this.sketches, this.constructions);
+		this.scene.add(
+			this.env,
+			this.workspace,
+			this.interactables,
+			this.fdtdItems,
+			this.sketches,
+			this.constructions,
+			this.markup
+		);
 		
 		// renderer
 		this.renderer = new THREE.WebGLRenderer({
