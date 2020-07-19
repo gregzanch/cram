@@ -6,10 +6,11 @@
  */
 import * as THREE from "three";
 import { TGALoader } from './tga';
+
+
 export class DAELoader extends THREE.Loader {
 	constructor(manager?: THREE.LoadingManager) {
 		super(manager);
-		
 	}
 	load( url, onLoad, onProgress, onError ) {
 		var scope = this;
@@ -24,7 +25,7 @@ export class DAELoader extends THREE.Loader {
 	parse( text, path ) {
 		function getElementsByTagName( xml, name ) {
 			// Non recursive xml.getElementsByTagName() ...
-			var array = [];
+			var array = [] as Array<any>;
 			var childNodes = xml.childNodes;
 			for ( var i = 0, l = childNodes.length; i < l; i ++ ) {
 				var child = childNodes[ i ];
@@ -109,6 +110,7 @@ export class DAELoader extends THREE.Loader {
 			data.build = builder( data );
 			return data.build;
 		}
+		
 		// animation
 		function parseAnimation( xml ) {
 			var data = {
@@ -188,7 +190,7 @@ export class DAELoader extends THREE.Loader {
 			return data;
 		}
 		function buildAnimation( data ) {
-			var tracks = [];
+			var tracks = [] as Array<any>;
 			var channels = data.channels;
 			var samplers = data.samplers;
 			var sources = data.sources;
@@ -254,7 +256,7 @@ export class DAELoader extends THREE.Loader {
 			return animation;
 		}
 		function prepareAnimationData( data, defaultMatrix ) {
-			var keyframes = [];
+			var keyframes = [] as Array<any>;
 			// transfer data into a sortable array
 			for ( var time in data ) {
 				keyframes.push( { time: parseFloat( time ), value: data[ time ] } );
@@ -277,10 +279,10 @@ export class DAELoader extends THREE.Loader {
 		function createKeyframeTracks( animation, tracks ) {
 			var keyframes = animation.keyframes;
 			var name = animation.name;
-			var times = [];
-			var positionData = [];
-			var quaternionData = [];
-			var scaleData = [];
+			var times = [] as Array<any>;
+			var positionData = [] as Array<any>;
+			var quaternionData = [] as Array<any>;
+			var scaleData = [] as Array<any>;
 			for ( var i = 0, l = keyframes.length; i < l; i ++ ) {
 				var keyframe = keyframes[ i ];
 				var time = keyframe.time;
@@ -363,6 +365,7 @@ export class DAELoader extends THREE.Loader {
 			}
 			key.value[ property ] = ( ( key.time - prev.time ) * ( next.value[ property ] - prev.value[ property ] ) / ( next.time - prev.time ) ) + prev.value[ property ];
 		}
+		
 		// animation clips
 		function parseAnimationClip( xml ) {
 			var data = {
@@ -383,7 +386,7 @@ export class DAELoader extends THREE.Loader {
 			library.clips[ xml.getAttribute( 'id' ) ] = data;
 		}
 		function buildAnimationClip( data ) {
-			var tracks = [];
+			var tracks = [] as Array<any>;
 			var name = data.name;
 			var duration = ( data.end - data.start ) || - 1;
 			var animations = data.animations;
@@ -398,6 +401,7 @@ export class DAELoader extends THREE.Loader {
 		function getAnimationClip( id ) {
 			return getBuild( library.clips[ id ], buildAnimationClip );
 		}
+		
 		// controller
 		function parseController( xml ) {
 			var data = {};
@@ -524,7 +528,7 @@ export class DAELoader extends THREE.Loader {
 			// procces skin data for each vertex
 			for ( i = 0, l = vcount.length; i < l; i ++ ) {
 				var jointCount = vcount[ i ]; // this is the amount of joints that affect a single vertex
-				var vertexSkinData = [];
+				var vertexSkinData = [] as Array<any>;
 				for ( j = 0; j < jointCount; j ++ ) {
 					var skinIndex = v[ stride + jointOffset ];
 					var weightId = v[ stride + weightOffset ];
@@ -569,6 +573,7 @@ export class DAELoader extends THREE.Loader {
 		function getController( id ) {
 			return getBuild( library.controllers[ id ], buildController );
 		}
+		
 		// image
 		function parseImage( xml ) {
 			var data = {
@@ -588,6 +593,7 @@ export class DAELoader extends THREE.Loader {
 			console.warn( 'THREE.DAELoader: Couldn\'t find image with ID:', id );
 			return null;
 		}
+		
 		// effect
 		function parseEffect( xml ) {
 			var data = {};
@@ -1258,7 +1264,7 @@ export class DAELoader extends THREE.Loader {
 			var build = {};
 			for ( var i = 0; i < primitives.length; i ++ ) {
 				var primitive = primitives[ i ];
-				if ( build[ primitive.type ] === undefined ) build[ primitive.type ] = [];
+				if ( build[ primitive.type ] === undefined ) build[ primitive.type ] = [] as Array<any>;
 				build[ primitive.type ].push( primitive );
 			}
 			return build;
@@ -1303,7 +1309,7 @@ export class DAELoader extends THREE.Loader {
 			var skinIndex = { array: [], stride: 4 };
 			var skinWeight = { array: [], stride: 4 };
 			var geometry = new THREE.BufferGeometry();
-			var materialKeys = [];
+			var materialKeys = [] as Array<any>;
 			var start = 0;
 			for ( var p = 0; p < primitives.length; p ++ ) {
 				var primitive = primitives[ p ];
@@ -1814,7 +1820,7 @@ export class DAELoader extends THREE.Loader {
 			};
 		}
 		function buildTransformList( node ) {
-			var transforms = [];
+			var transforms = [] as Array<any>;
 			var xml = collada.querySelector( '[id="' + node.id + '"]' );
 			for ( var i = 0; i < xml.childNodes.length; i ++ ) {
 				var child = xml.childNodes[ i ];
@@ -1968,8 +1974,8 @@ export class DAELoader extends THREE.Loader {
 			return data;
 		}
 		function buildSkeleton( skeletons, joints ) {
-			var boneData = [];
-			var sortedBoneData = [];
+			var boneData = [] as Array<any>;
+			var sortedBoneData = [] as Array<any>;
 			var i, j, data;
 			// a skeleton can have multiple root bones. collada expresses this
 			// situtation with multiple "skeleton" tags per controller instance
@@ -2014,8 +2020,8 @@ export class DAELoader extends THREE.Loader {
 				}
 			}
 			// setup arrays for skeleton creation
-			var bones = [];
-			var boneInverses = [];
+			var bones = [] as Array<any>;
+			var boneInverses = [] as Array<any>;
 			for ( i = 0; i < sortedBoneData.length; i ++ ) {
 				data = sortedBoneData[ i ];
 				bones.push( data.bone );
@@ -2049,7 +2055,7 @@ export class DAELoader extends THREE.Loader {
 			} );
 		}
 		function buildNode( data ) {
-			var objects = [];
+			var objects = [] as Array<any>;
 			var matrix = data.matrix;
 			var nodes = data.nodes;
 			var type = data.type;
@@ -2127,7 +2133,7 @@ export class DAELoader extends THREE.Loader {
 		}
 		var fallbackMaterial = new THREE.MeshBasicMaterial( { color: 0xff00ff } );
 		function resolveMaterialBinding( keys, instanceMaterials ) {
-			var materials = [];
+			var materials = [] as Array<any>;
 			for ( var i = 0, l = keys.length; i < l; i ++ ) {
 				var id = instanceMaterials[ keys[ i ] ];
 				if ( id === undefined ) {
@@ -2140,7 +2146,7 @@ export class DAELoader extends THREE.Loader {
 			return materials;
 		}
 		function buildObjects( geometries, instanceMaterials ) {
-			var objects = [];
+			var objects = [] as Array<any>;
 			for ( var type in geometries ) {
 				var geometry = geometries[ type ];
 				var materials = resolveMaterialBinding( geometry.materialKeys, instanceMaterials );
@@ -2228,7 +2234,7 @@ export class DAELoader extends THREE.Loader {
 			if ( isEmpty( clips ) === true ) {
 				if ( isEmpty( library.animations ) === false ) {
 					// if there are animations but no clips, we create a default clip for playback
-					var tracks = [];
+					var tracks = [] as Array<any>;
 					for ( var id in library.animations ) {
 						var animationTracks = getAnimation( id );
 						for ( var i = 0, l = animationTracks.length; i < l; i ++ ) {
@@ -2289,11 +2295,11 @@ export class DAELoader extends THREE.Loader {
 			tgaLoader.setPath( this.resourcePath || path );
 		}
 		//
-		var animations = [];
-		var kinematics = {};
-		var count = 0;
+		const animations = [] as Array<any>;
+		const kinematics = {};
+		let count = 0;
 		//
-		var library = {
+		const library = {
 			animations: {},
 			clips: {},
 			controllers: {},

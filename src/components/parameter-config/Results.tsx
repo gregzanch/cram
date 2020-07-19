@@ -1,5 +1,5 @@
 import React from "react";
-import Messenger from "../../messenger";
+import Messenger from "../../state/messenger";
 
 
 import { Tab, Tabs, TabList, TabPanel } from "react-tabs";
@@ -10,6 +10,7 @@ import { RT60 } from "../../compute/rt";
 import RayTracer from "../../compute/raytracer";
 import RayTracerResults from "./ray-tracer-results/RayTracerResults";
 import RT60Results from "./rt60-results/RT60Results";
+import { Actions } from "../../state/actions";
 
 export interface ResultsProps {
   solvers: KeyValuePair<Solver>;
@@ -29,11 +30,13 @@ export default class Results extends React.Component<ResultsProps, ResultsState>
     };
     this.handleTabChange = this.handleTabChange.bind(this);
     this.updateHandlerIDs = [] as string[][];
-    this.updateHandlerIDs.push(this.props.messenger.addMessageHandler("RESULTS_SHOULD_UPDATE", () => this.forceUpdate()));
+    // this.updateHandlerIDs.push(this.props.messenger.addMessageHandler(Actions.RESULTS_SHOULD_UPDATE, () => this.forceUpdate()));
   }
   componentWillUnmount() {
     for (let i = 0; i < this.updateHandlerIDs.length; i++){
-      this.props.messenger.removeMessageHandler(this.updateHandlerIDs[i][0], this.updateHandlerIDs[i][1]);
+      if (Actions[this.updateHandlerIDs[i][0]]) {
+        this.props.messenger.removeMessageHandler(Actions[this.updateHandlerIDs[i][0]], this.updateHandlerIDs[i][1]);
+      }
     }
   }
   handleTabChange(tabIndex: number) {

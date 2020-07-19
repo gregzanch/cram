@@ -29,7 +29,7 @@
 //     };
 //     this.handleTabChange = this.handleTabChange.bind(this);
 //     this.updateHandlerIDs = [] as string[][];
-//     this.updateHandlerIDs.push(this.props.messenger.addMessageHandler("RESULTS_SHOULD_UPDATE", () => this.forceUpdate()));
+//     this.updateHandlerIDs.push(this.props.messenger.addMessageHandler(Actions.RESULTS_SHOULD_UPDATE, () => this.forceUpdate()));
 //   }
 //   componentWillUnmount() {
 //     for (let i = 0; i < this.updateHandlerIDs.length; i++){

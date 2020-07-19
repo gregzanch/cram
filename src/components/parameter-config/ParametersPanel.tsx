@@ -8,7 +8,7 @@ import {
   EditableName,
   Table
 } from "@blueprintjs/table";
-import Messenger from "../../messenger";
+import Messenger from "../../state/messenger";
 
 export interface ParametersPanelProps {
   messenger: Messenger

@@ -16,7 +16,7 @@ export interface ReceiverSaveObject {
   rotation: Array<string | number>;
   uuid: string;
   kind: string;
-  color: number;
+  color?: number;
 }
 
 export interface ReceiverProps extends ContainerProps{
@@ -28,7 +28,7 @@ const defaults = {
   selectedColor: 0x9fcbff
 };
 
-export default class Receiver extends Container{
+export class Receiver extends Container{
   mesh: THREE.Mesh;
   selectedMaterial: THREE.MeshMatcapMaterial;
   normalMaterial: THREE.MeshMatcapMaterial;
@@ -94,7 +94,7 @@ export default class Receiver extends Container{
       uuid
     } as ReceiverSaveObject;
   }
-  restore(state: ReceiverSaveObject) {
+  restore(state: ReceiverSaveObject|Container) {
     this.name = state.name;
     this.visible = state.visible;
     this.position.set(state.position[0], state.position[1], state.position[2]);
@@ -105,7 +105,7 @@ export default class Receiver extends Container{
       Number(state.rotation[2]),
       String(state.rotation[3])
     );
-    this.color = state.color;
+    this.color = state.color || defaults.color;
     this.uuid = state.uuid;
     return this;
   }
@@ -155,3 +155,4 @@ export default class Receiver extends Container{
   }
 
 }
+export default Receiver;

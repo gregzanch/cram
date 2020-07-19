@@ -4,7 +4,7 @@ import NumberInput from "../number-input/NumberInput";
 import CheckboxInput from "../checkbox-input/CheckboxInput";
 import Source, { SignalSource } from '../../objects/source';
 import GridRow from '../grid-row/GridRow';
-import Messenger from "../../messenger";
+import Messenger from "../../state/messenger";
 import ColorInput from "../color-input/ColorInput";
 import Slider, { SliderChangeEvent } from "../slider/Slider";
 import PropertyRow from "../parameter-config/property-row/PropertyRow";
@@ -14,6 +14,7 @@ import PropertyRowButton from "../parameter-config/property-row/property-row-but
 import PropertyRowCheckbox from "../parameter-config/property-row/property-row-checkbox/PropertyRowCheckbox";
 import { ObjectPropertyInputEvent } from ".";
 import { IToastProps } from "@blueprintjs/core/lib/esm/components/toast/toast";
+import { Actions } from "../../state/actions";
 
 export interface SourcePropertiesProps {
   object: Source;
@@ -50,7 +51,7 @@ export default function SourceProperties(props: SourcePropertiesProps) {
 	  },
 		onChange: props.onPropertyChange,
 	}
-	// const source = props.messenger.postMessage("FETCH_SOURCE", props.object.uuid)[0];
+	// const source = props.messenger.postMessage(Actions.FETCH_SOURCE, props.object.uuid)[0];
 	return (
     <div>
       <div style={SourcePropertiesContainerStyle}>
@@ -162,7 +163,7 @@ export default function SourceProperties(props: SourcePropertiesProps) {
               if (props.object.fdtdSamples.length > 0) {
                 props.object.saveSamples();
               } else {
-                props.messenger.postMessage("SHOW_TOAST", {
+                props.messenger.postMessage(Actions.SHOW_TOAST, {
                   message: `No signal data.`,
                   intent: "warning",
                   timeout: 1750,

@@ -9,8 +9,9 @@ import Surface from '../../objects/surface';
 import GridRowSeperator from "../grid-row/GridRowSeperator";
 
 import AutoCompleteTextInput from '../auto-complete-text-input/AutoCompleteTextInput';
-import Messenger from "../../messenger";
+import Messenger from "../../state/messenger";
 import { Button, Tag } from "@blueprintjs/core";
+import { Actions } from "../../state/actions";
 
 
 
@@ -79,7 +80,7 @@ export default function SurfaceProperties(props: SurfacePropertiesProps) {
 	}
 	
 	async function getMaterialSuggestions(value: string) {
-		const materials = props.messenger.postMessage("SEARCH_ALL_MATERIALS", value)[0];
+    const materials = props.messenger.postMessage(Actions.SEARCH_ALL_MATERIALS, { query: value });
 
 		return new Promise<any[]>((resolve, reject) => { 
 			let res = materials;
@@ -166,7 +167,7 @@ export default function SurfaceProperties(props: SurfacePropertiesProps) {
               >
                 {props.object.acousticMaterial.name}
               </Tag>
-              <Button icon="edit" minimal small onClick={(e) => props.messenger.postMessage("OPEN_MATERIAL_SEARCH", props.object)} />
+              <Button icon="edit" minimal small onClick={(e) => props.messenger.postMessage(Actions.OPEN_MATERIAL_SEARCH, { object: props.object })} />
             </>
           )}
         </GridRow>

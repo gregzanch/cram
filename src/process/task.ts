@@ -1,4 +1,4 @@
-import Messenger from "../messenger";
+import Messenger from "../state/messenger";
 import { uuid } from "uuidv4";
 
 export interface TaskParams {

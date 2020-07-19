@@ -10,7 +10,7 @@ import Renderer from "../../render/renderer";
 import Surface from "../../objects/surface";
 import Receiver from "../../objects/receiver";
 import { Stat } from "../../components/parameter-config/Stats";
-import Messenger from "../../messenger";
+import Messenger from "../../state/messenger";
 import sort from "fast-sort";
 import FileSaver from "file-saver";
 import Plotly, { PlotData } from 'plotly.js';
@@ -31,6 +31,8 @@ import { BVH } from './bvh/BVH';
 
 import expose from "../../common/expose";
 import { reverseTraverse } from "../../common/reverse-traverse";
+import { Actions } from "../../state/actions";
+
 
 expose({ Plotly });
 
@@ -344,25 +346,23 @@ class RayTracer extends Solver {
     });
     this.messenger = params.messenger;
     this.messageHandlerIDs = [] as string[][];
-    this.messenger.postMessage("STATS_SETUP", this.stats);
+    this.messenger.postMessage(Actions.STATS_SETUP, { stats: this.stats });
     this.messageHandlerIDs.push(
-      this.messenger.addMessageHandler("RAYTRACER_SOURCE_CHANGE", (acc, ...args) => {
-        console.log(args && args[0] && args[0] instanceof Array && args[1] && args[1] === this.uuid);
-        if (args && args[0] && args[0] instanceof Array && args[1] && args[1] === this.uuid) {
-          this.sourceIDs = args[0].map((x) => x.id);
+      this.messenger.addMessageHandler(Actions.RAYTRACER_SOURCE_CHANGE, ({ id, sources }) => {
+        if (sources instanceof Array && id === this.uuid) {
+          this.sourceIDs = sources.map((x) => x.id);
         }
       })
     );
     this.messageHandlerIDs.push(
-      this.messenger.addMessageHandler("RAYTRACER_RECEIVER_CHANGE", (acc, ...args) => {
-        if (args && args[0] && args[0] instanceof Array && args[1] && args[1] === this.uuid) {
-          this.receiverIDs = args[0].map((x) => x.id);
+      this.messenger.addMessageHandler(Actions.RAYTRACER_RECEIVER_CHANGE, ({ id, receivers}) => {
+        if (receivers instanceof Array && id === this.uuid) {
+          this.receiverIDs = receivers.map((x) => x.id);
         }
       })
     );
     this.messageHandlerIDs.push(
-      this.messenger.addMessageHandler("SHOULD_REMOVE_CONTAINER", (acc, ...args) => {
-        const id = args[0];
+      this.messenger.addMessageHandler(Actions.SHOULD_REMOVE_CONTAINER, ({ id }) => {
         if (id) {
           console.log(id);
           if (this.sourceIDs.includes(id)) {
@@ -446,7 +446,7 @@ class RayTracer extends Solver {
     // let node = this.bvh.rootNode;
     // while(node)
     
-    console.log(this.mapBVHTree());
+    // console.log(this.mapBVHTree());
     
     
 
@@ -454,11 +454,18 @@ class RayTracer extends Solver {
     // const intersections = this.bvh.intersectRay(new BVHVector3(0.25, 1, 0.25), new BVHVector3(0, -1, 0));
   }
   
+ 
+  
   mapBVHTree() {
+    // const addBox = this.renderer.markup.addBox;
     function mapTree(node: BVHNode | null) {
       if (node && node.children[0] && node.children[1]) {
+        // addBox(node.extentsMin as [number, number, number], node.extentsMax as [number, number, number]);
         return {
-          name: `${node.startIndex},${node.endIndex}`,
+          bbox: {
+            min: node.extentsMin,
+            max: node.extentsMax
+          },
           children: node.children.map((n: BVHNode | null) => mapTree(n)).filter(x=>x)
         };
       }
@@ -472,7 +479,9 @@ class RayTracer extends Solver {
   
   removeMessageHandlers() {
     this.messageHandlerIDs.forEach((x) => {
-      this.messenger.removeMessageHandler(x[0], x[1]);
+      if (Actions[x[0]]) {
+        this.messenger.removeMessageHandler(Actions[x[0]], x[1]);
+      }
     });
   }
   dispose() {
@@ -917,7 +926,7 @@ class RayTracer extends Solver {
       (this.stats.numRaysShot.value as number)++;
     }
 
-    this.messenger.postMessage("RAYTRACER_RESULTS_SHOULD_UPDATE");
+    // this.messenger.postMessage(Actions.RAYTRACER_RESULTS_SHOULD_UPDATE);
   }
   start() {
     this.mapIntersectableObjects();
@@ -962,7 +971,7 @@ class RayTracer extends Solver {
     this.rayPositionIndex = 0;
     this.stats.numRaysShot.value = 0;
     this.stats.numValidRayPaths.value = 0;
-    this.messenger.postMessage("STATS_UPDATE", this.stats);
+    this.messenger.postMessage(Actions.STATS_UPDATE, { stats: this.stats });
     this.sourceIDs.forEach((x) => {
       (this.containers[x] as Source).numRays = 0;
     });
@@ -1061,7 +1070,7 @@ class RayTracer extends Solver {
         };
       });
     });
-    this.messenger.postMessage("UPDATE_CHART_DATA", chartdata && chartdata[0]);
+    // this.messenger.postMessage(Actions.UPDATE_CHART_DATA, chartdata && chartdata[0]);
     return this.allReceiverData;
   }
 

@@ -39,7 +39,7 @@ import defaults from '../default-storage';
 import Axes from './env/axes';
 import Lights from './env/lights';
 import Room from '../objects/room';
-import Messenger from "../messenger";
+import Messenger from "../state/messenger";
 
 import { History, Moment, Directions } from '../history';
 
@@ -61,6 +61,7 @@ import ConstructionPoint from "../objects/construction-point";
 import { Processes } from "../constants/processes";
 import roundTo from "../common/round-to";
 import { Markup } from "./Markup";
+import { Actions } from "../state/actions";
 
 const colored_number_html = (num: number) => /*html*/`<span style="color: ${num < 0 ? "#E68380" : "#A2C982"};">${num.toFixed(3)}</span>`;
 
@@ -454,25 +455,24 @@ export default class Renderer {
 			this.lights.setHelpersVisible(val);
 		};
 		
-		this.messenger.addMessageHandler("SET_RENDERER_SHOULD_ANIMATE", (acc, ...args) => {
-			this.shouldAnimate = args[0];
+		this.messenger.addMessageHandler(Actions.SET_RENDERER_SHOULD_ANIMATE, ({animate}) => {
+			this.shouldAnimate = animate;
 		});
 
-		this.messenger.addMessageHandler("RENDERER_SHOULD_CHANGE_BACKGROUND", (acc, ...args) => {
-			this.background = args[0];
-			this.needsToRender = true;
-		});
-		this.messenger.addMessageHandler("RENDERER_SHOULD_CHANGE_FOG_COLOR", (acc, ...args) => {
-			this.fogColor = args[0];
-			this.needsToRender = true;
-		});
-		this.messenger.addMessageHandler("TOGGLE_CAMERA_ORTHO", (acc, ...args) => {
+		this.messenger.addMessageHandler(Actions.RENDERER_SHOULD_CHANGE_BACKGROUND, ({background}) => {
+      this.background = background;
+      this.needsToRender = true;
+    });
+		this.messenger.addMessageHandler(Actions.RENDERER_SHOULD_CHANGE_FOG_COLOR, ({color}) => {
+      this.fogColor = color;
+      this.needsToRender = true;
+    });
+		this.messenger.addMessageHandler(Actions.TOGGLE_CAMERA_ORTHO, () => {
 			this.setOrtho(this.camera instanceof THREE.PerspectiveCamera);
 			this.needsToRender = true;
 			this.storeCameraState();
 		});
-		this.messenger.addMessageHandler("SHOULD_REMOVE_CONTAINER", (acc, ...args) => {
-			const id = args[0];
+		this.messenger.addMessageHandler(Actions.SHOULD_REMOVE_CONTAINER, ({ id }) => {
 			const object = this.scene.getObjectByProperty("uuid", id);
 			if (object) {
 				// console.log(object);
@@ -482,8 +482,8 @@ export default class Renderer {
 			this.needsToRender = true;
 		});
 		
-		this.messenger.addMessageHandler("FOCUS_ON_SELECTED_OBJECTS", (acc, ...args) => {
-			const selectedObjects = this.messenger.postMessage("GET_SELECTED_OBJECTS")[0];
+		this.messenger.addMessageHandler(Actions.FOCUS_ON_SELECTED_OBJECTS, () => {
+			const selectedObjects = this.messenger.postMessage(Actions.GET_SELECTED_OBJECTS);
 			if (selectedObjects && selectedObjects.length > 0) {
 				const easingFunction = EasingFunctions.linear;
 				const position = this.camera.position;
@@ -507,7 +507,7 @@ export default class Renderer {
 			this.needsToRender = true;
 		})
 
-		this.messenger.addMessageHandler("FOCUS_ON_CURSOR", (acc, ...args) => {
+		this.messenger.addMessageHandler(Actions.FOCUS_ON_CURSOR, () => {
 				const easingFunction = EasingFunctions.linear;
 				const position = this.camera.position;
 				const target = this.cursor.position;
@@ -520,36 +520,33 @@ export default class Renderer {
 		})
 		
 		
-		this.messenger.addMessageHandler("LOOK_ALONG_AXIS", (acc, ...args) => {
-			const axis = args[0];
-			if (!OrientationAxisAdds[axis]) {
+		this.messenger.addMessageHandler(Actions.LOOK_ALONG_AXIS, ({axis}) => {
+      if (!OrientationAxisAdds[axis]) {
         console.warn("invalid args");
         return;
       }
-			const dist = this.camera.position.distanceTo(this.controls.target);
+      const dist = this.camera.position.distanceTo(this.controls.target);
 
-			const duration = 125;
-			const target = this.controls.target.clone();
-			const easingFunction = EasingFunctions.linear;
-			const onFinish = () => {
-				// this.resetControls();
-				this.controls.target.set(target.x, target.y, target.z);
-				this.orientationControl.axis = axis;
-				this.storeCameraState();
-				this.needsToRender = true;
-			};
-			
+      const duration = 125;
+      const target = this.controls.target.clone();
+      const easingFunction = EasingFunctions.linear;
+      const onFinish = () => {
+        // this.resetControls();
+        this.controls.target.set(target.x, target.y, target.z);
+        this.orientationControl.axis = axis;
+        this.storeCameraState();
+        this.needsToRender = true;
+      };
 
-
-			// const position = this.controls.target.clone() as THREE.Vector3;
-			const position = this.controls.target.clone().add(OrientationAxisAdds[axis].clone().multiplyScalar(dist));
-			const quat = OrientationAxisQuats[axis].clone();
-			this.smoothCameraToQuat({ position, target, duration, onFinish, easingFunction, quat });
-			this.needsToRender = true;
-		});
+      // const position = this.controls.target.clone() as THREE.Vector3;
+      const position = this.controls.target.clone().add(OrientationAxisAdds[axis].clone().multiplyScalar(dist));
+      const quat = OrientationAxisQuats[axis].clone();
+      this.smoothCameraToQuat({ position, target, duration, onFinish, easingFunction, quat });
+      this.needsToRender = true;
+    });
 		
-		this.messenger.addMessageHandler("MOVE_SELECTED_OBJECTS", () => {
-			const selectedObjects = this.messenger.postMessage("GET_SELECTED_OBJECTS")[0];
+		this.messenger.addMessageHandler(Actions.MOVE_SELECTED_OBJECTS, () => {
+			const selectedObjects = this.messenger.postMessage(Actions.GET_SELECTED_OBJECTS);
 			if (selectedObjects && selectedObjects.length > 0) {
 				for (let i = 0; i < selectedObjects.length; i++){
 					selectedObjects[i].userData.lastSave = selectedObjects[i].save();
@@ -566,19 +563,19 @@ export default class Renderer {
 			this.needsToRender = true;
 		});
 	
-		this.messenger.addMessageHandler("PHASE_OUT", () => {
+		this.messenger.addMessageHandler(Actions.PHASE_OUT, () => {
 			if (this.isPerformingOperation) {
-				this.messenger.postMessage("STOP_OPERATIONS");
+				this.messenger.postMessage(Actions.STOP_OPERATIONS);
 				hotkeys.setScope("editor");
 			}
 			else {
-				this.messenger.postMessage("DESELECT_ALL_OBJECTS");
+				this.messenger.postMessage(Actions.DESELECT_ALL_OBJECTS);
 				hotkeys.setScope("normal");
 			}
 			this.needsToRender = true;
 		})
 		
-		this.messenger.addMessageHandler("STOP_OPERATIONS", () => {
+		this.messenger.addMessageHandler(Actions.STOP_OPERATIONS, () => {
 			this.interactables.remove(this.transformControls);
       this.transformControls.detach();
       this.currentlyMovingObjects = false;
@@ -588,7 +585,7 @@ export default class Renderer {
 
 		
 		
-		this.messenger.addMessageHandler("TOGGLE_RENDERER_STATS_VISIBLE", () => {
+		this.messenger.addMessageHandler(Actions.TOGGLE_RENDERER_STATS_VISIBLE, () => {
 			if (this.stats.hidden) {
 				this.stats.unhide();
 			} else {
@@ -596,7 +593,7 @@ export default class Renderer {
 			}
     });
 
-		this.messenger.addMessageHandler("GET_RENDERER_STATS_VISIBLE", () => !this.stats.hidden);
+		this.messenger.addMessageHandler(Actions.GET_RENDERER_STATS_VISIBLE, () => !this.stats.hidden);
 
 		// save the state of the camera
 		window.addEventListener("mouseup", (e) => {
@@ -703,10 +700,10 @@ export default class Renderer {
 					
 					if (!this.currentlyMovingObjects) {
 						if (e.shiftKey) {
-							this.messenger.postMessage("APPEND_SELECTION", [selection.pickedObject]);
+							this.messenger.postMessage(Actions.APPEND_SELECTION, { objects: [selection.pickedObject] });
 						}
 						else if (!e.altKey) {
-							this.messenger.postMessage("SET_SELECTION", [selection.pickedObject]);
+							this.messenger.postMessage(Actions.SET_SELECTION, { objects: [selection.pickedObject] });
 						}
 					}
 				}
@@ -714,7 +711,7 @@ export default class Renderer {
 			else {
 				if (e.button == 0) {
 					if (!e.shiftKey && !e.altKey) {
-						this.messenger.postMessage("PHASE_OUT");
+						this.messenger.postMessage(Actions.PHASE_OUT);
           }
 				}
 			}
@@ -766,7 +763,7 @@ export default class Renderer {
 
     this.orientationControl.addClickListener((e) => {
       if (e.target.match(/top|bottom|right|left|front|back/gim)) {
-        this.messenger.postMessage("LOOK_ALONG_AXIS", e.target);
+				this.messenger.postMessage(Actions.LOOK_ALONG_AXIS, { axis: e.target });
       }
     });
 		
@@ -1094,7 +1091,7 @@ export default class Renderer {
 		});
 		origin.visible = false;
 
-		this.messenger.postMessage("ADD_CONSTRUCTION", origin);
+		this.messenger.postMessage(Actions.ADD_CONSTRUCTION, { construction: origin });
 		this.constructions.add(origin);
 
 
@@ -1117,9 +1114,9 @@ export default class Renderer {
 		});
 		zAxis.visible = false;
 		
-		this.messenger.postMessage("ADD_CONSTRUCTION", xAxis);
-		this.messenger.postMessage("ADD_CONSTRUCTION", yAxis);
-		this.messenger.postMessage("ADD_CONSTRUCTION", zAxis);
+		this.messenger.postMessage(Actions.ADD_CONSTRUCTION, { construction: xAxis });
+		this.messenger.postMessage(Actions.ADD_CONSTRUCTION, { construction: yAxis });
+		this.messenger.postMessage(Actions.ADD_CONSTRUCTION, { construction: zAxis });
 		this.constructions.add(xAxis, yAxis, zAxis);
 		
 
@@ -1144,9 +1141,9 @@ export default class Renderer {
       height: 2
 		});
 		xzPlane.visible = false;
-    this.messenger.postMessage("ADD_CONSTRUCTION", xyPlane);
-    this.messenger.postMessage("ADD_CONSTRUCTION", zyPlane);
-    this.messenger.postMessage("ADD_CONSTRUCTION", xzPlane);
+    this.messenger.postMessage(Actions.ADD_CONSTRUCTION, { construction: xyPlane });
+    this.messenger.postMessage(Actions.ADD_CONSTRUCTION, { construction: zyPlane });
+    this.messenger.postMessage(Actions.ADD_CONSTRUCTION, { construction: xzPlane });
     this.constructions.add(xyPlane, zyPlane, xzPlane);
 		
 	}
@@ -1190,7 +1187,7 @@ export default class Renderer {
 
       this.orientationControl.shouldRender = true;
 
-      this.messenger.postMessage("RENDERER_UPDATED");
+      this.messenger.postMessage(Actions.RENDERER_UPDATED);
       this.needsToRender = false;
     }
 		if (this.orientationControl.shouldRender) {
@@ -1304,7 +1301,7 @@ export default class Renderer {
 	
 	set isOrtho(ortho: boolean) {
 		if (ortho != this.isOrtho) {
-			this.messenger.postMessage("TOGGLE_CAMERA_ORTHO");
+			this.messenger.postMessage(Actions.TOGGLE_CAMERA_ORTHO);
 		}
 	}
 	
@@ -1342,7 +1339,7 @@ export default class Renderer {
 		return this.clientWidth / this.clientHeight;
 	}
 	private get mode() {
-		return this.messenger.postMessage("GET_EDITOR_MODE")[0];
+		return this.messenger.postMessage(Actions.GET_EDITOR_MODE);
 	}
 		
 }

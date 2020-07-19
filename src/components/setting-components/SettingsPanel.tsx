@@ -1,6 +1,6 @@
 import React from 'react';
 import SettingsPanelBlock from './SettingsPanelBlock';
-import Messenger from '../../messenger';
+import Messenger from '../../state/messenger';
 import SettingsPanelSetting from './SettingsPanelSetting';
 import SettingsTextComponent from './SettingsTextComponent';
 import './SettingsPanel.css';
@@ -10,6 +10,8 @@ import SettingsNumberComponent from './SettingsNumberComponent';
 import SettingsColorComponent from './SettingsColorComponent';
 import properCase from '../../common/proper-case';
 import SettingsKeyBindingComponent from './SettingsKeyBindingComponent';
+import { Actions } from '../../state/actions';
+
 
 export interface SettingsPanelProps{
   messenger: Messenger;
@@ -19,7 +21,8 @@ export interface SettingsPanelProps{
 export class SettingsPanel extends React.Component<SettingsPanelProps, KeyValuePair<Setting<string|number|boolean>>>{
   constructor(props: SettingsPanelProps) {
     super(props);
-    this.state = this.props.messenger.postMessage("FETCH_SETTINGS__"+props.category.toUpperCase())[0] as KeyValuePair<Setting<string | number | boolean>>;
+    const action = "FETCH_SETTINGS__" + props.category.toUpperCase();
+    this.state = this.props.messenger.postMessage(Actions[action]) as KeyValuePair<Setting<string | number | boolean>>;
     this.handleTextComponentChange = this.handleTextComponentChange.bind(this);
     this.handleNumberComponentChange = this.handleNumberComponentChange.bind(this);
     this.handleColorComponentChange = this.handleColorComponentChange.bind(this);

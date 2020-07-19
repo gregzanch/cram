@@ -4,12 +4,13 @@ import RayTracer from "../../../compute/raytracer";
 import Plot from "react-plotly.js";
 import { Button } from "@blueprintjs/core";
 import ObjectProperties from "../../ObjectProperties";
-import Messenger from "../../../messenger";
+import Messenger from "../../../state/messenger";
 import { ObjectPropertyInputEvent } from "../../ObjectProperties";
 import SplitterLayout from "react-splitter-layout";
 import RayTracerResults from "../ray-tracer-results/RayTracerResults";
 import PanelContainer from "../../panel-container/PanelContainer";
 import RayTracerProperties from "../../ObjectProperties/RayTracerProperties";
+import { Actions } from "../../../state/actions";
 
 export interface RayTracerTabProps {
   solver: RayTracer;
@@ -47,8 +48,7 @@ export default class RayTracerTab extends React.Component<RayTracerTabProps, Ray
 				break;
     }
     this.forceUpdate();
-    this.props.messenger.postMessage("RESULTS_SHOULD_UPDATE");
-    this.props.messenger.postMessage("GUTTER_SHOULD_UPDATE");
+    this.props.messenger.postMessage(Actions.GUTTER_SHOULD_UPDATE);
 	}
   handleObjectPropertyValueChangeAsNumber(
 		id: string,
@@ -69,21 +69,13 @@ export default class RayTracerTab extends React.Component<RayTracerTabProps, Ray
   handleObjectPropertyButtonClick(e: React.MouseEvent<HTMLInputElement, MouseEvent>) {
     switch (e.currentTarget.name) {
       case "ray-tracer-play":
-        this.props.messenger.postMessage("RAYTRACER_SHOULD_PLAY", this.props.solver.uuid);
+        this.props.messenger.postMessage(Actions.RAYTRACER_SHOULD_PLAY, {id: this.props.solver.uuid});
         break;
       case "ray-tracer-pause":
-        this.props.messenger.postMessage("RAYTRACER_SHOULD_PAUSE", this.props.solver.uuid);
-        this.props.messenger.postMessage("RESULTS_SHOULD_UPDATE");
+        this.props.messenger.postMessage(Actions.RAYTRACER_SHOULD_PAUSE, { id: this.props.solver.uuid });
         break;
       case "ray-tracer-clear":
-        this.props.messenger.postMessage("RAYTRACER_SHOULD_CLEAR", this.props.solver.uuid);
-        this.props.messenger.postMessage("RESULTS_SHOULD_UPDATE");
-        break;
-      case "ray-tracer-show-results":
-         this.props.messenger.postMessage("GUTTER_SHOULD_SPLIT");
-        break;
-      case "ray-tracer-hide-results":
-        this.props.messenger.postMessage("GUTTER_SHOULD_MERGE");
+        this.props.messenger.postMessage(Actions.RAYTRACER_SHOULD_CLEAR, { id: this.props.solver.uuid });
         break;
       default: break;
     }

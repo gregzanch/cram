@@ -10,7 +10,8 @@ import RayTracer from "../../compute/raytracer";
 import { Button } from "@blueprintjs/core";
 
 import Select, { components } from "react-select";
-import Messenger from "../../messenger";
+import Messenger from "../../state/messenger";
+import { Actions } from "../../state/actions";
 
 
 export interface RayTracerPropertiesProps {
@@ -75,11 +76,11 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
   };
 
   const onSourceChange = (e) => {
-    props.messenger.postMessage("RAYTRACER_SOURCE_CHANGE", !e ? [] : e, props.object.uuid);
+    props.messenger.postMessage(Actions.RAYTRACER_SOURCE_CHANGE, { id: props.object.uuid, sources: !e ? [] : e });
   }
 
   const onReceiverChange = e => {
-    props.messenger.postMessage("RAYTRACER_RECEIVER_CHANGE", !e? [] : e, props.object.uuid);
+    props.messenger.postMessage(Actions.RAYTRACER_RECEIVER_CHANGE, { id: props.object.uuid, receivers: !e ? [] : e });
   };
 
   const onPlotModeChange = e => {
@@ -89,8 +90,8 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
     })
   };
 
-  let sources = props.messenger.postMessage("FETCH_ALL_SOURCES")[0];
-  const sourcesSelectOptions = sources.map(x => {
+  let sources = props.messenger.postMessage(Actions.FETCH_ALL_SOURCES);
+  const sourcesSelectOptions = sources && sources.map((x) => {
     return {
       value: x.uuid,
       label: x.name,
@@ -98,20 +99,20 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
       id: x.uuid
     };
   });
-  if (sources.length > 0) {
-    sources = sources.filter(x => props.object.sourceIDs.includes(x.uuid))
+  if (sources && sources.length > 0) {
+    sources = sources.filter((x) => props.object.sourceIDs.includes(x.uuid));
   }
-  const sourceSelectedOptions = sources.map(x => {
-     return {
-       value: x.uuid,
-       label: x.name,
-       key: x.uuid,
-       id: x.uuid
-     };
-  })
+  const sourceSelectedOptions = sources && sources.map((x) => {
+    return {
+      value: x.uuid,
+      label: x.name,
+      key: x.uuid,
+      id: x.uuid
+    };
+  });
   
-  let receivers = props.messenger.postMessage("FETCH_ALL_RECEIVERS")[0]
-  const receiverSelectOptions = receivers.map(x => {
+  let receivers = props.messenger.postMessage(Actions.FETCH_ALL_RECEIVERS)
+  const receiverSelectOptions = receivers && receivers.map((x) => {
     return {
       value: x.uuid,
       label: x.name,
@@ -119,17 +120,17 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
       id: x.uuid
     };
   });    
-  if (receivers.length > 0) {
-    receivers = receivers.filter(x => props.object.receiverIDs.includes(x.uuid));
+  if (receivers && receivers.length > 0) {
+    receivers = receivers.filter((x) => props.object.receiverIDs.includes(x.uuid));
   }
-  const receiverSelectedOptions = receivers.map(x => {
+  const receiverSelectedOptions = receivers && receivers.map((x) => {
     return {
       value: x.uuid,
       label: x.name,
       key: x.uuid,
       id: x.uuid
     };
-  })
+  });
    
   const customStyles = {
     indicatorsContainer: (provided, state) => ({
@@ -277,11 +278,10 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
           <Button
             text="Calulate Response"
             onClick={(e) =>
-              props.messenger.postMessage(
-                "RAYTRACER_CALCULATE_RESPONSE",
-                props.object.uuid,
-                props.object.reflectionLossFrequencies
-              )
+              props.messenger.postMessage(Actions.RAYTRACER_CALCULATE_RESPONSE, {
+                id: props.object.uuid,
+                frequencies: props.object.reflectionLossFrequencies
+              })
             }
           />
         </GridRow>
@@ -313,7 +313,7 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
           <Button text="Plot Response by Intensity" onClick={(e) => props.object.plotResponseByIntensity()} />
         </GridRow>
         <GridRow label="Plot Mode"></GridRow>
-        
+
         <GridRow span={2}>
           <Select
             defaultValue={plotMode}
@@ -332,12 +332,12 @@ export default function RayTracerProperties(props: RayTracerPropertiesProps) {
         <GridRow span={2}>
           <Button
             text="Quick Estimate"
-            onClick={(e) => props.messenger.postMessage("RAYTRACER_QUICK_ESTIMATE", props.object.uuid)}
+            onClick={(e) => props.messenger.postMessage(Actions.RAYTRACER_QUICK_ESTIMATE, { id: props.object.uuid })}
           />
         </GridRow>
 
         {/* <GridRow span={2}>
-          <Button text="Test WASM" onClick={(e) => props.messenger.postMessage("RAYTRACER_TEST_WASM", props.object.uuid, Math.random())} />
+          <Button text="Test WASM" onClick={(e) => props.messenger.postMessage(Actions.RAYTRACER_TEST_WASM, props.object.uuid, Math.random())} />
         </GridRow> */}
       </div>
     </div>

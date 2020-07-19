@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { makeStyles, createStyles } from "@material-ui/core/styles";
 import { SvgIcon } from "@material-ui/core";
 import TreeView from "@material-ui/lab/TreeView";
 import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
 import ChevronRightIcon from "@material-ui/icons/ChevronRight";
 import hotkeys from 'hotkeys-js';
-
+// import JsonViewer from 'react-json-view';
 
 import TreeItem from "@material-ui/lab/TreeItem";
 import TreeItemLabel from '../tree-item-label/TreeItemLabel';
@@ -30,8 +30,9 @@ import {
   RT60Icon
 } from '../icons';
 import "./ObjectView.css";
-import Messenger from "../../messenger";
+import Messenger from "../../state/messenger";
 import { addToGlobalVars } from "../../common/global-vars";
+import { Actions } from "../../state/actions";
 
 export interface ObjectViewProps {
   containers: KeyValuePair<Container>;
@@ -88,13 +89,13 @@ function MapChildren(props: MapChildrenProps) {
             } break;
             case "Merge Surfaces": {
               if (container instanceof Surface) {
-                const selection = objectViewProps.messenger.postMessage("GET_SELECTED_OBJECTS")[0];
-                if (selection.length > 1) {
+                const selection = objectViewProps.messenger.postMessage(Actions.GET_SELECTED_OBJECTS);
+                if (selection && selection.length > 1) {
                   const selectionHasNonSurfaces = selection.filter(x => x.kind !== "surface").length > 0;
                   if (selectionHasNonSurfaces) {
                     return;
                   }
-                  const newsurface = container.mergeSurfaces(selection);
+                  const newsurface = container.mergeSurfaces(selection as Surface[]);
                   container.room.surfaces.add(newsurface);
                   selection.forEach(x => {
                     objectViewProps.onDelete(x);
@@ -103,18 +104,20 @@ function MapChildren(props: MapChildrenProps) {
               }
             } break;
             case "Hide": {
-              const selection = objectViewProps.messenger.postMessage("GET_SELECTED_OBJECTS")[0];
+              const selection = objectViewProps.messenger.postMessage(Actions.GET_SELECTED_OBJECTS);
               container.visible = false;
-              selection.forEach((obj: Container) => {
-                obj.visible = false;
-              })
+              selection &&
+                selection.forEach((obj: Container) => {
+                  obj.visible = false;
+                })
             } break;
             case "Show": {
-              const selection = objectViewProps.messenger.postMessage("GET_SELECTED_OBJECTS")[0];
+              const selection = objectViewProps.messenger.postMessage(Actions.GET_SELECTED_OBJECTS);
               container.visible = true;
-              selection.forEach((obj: Container) => {
-                obj.visible = true;
-              });
+              selection &&
+                selection.forEach((obj: Container) => {
+                  obj.visible = true;
+                });
             } break;
             default:
               break;
@@ -129,8 +132,11 @@ function MapChildren(props: MapChildrenProps) {
       case "surface":
         {
           let items = ["Show", "Hide", "Delete", "!seperator", "Add To Global Variables", "Log to Console"];
-          const selectedObjectTypes = objectViewProps.messenger.postMessage("GET_SELECTED_OBJECT_TYPES")[0];
-          if (selectedObjectTypes.length > 1 && selectedObjectTypes.filter((x: string) => x !== "surface").length == 0) {
+          const selectedObjectTypes = objectViewProps.messenger.postMessage(Actions.GET_SELECTED_OBJECT_TYPES);
+          if (
+            selectedObjectTypes && selectedObjectTypes.length > 1 &&
+            selectedObjectTypes.filter((x: string) => x !== "surface").length == 0
+          ) {
             items = ["Merge Surfaces", "!seperator"].concat(items);
           }
           return (
@@ -322,6 +328,16 @@ function MapChildren(props: MapChildrenProps) {
 
 export default function ObjectView(props) {
 
+  const memoizedProps = useMemo(() => {
+    return {
+      objects: props.containers
+    };
+  }, [props.containers]);
+  
+
+  
+
+  
   const [expanded, setExpanded] = useState([""]);
   
   const ContainerLabelStyle ={

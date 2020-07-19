@@ -8,7 +8,7 @@ import GridRowSeperator from "../grid-row/GridRowSeperator";
 import {RT60} from "../../compute/rt";
 import { Button } from "@blueprintjs/core";
 import Select, { components } from "react-select";
-import Messenger from "../../messenger";
+import Messenger from "../../state/messenger";
 import * as ac from '../../compute/acoustics';
 import "./RT60Properties.css";
 

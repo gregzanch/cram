@@ -16,8 +16,9 @@ import {
 } from "./icons";
 
 import "./ConstructionsView.css";
-import Messenger from "../messenger";
+import Messenger from "../state/messenger";
 import { addToGlobalVars } from "../common/global-vars";
+import { Actions } from "../state/actions";
 
 export interface ConstructionsViewProps {
   constructions: KeyValuePair<Container>;
@@ -118,7 +119,7 @@ export default function ConstructionsView(props: ConstructionsViewProps) {
 
                     case "Delete":
                       {
-                        props.messenger.postMessage("REMOVE_CONSTRUCTION", construction.uuid);
+                        props.messenger.postMessage(Actions.REMOVE_CONSTRUCTION, { id: construction.uuid });
                       }
                       break;
 

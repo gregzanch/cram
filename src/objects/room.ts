@@ -7,6 +7,7 @@ import { RT_CONSTANTS } from "../constants/rt-constants";
 import { third_octave } from "../compute/acoustics";
 import { KVP } from "../common/key-value-pair";
 import RT60 from "../compute/rt";
+import { BSP } from '../compute/raytracer/bsp';
 
 export interface RoomProps extends ContainerProps {
   surfaces: Surface[];
@@ -39,6 +40,7 @@ export default class Room extends Container {
   originalFileData!: string;
   surfaceMap!: KVP<Surface>;
   rt!: RT60;
+  bsp!: BSP;
   constructor(name: string, props: RoomProps) {
     super(name);
     this.kind = "room";
@@ -66,6 +68,13 @@ export default class Room extends Container {
     this.rt = new RT60({
       name: this.name + "rt60"
     });
+    this.bsp = new BSP();
+    
+  }
+  
+  construct() {
+    this.bsp.construct(this.surfaces.children as Surface[]);
+    
   }
 
 	save() {

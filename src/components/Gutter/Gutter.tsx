@@ -1,5 +1,5 @@
 import React, {useState} from 'react';
-import Messenger from '../../messenger';
+import Messenger from '../../state/messenger';
 import { uuid } from 'uuidv4';
 import UPlot from './UPlot';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
@@ -41,17 +41,17 @@ export default class Gutter extends React.Component<GutterProps, GutterState>{
     this.handleTabChange = this.handleTabChange.bind(this);
     this.removeTab = this.removeTab.bind(this);
     
-    this.props.messenger.addMessageHandler("SHOW_RECEIVER_FDTD", (acc, ...args) => {
-      console.log(args);
-      const receiver_id = args[0].uuid;
-      const name = args[0].name;
-      const tabs = this.state.tabs.concat({ uuid: receiver_id, name, type: TabTypes.RECEIVER_FDTD });
-      const selectedTabIndex = tabs.length;
-      this.setState({
-        tabs,
-        selectedTabIndex
-      })
-    })
+    // this.props.messenger.addMessageHandler(Actions.SHOW_RECEIVER_FDTD, (acc, ...args) => {
+    //   console.log(args);
+    //   const receiver_id = args[0].uuid;
+    //   const name = args[0].name;
+    //   const tabs = this.state.tabs.concat({ uuid: receiver_id, name, type: TabTypes.RECEIVER_FDTD });
+    //   const selectedTabIndex = tabs.length;
+    //   this.setState({
+    //     tabs,
+    //     selectedTabIndex
+    //   })
+    // })
   } 
   handleTabChange(tabIndex: number) {
     this.setState({

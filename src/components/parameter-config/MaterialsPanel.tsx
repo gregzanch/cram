@@ -1,6 +1,7 @@
 import React from 'react';
 import { VariableSizeGrid as Grid } from "react-window";
-import Messenger from "../../messenger";
+import Messenger from "../../state/messenger";
+import { Actions } from '../../state/actions';
 
 export interface MaterialsPanelProps{
   messenger?: Messenger;
@@ -11,13 +12,13 @@ const columnWidths = [
 ]
 
 export default function MaterialsPanel(props: MaterialsPanelProps) {
-  const materials = props.messenger?.postMessage("FETCH_ALL_MATERIALS")[0]
+  const materials = props.messenger?.postMessage(Actions.FETCH_ALL_MATERIALS)
   
-  const keys = Object.keys(materials[0]);
+  const keys = Object.keys(materials![0]);
 
   const Cell = ({ columnIndex, rowIndex, style }) => (
     <div style={style}>
-      {JSON.stringify(materials[rowIndex][keys[columnIndex]])}
+      {JSON.stringify(materials![rowIndex][keys[columnIndex]])}
     </div>
   );
   

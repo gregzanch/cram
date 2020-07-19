@@ -18,6 +18,7 @@ export interface ContainerSaveObject {
   rotation: Array<string|number>;
 	uuid: string;
 	kind: string;
+	color?: number; 
 }
 
 export interface ContainerProps {
@@ -29,11 +30,13 @@ export interface ContainerProps {
 export default class Container extends THREE.Group {
 	kind: string;
 	selected: boolean;
+	private _color: THREE.Color;
 	renderCallback!: (time?: number) => void;
 	constructor(name: string, props?: ContainerProps) {
 		super();
 		this.name = name;
 		this.kind = "container";
+		this._color = new THREE.Color(0xaaaaaa);
 		props &&
 			(() => {
 				for (const key in props) {
@@ -141,6 +144,13 @@ export default class Container extends THREE.Group {
 	}
 	set rotationz(val) {
 		this.rotation.z = val;
+	}
+	
+  get color() {
+    return String.fromCharCode(35)+this._color.getHexString();
+  }
+	set color(col: string | number) {
+		this._color = new THREE.Color(col);
   }
   
 

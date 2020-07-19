@@ -1,5 +1,5 @@
 import { Setting } from "./setting";
-import Messenger from "./messenger";
+import Messenger from "./state/messenger";
 import { KeyValuePair } from "./common/key-value-pair";
 
 export interface StoredSetting {

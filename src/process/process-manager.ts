@@ -1,6 +1,6 @@
 import { Process } from './process';
 import { KeyValuePair } from '../common/key-value-pair';
-import Messenger from '../messenger';
+import Messenger from '../state/messenger';
 
 export interface ProcessManagerParams {
   

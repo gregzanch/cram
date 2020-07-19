@@ -1,5 +1,5 @@
 import Renderer from "../../render/renderer";
-import Messenger from "../../messenger";
+import Messenger from "../../state/messenger";
 import {
   PlaneBufferGeometry,
   ShaderMaterial,
@@ -38,6 +38,7 @@ import Surface from "../../objects/surface";
 import { KeyValuePair } from "../../common/key-value-pair";
 import { clamp } from "../../common/clamp";
 import { EditorModes } from "../../constants";
+import { Actions } from "../../state/actions";
 
 export const FDTD_2D_Defaults = {
   width: 10,
@@ -175,7 +176,7 @@ class FDTD_2D extends Solver {
     
     this.init();
     
-    this.onModeChange(this.messenger.postMessage("GET_EDITOR_MODE")[0]);
+    this.onModeChange(this.messenger.postMessage(Actions.GET_EDITOR_MODE)!);
     
 
   }
@@ -316,7 +317,7 @@ class FDTD_2D extends Solver {
     });
     
     this.messageHandlers.push(
-      this.messenger.addMessageHandler("RENDERER_UPDATED", () => {
+      this.messenger.addMessageHandler(Actions.RENDERER_UPDATED, () => {
         if (this.running) {
           this.render();
         }
@@ -330,7 +331,9 @@ class FDTD_2D extends Solver {
   }
   dispose() {
     for (let i = 0; i < this.messageHandlers.length; i++) {
-      this.messenger.removeMessageHandler(this.messageHandlers[i][0], this.messageHandlers[i][1]); 
+      if (Actions[this.messageHandlers[i][0]]) {
+        this.messenger.removeMessageHandler(Actions[this.messageHandlers[i][0]], this.messageHandlers[i][1]);
+      }
     }
     this.mesh && this.renderer.fdtdItems.remove(this.mesh);
     this.messageHandlers = [] as string[][];

@@ -4,7 +4,7 @@ import Surface from "../../objects/surface";
 import { third_octave } from '../acoustics';
 import { RT_CONSTANTS } from '../../constants/rt-constants';
 import { UNITS } from "../../enums/units";
-import Messenger from "../../messenger";
+import Messenger from "../../state/messenger";
 
 export interface RT60Props extends SolverParams{
   uuid?: string;

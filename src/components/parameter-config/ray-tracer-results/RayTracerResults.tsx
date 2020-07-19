@@ -1,8 +1,9 @@
 import React, {useState} from 'react';
 import RayTracer from '../../../compute/raytracer';
-import Messenger from '../../../messenger';
+import Messenger from '../../../state/messenger';
 import GridRow from '../../grid-row/GridRow';
 import { whole_octave } from '../../../compute/acoustics';
+import { Actions } from '../../../state/actions';
 
 export interface RayTracerResultsProps{
   raytracer: RayTracer;
@@ -14,20 +15,23 @@ export interface RayTracerResultsState{
 }
 
 export default class RayTracerResults extends React.Component<RayTracerResultsProps, RayTracerResultsState>{
-  updateHandlerID: string[];
+  // updateHandlerID: string[];
   constructor(props: RayTracerResultsProps) {
     super(props);
     this.state = {
       t60: props.raytracer.room.calculateRT60FromHits(whole_octave)
     };
-    this.updateHandlerID = this.props.messenger.addMessageHandler("RESULTS_SHOULD_UPDATE", () => {
-      this.setState({
-        t60: props.raytracer.room.calculateRT60FromHits(whole_octave)
-      });
-    });
+    
+    // this.updateHandlerID = this.props.messenger.addMessageHandler(Actions.RESULTS_SHOULD_UPDATE, () => {
+    //   this.setState({
+    //     t60: props.raytracer.room.calculateRT60FromHits(whole_octave)
+    //   });
+    // });
   }
   componentWillUnmount() {
-    this.props.messenger.removeMessageHandler(this.updateHandlerID[0], this.updateHandlerID[1]);
+    // if (Actions[this.updateHandlerID[0]]) {
+    //   this.props.messenger.removeMessageHandler(Actions[this.updateHandlerID[0]], this.updateHandlerID[1]);
+    // }
   }
   render() {
     return (

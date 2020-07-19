@@ -1,5 +1,8 @@
 import * as THREE from "three";
-import { STLLoader, OBJLoader, TGALoader } from "../render/loaders";
+import { STLLoader } from './stl';
+import { OBJLoader } from './obj';
+import { TGALoader } from './tga';
+import { DAELoader } from './dae';
 import { chunk } from "../common/chunk";
 import roundTo from "../common/round-to";
 
@@ -79,8 +82,17 @@ export function obj(data) {
   return models;
 }
 
-export function dae(data) {
+export function tga(data) {
   const loader = new TGALoader();
   const res = loader.parse(data);
+  return res;
+}
+
+export function dae(data) {
+  const loader = new DAELoader();
+  var xml = new DOMParser().parseFromString(data, "application/xml");
+  // console.log(xml);
+  Object.assign(window, { xml });
+  const res = loader.parse(data, undefined);
   return res;
 }

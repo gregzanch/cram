@@ -15,8 +15,9 @@ import PropertyRowButton from "../parameter-config/property-row/property-row-but
 import PropertyRowCheckbox from "../parameter-config/property-row/property-row-checkbox/PropertyRowCheckbox";
 import PropertyRowTextInput, { TextInputChangeEvent } from "../parameter-config/property-row/property-row-text-input/PropertyRowTextInput";
 import GridRowSeperator from "../grid-row/GridRowSeperator";
-import Messenger from "../../messenger";
+import Messenger from "../../state/messenger";
 import { IToastProps } from "@blueprintjs/core";
+import { Actions } from "../../state/actions";
 
 
 
@@ -128,9 +129,9 @@ export default function ReceiverProperties(props: ReceiverPropertiesProps) {
           <PropertyRowButton
             onClick={(e) => {
               if (props.object.fdtdSamples.length > 0) {
-                props.messenger.postMessage("SHOW_RECEIVER_FDTD", { uuid: props.object.uuid, name: props.object.name + " - Data" });
+                // props.messenger.postMessage(Actions.SHOW_RECEIVER_FDTD, { uuid: props.object.uuid, name: props.object.name + " - Data" });
               } else {
-                props.messenger.postMessage("SHOW_TOAST", {
+                props.messenger.postMessage(Actions.SHOW_TOAST, {
                   message: `No data has been recorded!`,
                   intent: "warning",
                   timeout: 1750,
@@ -145,7 +146,7 @@ export default function ReceiverProperties(props: ReceiverPropertiesProps) {
               if (props.object.fdtdSamples.length > 0) {
                 props.object.saveSamples();
               } else {
-                props.messenger.postMessage("SHOW_TOAST", {
+                props.messenger.postMessage(Actions.SHOW_TOAST, {
                   message: `No data has been recorded!`,
                   intent: "warning",
                   timeout: 1750,
