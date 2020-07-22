@@ -575,77 +575,87 @@ state.messenger.addMessageHandler("IMPORT_FILE", (acc, ...args) => {
     if (allowed[fileType(file.name)]) {
       const objectURL = URL.createObjectURL(file);
       switch (fileType(file.name)) {
-        case 'obj': {
-          const result = await (await fetch(objectURL)).text();
-          const models = importHandlers.obj(result);
-          const surfaces = models.map(
-            (model) =>
-              new Surface(model.name, {
-                geometry: model.geometry,
-                acousticMaterial: state.materials[0]
-              })
-          );
-          const room = new Room("new room", {
-            surfaces,
-            originalFileName: file.name,
-            originalFileData: result
-          });
-          state.containers[room.uuid] = room;
-          state.room = room.uuid;
-          state.renderer.addRoom(room);
-          state.messenger.postMessage("ADDED_ROOM", room);
-        } break;
-        case 'stl': {
-          const result = await (await fetch(objectURL)).text();
-          const models = importHandlers.stl(result);
-          const surfaces = models.map(
-            (model) =>
-              new Surface(model.name, {
-                geometry: model.geometry,
-                acousticMaterial: state.materials[0]
-              })
-          );
-          const room = new Room("new room", {
-            surfaces,
-            originalFileName: file.name,
-            originalFileData: result
-          });
-          state.containers[room.uuid] = room;
-          state.room = room.uuid;
-          state.renderer.addRoom(room);
-          state.messenger.postMessage("ADDED_ROOM", room);
-        } break;
-        case 'dae': {
-          const result = await (await fetch(objectURL)).arrayBuffer();
-          const models = importHandlers.dae(result);
-          console.log(models);
-        } break;
-        case 'wav': {
-          try {
-            const result = await (await fetch(objectURL)).arrayBuffer();
-            const audioContext = new AudioContext();
-            audioContext.decodeAudioData(result, (buffer: AudioBuffer) => {
-              const channelData = [] as Float32Array[];
-              for (let i = 0; i < buffer.numberOfChannels; i++){
-                channelData.push(buffer.getChannelData(i));
-              }
-              const audioFile = new AudioFile({
-                name: file.name,
-                filename: file.name,
-                sampleRate: buffer.sampleRate,
-                length: buffer.length,
-                duration: buffer.duration,
-                numberOfChannels: buffer.numberOfChannels,
-                channelData
-              });
-              state.messenger.postMessage("ADDED_AUDIO_FILE", audioFile);
+        case "obj":
+          {
+            const result = await(await fetch(objectURL)).text();
+            const models = importHandlers.obj(result);
+            const surfaces = models.map(
+              (model) =>
+                new Surface(model.name, {
+                  geometry: model.geometry,
+                  acousticMaterial: state.materials[0]
+                })
+            );
+            const room = new Room("new room", {
+              surfaces,
+              originalFileName: file.name,
+              originalFileData: result
             });
-            console.log(result);
-          } catch (e) {
-            console.error(e);
+            state.containers[room.uuid] = room;
+            state.room = room.uuid;
+            state.renderer.addRoom(room);
+            state.messenger.postMessage("ADDED_ROOM", room);
           }
-        } break;
-        default: break
+          break;
+        case "stl":
+          {
+            const result = await(await fetch(objectURL)).text();
+            const models = importHandlers.stl(result);
+            const surfaces = models.map(
+              (model) =>
+                new Surface(model.name, {
+                  geometry: model.geometry,
+                  acousticMaterial: state.materials[0]
+                })
+            );
+            const room = new Room("new room", {
+              surfaces,
+              originalFileName: file.name,
+              originalFileData: result
+            });
+            state.containers[room.uuid] = room;
+            state.room = room.uuid;
+            state.renderer.addRoom(room);
+            state.messenger.postMessage("ADDED_ROOM", room);
+          }
+          break;
+        case "dae":
+          {
+            const result = await(await fetch(objectURL)).text();
+            const models = importHandlers.dae(result);
+            console.log(models);
+          }
+          break;
+
+        case "wav":
+          {
+            try {
+              const result = await(await fetch(objectURL)).arrayBuffer();
+              const audioContext = new AudioContext();
+              audioContext.decodeAudioData(result, (buffer: AudioBuffer) => {
+                const channelData = [] as Float32Array[];
+                for (let i = 0; i < buffer.numberOfChannels; i++) {
+                  channelData.push(buffer.getChannelData(i));
+                }
+                const audioFile = new AudioFile({
+                  name: file.name,
+                  filename: file.name,
+                  sampleRate: buffer.sampleRate,
+                  length: buffer.length,
+                  duration: buffer.duration,
+                  numberOfChannels: buffer.numberOfChannels,
+                  channelData
+                });
+                state.messenger.postMessage("ADDED_AUDIO_FILE", audioFile);
+              });
+              console.log(result);
+            } catch (e) {
+              console.error(e);
+            }
+          }
+          break;
+        default:
+          break;
       }
     }
   });

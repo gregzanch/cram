@@ -1,8 +1,10 @@
 import * as THREE from "three";
-import { STLLoader, OBJLoader, TGALoader } from "../render/loaders";
+import { STLLoader } from "./stl";
+import { OBJLoader } from "./obj";
+import { TGALoader } from "./tga";
+import { DAELoader } from "./dae";
 import { chunk } from "../common/chunk";
 import roundTo from "../common/round-to";
-
 
 export interface Model {
   name: string;
@@ -45,7 +47,7 @@ export function obj(data) {
   const res = loader.parse();
 
   console.log(res);
-  
+
   const [vertices, vertexNormals, textureCoords] = res.models.reduce(
     (a, b) => [a[0].concat(b.vertices), a[1].concat(b.vertexNormals), a[2].concat(b.textureCoords)],
     [[] as any[], [] as any[], [] as any[]]
@@ -79,8 +81,17 @@ export function obj(data) {
   return models;
 }
 
-export function dae(data) {
+export function tga(data) {
   const loader = new TGALoader();
   const res = loader.parse(data);
+  return res;
+}
+
+export function dae(data) {
+  const loader = new DAELoader();
+  var xml = new DOMParser().parseFromString(data, "application/xml");
+  // console.log(xml);
+  Object.assign(window, { xml });
+  const res = loader.parse(data, undefined);
   return res;
 }
