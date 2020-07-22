@@ -1,5 +1,5 @@
 import React, {useState} from 'react';
-import Messenger from '../../messenger';
+import Messenger from '../../state/messenger';
 
 
 import Stats, {StatsProps, Stat} from './Stats';
@@ -21,6 +21,7 @@ import RendererTab from './renderer-tab/RendererTab';
 import FDTD_2DTab from './fdtd-2d-tab/FDTD_2DTab';
 import { FDTD_2D } from '../../compute/2d-fdtd';
 import { addToGlobalVars } from '../../common/global-vars';
+import { Actions, StateAction } from '../../state/actions';
 
 
 export interface ParameterConfigProps {
@@ -46,13 +47,15 @@ export default class ParameterConfig extends React.Component<ParameterConfigProp
     };
     this.handleTabChange = this.handleTabChange.bind(this);
     this.updateHandlerIDs = [] as string[][];
-    this.updateHandlerIDs.push(this.props.messenger.addMessageHandler("SHOULD_REMOVE_CONTAINER", () => this.forceUpdate()));
-    this.updateHandlerIDs.push(this.props.messenger.addMessageHandler("GUTTER_SHOULD_UPDATE", () => this.forceUpdate()));
+    this.updateHandlerIDs.push(this.props.messenger.addMessageHandler(Actions.SHOULD_REMOVE_CONTAINER, () => this.forceUpdate()));
+    this.updateHandlerIDs.push(this.props.messenger.addMessageHandler(Actions.GUTTER_SHOULD_UPDATE, () => this.forceUpdate()));
     
   } 
   componentWillUnmount() {
-    for (let i = 0; i < this.updateHandlerIDs.length; i++){
-      this.props.messenger.removeMessageHandler(this.updateHandlerIDs[i][0], this.updateHandlerIDs[i][1]);
+    for (let i = 0; i < this.updateHandlerIDs.length; i++) {
+      if (Actions[this.updateHandlerIDs[i][0]]) {
+        this.props.messenger.removeMessageHandler(Actions[this.updateHandlerIDs[i][0]], this.updateHandlerIDs[i][1]);
+      }
     }
   }
   handleTabChange(tabIndex: number) {
@@ -95,7 +98,7 @@ export default class ParameterConfig extends React.Component<ParameterConfigProp
                     if (e.target.textContent) {
                       switch (e.target.textContent) {
                         case "Delete": {
-                            this.props.messenger.postMessage("SHOULD_REMOVE_SOLVER", x);
+                            this.props.messenger.postMessage(Actions.SHOULD_REMOVE_SOLVER, {id: x});
                         } break;
                         case "Log to Console": {
                           console.log(this.props.solvers[x]);

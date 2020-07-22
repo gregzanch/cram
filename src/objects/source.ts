@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import Container, { ContainerProps } from "./container";
+import Container, { ContainerProps, ContainerSaveObject } from "./container";
 import chroma from 'chroma-js';
 import map from "../common/map";
 import { MATCAP_PORCELAIN_WHITE, MATCAP_UNDER_SHADOW } from "./asset-store";
@@ -12,7 +12,7 @@ const defaults = {
   color: 0xa2c982
 };
 
-export interface SourceSaveObject {
+export interface SourceSaveObject extends ContainerSaveObject {
   name: string;
   visible: boolean;
   position: number[];
@@ -20,7 +20,7 @@ export interface SourceSaveObject {
   rotation: Array<string | number>;
   uuid: string;
   kind: string;
-  color: number;
+  color?: number;
 }
 
 
@@ -38,7 +38,7 @@ export enum SignalSource {
 }
 
 
-export default class Source extends Container {
+export class Source extends Container {
   f: (t: number) => number;
   theta: number;
   phi: number;
@@ -163,7 +163,7 @@ export default class Source extends Container {
       uuid
     } as SourceSaveObject;
   }
-  restore(state: SourceSaveObject) {
+  restore(state: SourceSaveObject|Container) {
     this.name = state.name;
     this.visible = state.visible;
     this.position.set(state.position[0], state.position[1], state.position[2]);
@@ -174,7 +174,7 @@ export default class Source extends Container {
       Number(state.rotation[2]),
       String(state.rotation[3])
     );
-    this.color = state.color;
+    this.color = state.color || defaults.color;
     this.uuid = state.uuid;
     return this;
   }
@@ -304,3 +304,6 @@ export default class Source extends Container {
     return this._initialIntensity;
   }
 }
+
+
+export default Source;

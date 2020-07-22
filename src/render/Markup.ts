@@ -100,6 +100,10 @@ export class Markup extends Container{
     this.boxes = new Container("boxes");
     this.add(this.boxes);
     
+    this.addBox = this.addBox.bind(this);
+    this.addLine = this.addLine.bind(this);
+    this.addPoint = this.addPoint.bind(this);
+    
   }
   addLine(p1: [number, number, number], p2: [number, number, number], c1: number=0, c2: number=0) {
     // set p1
@@ -151,7 +155,7 @@ export class Markup extends Container{
     //update version
     this.colorBufferAttribute.version++;
   }
-  addBox(min: [number, number, number], max: [number, number, number], color: [number, number, number]=[Math.random(), Math.random(), Math.random()]) {
+  addBox(min: [number, number, number], max: [number, number, number], color: [number, number, number] = [Math.random(), Math.random(), Math.random()]) {
     // const box = new THREE.Box3(new THREE.Vector3().fromArray(min), new THREE.Vector3().fromArray(max));
     const length = Math.abs(max[0] - min[0]);
     const width = Math.abs(max[1] - min[1]);

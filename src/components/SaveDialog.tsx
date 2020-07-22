@@ -1,6 +1,7 @@
 import React from 'react';
 import { Dialog, Classes, Button, AnchorButton, Intent } from '@blueprintjs/core';
-import Messenger from '../messenger';
+import Messenger from '../state/messenger';
+import { Actions } from '../state/actions';
 
 export interface SaveEvent {
   filename: string;
@@ -32,7 +33,7 @@ class SaveDialog extends React.Component<SaveDialogProps, SaveDialogState>{
         title="Save Project"
         onOpened={(e) => {
           this.setState({
-            filename: this.props.messenger.postMessage("GET_PROJECT_NAME")[0]
+            filename: this.props.messenger.postMessage(Actions.GET_PROJECT_NAME)!
           })
         }}
         // icon="floppy-disk"

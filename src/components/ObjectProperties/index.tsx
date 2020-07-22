@@ -9,7 +9,7 @@ import SurfaceProperties, { SurfacePropertiesProps } from './SurfaceProperties';
 import GenericObjectProperties, { GenericObjectPropertiesProps } from './GenericObjectProperties';
 import Container from "../../objects/container";
 import Solver from "../../compute/solver";
-import Messenger from "../../messenger";
+import Messenger from "../../state/messenger";
 
 export interface ObjectPropertyInputEvent {
   name: string;

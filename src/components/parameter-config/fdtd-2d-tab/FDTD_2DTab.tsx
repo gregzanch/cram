@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Messenger from "../../../messenger";
+import Messenger from "../../../state/messenger";
 import FDTD_2D from "../../../compute/2d-fdtd";
 import { clamp } from "../../../common/clamp";
 import Slider, { SliderChangeEvent } from '../../slider/Slider';
@@ -11,6 +11,7 @@ import PropertyRowCheckbox from "../property-row/property-row-checkbox/PropertyR
 import PropertyRowFolder from "../property-row/property-row-folder/PropertyRowFolder";
 import Source from "../../../objects/source";
 import Receiver from "../../../objects/receiver";
+import { Actions } from "../../../state/actions";
 
 export interface FDTD_2DTabProps {
   messenger: Messenger;
@@ -18,8 +19,8 @@ export interface FDTD_2DTabProps {
 }
 
 export default function FDTD_2DTab(props: FDTD_2DTabProps) {
-  const sources = props.messenger.postMessage("FETCH_ALL_SOURCES")[0] as Source[];
-  const receivers = props.messenger.postMessage("FETCH_ALL_RECEIVERS")[0] as Receiver[];
+  const sources = props.messenger.postMessage(Actions.FETCH_ALL_SOURCES) as Source[];
+  const receivers = props.messenger.postMessage(Actions.FETCH_ALL_RECEIVERS) as Receiver[];
   
   const [colorBrightness, setColorBrightness] = useState(props.solver.uniforms['colorBrightness'].value);
   const [heightScale, setHeightScale] = useState(props.solver.mesh.scale.z);

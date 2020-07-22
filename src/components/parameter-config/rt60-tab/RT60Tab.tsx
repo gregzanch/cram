@@ -1,9 +1,10 @@
 import React from 'react';
 import { RT60 } from '../../../compute/rt';
-import Messenger from "../../../messenger";
+import Messenger from "../../../state/messenger";
 import { ObjectPropertyInputEvent } from "../../ObjectProperties";
 import "./RT60Tab.css"
 import RT60Properties from '../../ObjectProperties/RT60Properties';
+import { Actions } from '../../../state/actions';
 
 export interface RT60TabProps {
   solver: RT60;
@@ -42,8 +43,8 @@ export default class RT60Tab extends React.Component<RT60TabProps, RT60TabState>
 				break;
     }
     this.forceUpdate();
-    this.props.messenger.postMessage("RESULTS_SHOULD_UPDATE");
-    this.props.messenger.postMessage("GUTTER_SHOULD_UPDATE");
+
+    this.props.messenger.postMessage(Actions.GUTTER_SHOULD_UPDATE);
 	}
   handleObjectPropertyValueChangeAsNumber(
 		id: string,

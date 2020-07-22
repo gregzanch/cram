@@ -21,13 +21,16 @@ import MenuItemText from './menu-item-text/MenuItemText';
 import { ItemListRenderer, IItemListRendererProps } from "@blueprintjs/select";
 import ContextMenu from "./context-menu/ContextMenu";
 import ImportDialog from "./import-dialog/ImportDialog";
+
 import ObjectView from "./object-view/ObjectView";
+// import ObjectTreeView from "./object-view/ObjectTreeView";
+
 import ConstructionsView from "./ConstructionsView";
 import Container from "../objects/container";
 import PanelContainer from "./panel-container/PanelContainer";
 import ObjectProperties from "./ObjectProperties/index";
-import Messenger from "../messenger";
-import { KeyValuePair } from "../common/key-value-pair";
+import Messenger from "../state/messenger";
+import { KeyValuePair, KVP } from "../common/key-value-pair";
 import SettingsDrawer from "./settings-drawer/SettingsDrawer";
 import { Setting } from "../setting";
 import { Report } from "../common/browser-report";
@@ -56,6 +59,8 @@ import SaveDialog from "./SaveDialog";
 import OpenWarning from "./OpenWarning";
 
 import { NavBarComponent } from './NavBarComponent';
+import { Actions, StateAction } from "../state/actions";
+import { PostMessageMap } from "../state/messenger/messenger";
 
 
 const AppToaster = Toaster.create({
@@ -143,8 +148,8 @@ export default class App extends React.Component<AppProps, AppState> {
       leftPanelSize: this.props.leftPanelInitialSize,
       rendererStatsVisible: true,
       saveDialogVisible: false,
-      projectName: this.props.messenger.postMessage("GET_PROJECT_NAME")[0],
-      constructions: this.props.messenger.postMessage("GET_CONSTRUCTIONS")[0],
+      projectName: this.props.messenger.postMessage(Actions.GET_PROJECT_NAME) || "",
+      constructions: this.props.messenger.postMessage(Actions.GET_CONSTRUCTIONS) || {},
       openWarningVisible: false,
       terminalOpen: false,
       newWarningVisible: false,
@@ -199,9 +204,13 @@ export default class App extends React.Component<AppProps, AppState> {
     this.handleSettingsTabChange = this.handleSettingsTabChange.bind(this);
     this.saveLayout = this.saveLayout.bind(this);
 	}
-	addMessageHandler(message: string, handler: (acc, ...args) => KeyValuePair<any>, cb?: ()=>void) {
-		this.props.messenger.addMessageHandler(message, (acc, ...args) => {
-			const nextState = handler(acc, ...args);
+  addMessageHandler<K extends keyof PostMessageMap>(
+    message: K,
+    handler: (e: PostMessageMap[K]["args"]) => KVP<any>,
+    cb?: () => void
+  ) {
+		this.props.messenger.addMessageHandler(message, (args) => {
+			const nextState = handler(args);
 			this.setState({
 				lastUpdateReason: message,
 				...nextState
@@ -210,309 +219,256 @@ export default class App extends React.Component<AppProps, AppState> {
 	}
   setupMessageHandlers() {
     
-    this.props.messenger.addMessageHandler("CAN_DUPLICATE", () => {
+    this.props.messenger.addMessageHandler(Actions.CAN_DUPLICATE, () => {
       return this.state.canDuplicate;
     })
     
-    this.addMessageHandler("UNDO", (acc, ...args) => {
+    this.addMessageHandler(Actions.UNDO, (acc, ...args) => {
       const [canUndo, canRedo] = acc[0];
       return {
         canUndo,
         canRedo
       }
     })
-    this.addMessageHandler("REDO", (acc, ...args) => {
+    this.addMessageHandler(Actions.REDO, (acc, ...args) => {
       const [canUndo, canRedo] = acc[0];
       return {
         canUndo,
         canRedo
       }
     })
-    this.addMessageHandler("NEW", () => {
+    this.addMessageHandler(Actions.NEW, () => {
       return {
         selectedObject: {} as Container,
         containers: {} as KeyValuePair<Container>,
-        lastUpdateReason: "NEW"
+        lastUpdateReason: Actions.NEW
       }
     });
-    this.addMessageHandler("DESELECT_ALL_OBJECTS", () => {
+    this.addMessageHandler(Actions.DESELECT_ALL_OBJECTS, () => {
       return {
         canDuplicate: false,
         selectedObject: {} as Container,
-        lastUpdateReason: "DESELECT_ALL_OBJECTS"
+        lastUpdateReason: Actions.DESELECT_ALL_OBJECTS
       };
     });
     
-    this.addMessageHandler("SET_SELECTION", (acc, objects) => {
+    this.addMessageHandler(Actions.SET_SELECTION, (objects) => {
       if (objects instanceof Array) {
         return {
           canDuplicate: objects.filter(x=>["source", "receiver"].includes(x.kind)).length == objects.length,
           selectedObject: objects[objects.length - 1],
-          lastUpdateReason: "SET_SELECTION"
+          lastUpdateReason: Actions.SET_SELECTION
         };
       }
       else return {}
     })
     
-    this.addMessageHandler("APPEND_SELECTION", (acc, objects) => {
+    this.addMessageHandler(Actions.APPEND_SELECTION, (objects) => {
       if (objects instanceof Array) {
         return {
           selectedObject: objects[objects.length - 1],
-          lastUpdateReason: "APPEND_SELECTION"
+          lastUpdateReason: Actions.APPEND_SELECTION
         };
       } else return {};
     })
-    
-    this.addMessageHandler("SET_OBJECT_VIEW", (acc, object) => {
-      if (!object.uuid) {
-        return {}
-      }
-      else {
-        return {
-          selectedObject: object,
-          lastUpdateReason: "SET_OBJECT_VIEW"
-        };
-      }
-    });
         
-    this.addMessageHandler("SHOW_TOAST", (acc, toastProps: IToastProps) => {
+    this.addMessageHandler(Actions.SHOW_TOAST, (toastProps: IToastProps) => {
       AppToaster.show(toastProps);
       return {};
     });
     
-		this.addMessageHandler("SHOW_NEW_WARNING",
+		this.addMessageHandler(Actions.SHOW_NEW_WARNING,
 			() => {
 				return ({
 					newWarningVisible: true
 			})
     });
 
-    this.addMessageHandler("SHOW_OPEN_WARNING",
+    this.addMessageHandler(Actions.SHOW_OPEN_WARNING,
 			() => {
 				return ({
 					openWarningVisible: true
 			})
     });
     
-		this.addMessageHandler("SHOW_TERMINAL",
+		this.addMessageHandler(Actions.SHOW_TERMINAL,
 			() => {
 			return ({
 				terminalOpen: true
 			});
 		});
-		this.addMessageHandler("TOGGLE_TERMINAL",
+		this.addMessageHandler(Actions.TOGGLE_TERMINAL,
 			() => {
       return {
         terminalOpen: !this.state.terminalOpen
       };
     });
-		this.addMessageHandler("OPEN_MATERIAL_SEARCH",
+		this.addMessageHandler(Actions.OPEN_MATERIAL_SEARCH,
 			(acc, ...args) => {
 			return {
         materialDrawerOpen: true
       };
     });
-    this.addMessageHandler("SHOW_SETTINGS_DRAWER", () => {
+    this.addMessageHandler(Actions.SHOW_SETTINGS_DRAWER, () => {
       return {
         settingsDrawerVisible: true
       };
     });
     
 
-		// this.addMessageHandler("ASSIGN_MATERIAL",
-    //   (acc, material, id) => {
-    //     if (id) {
-    //       const surface = this.props.messenger.postMessage("FETCH_SURFACE", id)[0] as Surface;
-    //       surface.acousticMaterial = material;
-    //     }
-    //     else if ((this.state.selectedObject) && (this.state.selectedObject instanceof Surface)) {
-		// 		// this.state.selectedObject.acousticMaterial = material;
-		// 		const { selectedObject } = this.state;
-		// 		selectedObject.acousticMaterial = material;
-		// 		return ({
-		// 			selectedObject,
-		// 			materialDrawerOpen: false
-		// 		})
-		// 	}
-		// 	return ({
-		// 		selectedObject: this.state.selectedObject
-		// 	})
-		// });
 
-		this.addMessageHandler("TOGGLE_MATERIAL_SEARCH",
+		this.addMessageHandler(Actions.TOGGLE_MATERIAL_SEARCH,
 			(acc, ...args) => {
       return {
         materialDrawerOpen: !this.state.materialDrawerOpen
       };
     });
-		this.addMessageHandler("UPDATE_CHART_DATA",
-			(acc, ...args) => {
-			return ({
-				chartData: args[0]
-			})
-		})
-		this.addMessageHandler("SHOW_IMPORT_DIALOG",
-			(acc, ...args) => {
-			return {
-				importDialogVisible: !this.state.importDialogVisible,
-			};
-		});
-		this.addMessageHandler("SHOW_IMPORT_DIALOG",
-			(acc, ...args) => {
+		this.addMessageHandler(Actions.SHOW_IMPORT_DIALOG,
+      () => {
+        return {
+          importDialogVisible: !this.state.importDialogVisible
+        };
+      }
+    );
+		this.addMessageHandler(Actions.SHOW_IMPORT_DIALOG,
+			() => {
 				return ({
           importDialogVisible: !this.state.importDialogVisible,
         });
 			}
     );
     
-    this.addMessageHandler("SHOULD_REMOVE_CONTAINER",
-      (acc, ...args) => {
-      if (args[0] && this.state.containers[args[0]]) {
+    this.addMessageHandler(Actions.SHOULD_REMOVE_CONTAINER,
+      ({ id }) => {
+      if (this.state.containers[id]) {
         const containers = { ...this.state.containers };
         const selectedObject = this.state.selectedObject;
-        delete containers[args[0]];
+        delete containers[id];
         return {
-          selectedObject: selectedObject && selectedObject.uuid === args[0] ? {} as Container : selectedObject,
+          selectedObject: selectedObject && selectedObject.uuid === id ? {} as Container : selectedObject,
           containers,
-          lastUpdateReason: "SHOULD_REMOVE_CONTAINER"
+          lastUpdateReason: Actions.SHOULD_REMOVE_CONTAINER
         }
       }
       else {
         return {}
       }
     })
-		this.addMessageHandler("SHOULD_ADD_SOURCE",
-			(acc, ...args) => {
-				const containers = this.props.messenger.postMessage("GET_CONTAINERS")[0];
-				// containers[acc[0].uuid] = acc[0];
-				return ({
+		this.addMessageHandler(Actions.ADDED_SOURCE,
+      ({ container }) => {
+				const containers = this.props.messenger.postMessage(Actions.GET_CONTAINERS)!;
+        // containers[container.uuid] = container;
+				return {
           containers,
-          lastUpdateReason: "SHOULD_ADD_SOURCE"
-        });
+          lastUpdateReason: Actions.ADDED_SOURCE
+        };
 			}
 		);
-		this.addMessageHandler("SHOULD_ADD_RECEIVER",
-			(acc, ...args) => {
-        const containers = this.props.messenger.postMessage("GET_CONTAINERS")[0];
-				// containers[acc[0].uuid] = acc[0];
-        return ({
+		this.addMessageHandler(Actions.ADDED_RECEIVER,
+      ({ container }) => {
+        const containers = this.props.messenger.postMessage(Actions.GET_CONTAINERS)!;
+        // containers[container.uuid] = container;
+        return {
           containers,
-          lastUpdateReason: "SHOULD_ADD_RECEIVER"
-        });
-			}
+          lastUpdateReason: Actions.ADDED_SOURCE
+        };
+      }
 		);
-		this.addMessageHandler("SHOULD_ADD_RAYTRACER",
-			(acc, ...args) => {
+		this.addMessageHandler(Actions.ADDED_RAYTRACER,
+      ({ solver }) => {
 				const solvers = { ...this.state.solvers };
-				solvers[acc[0].uuid] = acc[0];
+        solvers[solver.uuid] = solver;
 				return ({ solvers });
 			}
     );
-    this.addMessageHandler("SHOULD_REMOVE_SOLVER", (acc, ...args) => {
-      if (args[0] && this.state.solvers[args[0]]) {
+    this.addMessageHandler(Actions.SHOULD_REMOVE_SOLVER, ({ id }) => {
+      if (this.state.solvers[id]) {
         const solvers = { ...this.state.solvers };
         const selectedObject = this.state.selectedObject;
-        delete solvers[args[0]];
+        delete solvers[id];
         return {
-          selectedObject: selectedObject && selectedObject.uuid === args[0] ? ({} as Container) : selectedObject,
+          selectedObject: selectedObject && selectedObject.uuid === id ? ({} as Container) : selectedObject,
           solvers,
-          lastUpdateReason: "SHOULD_REMOVE_SOLVER"
+          lastUpdateReason: Actions.SHOULD_REMOVE_SOLVER
         };
       }
       else {
         return {}
       }
     });
-		this.addMessageHandler("SHOULD_ADD_RT60",
-      (acc, ...args) => {
-        if (acc && acc[0]) {
-          const solvers = { ...this.state.solvers };
-          solvers[acc[0].uuid] = acc[0];
-          return ({ solvers });
-        }
-        else {
-          return ({});
-        }
-			}
+		this.addMessageHandler(Actions.ADDED_RT60,
+      ({ solver }) => {
+        const solvers = { ...this.state.solvers };
+        solvers[solver.uuid] = solver;
+        return ({ solvers });
+      }
 		);
-		this.addMessageHandler("SHOULD_ADD_FDTD",
-			(acc, ...args) => {
-				const solvers = { ...this.state.solvers };
-				solvers[acc[0].uuid] = acc[0];
-				return ({ solvers });
-			}
+		this.addMessageHandler(Actions.ADDED_FDTD,
+      ({ solver }) => {
+        const solvers = { ...this.state.solvers };
+        solvers[solver.uuid] = solver;
+        return ({ solvers });
+      }
 		);		
 
-    this.addMessageHandler("SHOULD_ADD_FDTD_2D",
-			(acc, ...args) => {
-				const solvers = { ...this.state.solvers };
-				solvers[acc[0].uuid] = acc[0];
-				return ({ solvers });
-			}
+    this.addMessageHandler(Actions.ADDED_FDTD_2D,
+      ({ solver }) => {
+        const solvers = { ...this.state.solvers };
+        solvers[solver.uuid] = solver;
+        return ({ solvers });
+      }
 		);		
 
-		this.addMessageHandler("ADDED_ROOM",
-			(acc, ...args) => {
+		this.addMessageHandler(Actions.ADDED_ROOM,
+      ({ room }) => {
 			const containers = { ...this.state.containers };
-			containers[args[0].uuid] = args[0];
+			containers[room.uuid] = room;
 			return ({ containers });
 		});
-		this.addMessageHandler("IMPORT_FILE",
+		this.addMessageHandler(Actions.IMPORT_FILE,
 			(acc, ...args) => {
 				// console.log(acc);
 				return {}
 			}
 		);
-		this.addMessageHandler("SIMULATION_DID_PLAY",
-			(acc, ...args) => {
-			return ({
-				simulationRunning: true
-			})
+		this.addMessageHandler(Actions.STATS_SETUP,
+      ({ stats }) => {
+			return {
+        stats: Object.keys(stats).map(x => stats[x]) as Stat[]
+      };
 		});
-		this.addMessageHandler("SIMULATION_DID_PAUSE",
-			(acc, ...args) => {
-			return({
-				simulationRunning: false
-			})
-		});
-		this.addMessageHandler("STATS_SETUP",
-			(acc, ...args) => {
-			return({
-				stats: Object.keys(args[0]).map(x => args[0][x]) as Stat[]
-			});
-		});
-		this.addMessageHandler("STATS_UPDATE",
-			(acc, ...args) => {
-			return({
-				stats: Object.keys(args[0]).map(x => args[0][x]) as Stat[]
-			});
+		this.addMessageHandler(Actions.STATS_UPDATE,
+			({ stats }) => {
+			return {
+        stats: Object.keys(stats).map(x => stats[x]) as Stat[]
+      };
     });
-    this.addMessageHandler("SHOW_SAVE_DIALOG", (acc, ...args) => {
+    this.addMessageHandler(Actions.SHOW_SAVE_DIALOG, (acc, ...args) => {
       return ({
         saveDialogVisible: true
       })
     })
-    this.addMessageHandler("SHOW_SAVE_DIALOG_THEN_OPEN", (acc, ...args) => {
+    this.addMessageHandler(Actions.SHOW_SAVE_DIALOG_THEN_OPEN, (acc, ...args) => {
       return ({
         saveDialogVisible: true,
         openAfterSave: true
       })
     })
-    this.addMessageHandler("SET_PROJECT_NAME", (acc, ...args) => {
+    this.addMessageHandler(Actions.SET_PROJECT_NAME, ({name}) => {
       return {
-        projectName: (args && args[0]) || this.state.projectName
+        projectName: name || this.state.projectName
       };
     })
 
-    this.addMessageHandler("ADD_CONSTRUCTION", (acc, ...args) => {
+    this.addMessageHandler(Actions.ADD_CONSTRUCTION, (acc, ...args) => {
       return {
-        constructions: this.props.messenger.postMessage("GET_CONSTRUCTIONS")[0]
+        constructions: this.props.messenger.postMessage(Actions.GET_CONSTRUCTIONS)
       };
     })
 
-    this.addMessageHandler("REMOVE_CONSTRUCTION", (acc, ...args) => {
+    this.addMessageHandler(Actions.REMOVE_CONSTRUCTION, (acc, ...args) => {
       return {
-        constructions: this.props.messenger.postMessage("GET_CONSTRUCTIONS")[0]
+        constructions: this.props.messenger.postMessage(Actions.GET_CONSTRUCTIONS)
       };
     })
 
@@ -521,8 +477,8 @@ export default class App extends React.Component<AppProps, AppState> {
 	componentDidMount() {
 		this.canvas.current &&
 			this.props.messenger.postMessage(
-				"APP_MOUNTED",
-				this.canvas.current
+				Actions.APP_MOUNTED,
+				{canvas: this.canvas.current}
 			);
 	}
 
@@ -549,16 +505,16 @@ export default class App extends React.Component<AppProps, AppState> {
     console.log(e.currentTarget);
     if (object instanceof Container && object['kind']!=="room") {
       if (e.shiftKey) {
-        this.props.messenger.postMessage("APPEND_SELECTION", [object])
+        this.props.messenger.postMessage(Actions.APPEND_SELECTION, { objects: [object] })
       }
       else {
-        this.props.messenger.postMessage("SET_SELECTION", [object]);
+        this.props.messenger.postMessage(Actions.SET_SELECTION, { objects: [object] });
       }
     }
   }
   handleObjectViewDelete(object: Container) {
     if (object instanceof Container) {
-      this.props.messenger.postMessage("SHOULD_REMOVE_CONTAINER", object.uuid);
+      this.props.messenger.postMessage(Actions.SHOULD_REMOVE_CONTAINER, { id: object.uuid });
     }
   }
 	handleObjectPropertyButtonClick(e: React.MouseEvent<HTMLInputElement, MouseEvent>) {
@@ -628,7 +584,7 @@ export default class App extends React.Component<AppProps, AppState> {
         lastUpdateReason: "handleSettingChange"
       },
       () => {
-        this.props.messenger.postMessage("SETTING_CHANGE", {
+        this.props.messenger.postMessage(Actions.SETTING_CHANGE, {
           setting: id,
           value: settings[id].value
         });
@@ -700,7 +656,7 @@ export default class App extends React.Component<AppProps, AppState> {
           confirmButtonText="Yes, start over"
           intent={Intent.DANGER}
           onConfirm={(e) => {
-            this.props.messenger.postMessage("NEW");
+            this.props.messenger.postMessage(Actions.NEW);
             this.setState({
               newWarningVisible: false
             });
@@ -720,7 +676,7 @@ export default class App extends React.Component<AppProps, AppState> {
               {
                 openWarningVisible: false
               },
-              () => this.props.messenger.postMessage("OPEN")
+              () => this.props.messenger.postMessage(Actions.OPEN)
             );
           }}
           onSave={(e) => {
@@ -729,7 +685,7 @@ export default class App extends React.Component<AppProps, AppState> {
                 openWarningVisible: false
               },
               () => {
-                this.props.messenger.postMessage("SHOW_SAVE_DIALOG_THEN_OPEN");
+                this.props.messenger.postMessage(Actions.SHOW_SAVE_DIALOG_THEN_OPEN);
               }
             );
           }}
@@ -742,7 +698,7 @@ export default class App extends React.Component<AppProps, AppState> {
         <SaveDialog
           messenger={this.props.messenger}
           isOpen={this.state.saveDialogVisible}
-          filename={this.props.messenger.postMessage("GET_PROJECT_NAME")[0]}
+          filename={this.props.messenger.postMessage(Actions.GET_PROJECT_NAME)||""}
           onCancel={() => this.setState({ saveDialogVisible: false })}
           onSave={(e) => {
             let openAfterSaveCallback = () => {
@@ -750,7 +706,7 @@ export default class App extends React.Component<AppProps, AppState> {
                 {
                   openAfterSave: false
                 },
-                () => this.props.messenger.postMessage("OPEN")
+                () => this.props.messenger.postMessage(Actions.OPEN)
               );
             };
             openAfterSaveCallback = openAfterSaveCallback.bind(this);
@@ -761,7 +717,7 @@ export default class App extends React.Component<AppProps, AppState> {
                 saveDialogVisible: false
               },
               () => {
-                this.props.messenger.postMessage("SAVE", {
+                this.props.messenger.postMessage(Actions.SAVE, {
                   filename: this.state.projectName,
                   callback
                 });
@@ -775,7 +731,7 @@ export default class App extends React.Component<AppProps, AppState> {
           isOpen={this.state.settingsDrawerVisible}
           onSubmit={() => {
             this.setState({
-              settings: this.props.messenger.postMessage("SUBMIT_ALL_SETTINGS")[0]
+              settings: this.props.messenger.postMessage(Actions.SUBMIT_ALL_SETTINGS)!
             });
           }}
         >
@@ -822,7 +778,7 @@ export default class App extends React.Component<AppProps, AppState> {
 
         <ImportDialog
           onImport={(file) => {
-            this.props.messenger.postMessage("IMPORT_FILE", file);
+            this.props.messenger.postMessage(Actions.IMPORT_FILE, file);
             this.handleImportDialogClose();
           }}
           isOpen={this.state.importDialogVisible}
@@ -834,7 +790,7 @@ export default class App extends React.Component<AppProps, AppState> {
           data={{ themeName: "dark" }}
           onClose={this.handleImportDialogClose}
           onDrop={(file) => {
-            this.props.messenger.postMessage("IMPORT_FILE", file);
+            this.props.messenger.postMessage(Actions.IMPORT_FILE, file);
           }}
         />
 
@@ -845,10 +801,10 @@ export default class App extends React.Component<AppProps, AppState> {
           primaryIndex={1}
           customClassName="modified-splitter-layout"
           onDragStart={() => {
-            this.props.messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", true);
+            this.props.messenger.postMessage(Actions.SET_RENDERER_SHOULD_ANIMATE, {animate: true});
           }}
           onDragEnd={() => {
-            this.props.messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", false);
+            this.props.messenger.postMessage(Actions.SET_RENDERER_SHOULD_ANIMATE, {animate: false});
             this.saveLayout();
           }}
           onSecondaryPaneSizeChange={(value: number) => {
@@ -864,6 +820,7 @@ export default class App extends React.Component<AppProps, AppState> {
               onDelete={this.handleObjectViewDelete}
               messenger={this.props.messenger}
             />
+            {/* <ObjectTreeView containers={this.state.containers} /> */}
             <ConstructionsView constructions={this.state.constructions} messenger={this.props.messenger} />
           </PanelContainer>
 
@@ -874,10 +831,10 @@ export default class App extends React.Component<AppProps, AppState> {
             secondaryInitialSize={this.props.rightPanelInitialSize}
             primaryIndex={0}
             onDragStart={() => {
-              this.props.messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", true);
+              this.props.messenger.postMessage(Actions.SET_RENDERER_SHOULD_ANIMATE, {animate: true});
             }}
             onDragEnd={() => {
-              this.props.messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", false);
+              this.props.messenger.postMessage(Actions.SET_RENDERER_SHOULD_ANIMATE, { animate: false});
               this.saveLayout();
             }}
             onSecondaryPaneSizeChange={(value: number) => {
@@ -892,10 +849,10 @@ export default class App extends React.Component<AppProps, AppState> {
               secondaryInitialSize={this.props.bottomPanelInitialSize}
               customClassName="canvas-parameter-config"
               onDragStart={() => {
-                this.props.messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", true);
+                this.props.messenger.postMessage(Actions.SET_RENDERER_SHOULD_ANIMATE, true);
               }}
               onDragEnd={() => {
-                this.props.messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", false);
+                this.props.messenger.postMessage(Actions.SET_RENDERER_SHOULD_ANIMATE, false);
                 this.saveLayout();
               }}
               onSecondaryPaneSizeChange={(value: number) => {

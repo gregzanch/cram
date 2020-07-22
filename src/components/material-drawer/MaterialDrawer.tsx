@@ -1,6 +1,6 @@
 import React from 'react';
 import Surface from '../../objects/surface';
-import Messenger from '../../messenger';
+import Messenger from '../../state/messenger';
 import { AcousticMaterial } from '../../db/acoustic-material';
 import { uuid } from 'uuidv4';
 import { absorptionGradient } from '../absorption-gradient/AbsorptionGradient';
@@ -14,6 +14,7 @@ import { KeyValuePair } from '../../common/key-value-pair';
 import Container from '../../objects/container';
 
 import "./MaterialDrawer.css";
+import { Actions } from '../../state/actions';
 
 const max = (a: number, b: number) => (a > b ? a : b);
 const min = (a: number, b: number) => (a < b ? a : b);
@@ -82,10 +83,10 @@ export default class MaterialDrawer extends React.Component<MaterialDrawerProps,
   handleObjectViewClick(object, e: React.MouseEvent) {
   if (object instanceof Container && object['kind']!=="room") {
     if (e.shiftKey) {
-      this.props.messenger.postMessage("APPEND_SELECTION", [object])
+      this.props.messenger.postMessage(Actions.APPEND_SELECTION, {objects: [object]})
     }
     else {
-      this.props.messenger.postMessage("SET_SELECTION", [object]);
+      this.props.messenger.postMessage(Actions.SET_SELECTION, { objects: [object] });
     }
     if (object instanceof Surface) {
       console.log(object);
@@ -107,8 +108,8 @@ export default class MaterialDrawer extends React.Component<MaterialDrawerProps,
   // }
   render() {
     const filteredItems = this.state.query.length > 0
-      ? this.props.messenger.postMessage("SEARCH_ALL_MATERIALS", this.state.query)[0] as AcousticMaterial[]
-      : this.props.messenger.postMessage("FETCH_ALL_MATERIALS")[0] as AcousticMaterial[];
+      ? this.props.messenger.postMessage(Actions.SEARCH_ALL_MATERIALS, { query: this.state.query }) as AcousticMaterial[]
+      : this.props.messenger.postMessage(Actions.FETCH_ALL_MATERIALS) as AcousticMaterial[];
     
     const MaterialDrawerList = () => {
       if (filteredItems && filteredItems.length > 0) {
@@ -163,7 +164,7 @@ export default class MaterialDrawer extends React.Component<MaterialDrawerProps,
     }
 
     
-    const rooms = this.props.messenger.postMessage("FETCH_ROOMS")[0];
+    const rooms = this.props.messenger.postMessage(Actions.FETCH_ROOMS);
     
     
     
@@ -246,9 +247,8 @@ export default class MaterialDrawer extends React.Component<MaterialDrawerProps,
                 disabled={!this.state.selected_item || typeof this.state.selected_item.uuid === "undefined"}
                 onClick={(e) => {
                   this.props.messenger.postMessage(
-                    "ASSIGN_MATERIAL",
-                    this.state.selected_item,
-                    this.state.selected_object.uuid || false
+                    Actions.ASSIGN_MATERIAL,
+                    {material: this.state.selected_item }
                   );
                 }}
               />
