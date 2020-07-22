@@ -30,7 +30,7 @@ import Container from "../objects/container";
 import PanelContainer from "./panel-container/PanelContainer";
 import ObjectProperties from "./ObjectProperties/index";
 import Messenger from "../state/messenger";
-import { KeyValuePair } from "../common/key-value-pair";
+import { KeyValuePair, KVP } from "../common/key-value-pair";
 import SettingsDrawer from "./settings-drawer/SettingsDrawer";
 import { Setting } from "../setting";
 import { Report } from "../common/browser-report";
@@ -60,6 +60,7 @@ import OpenWarning from "./OpenWarning";
 
 import { NavBarComponent } from './NavBarComponent';
 import { Actions, StateAction } from "../state/actions";
+import { PostMessageMap } from "../state/messenger/messenger";
 
 
 const AppToaster = Toaster.create({
@@ -203,9 +204,13 @@ export default class App extends React.Component<AppProps, AppState> {
     this.handleSettingsTabChange = this.handleSettingsTabChange.bind(this);
     this.saveLayout = this.saveLayout.bind(this);
 	}
-	addMessageHandler(message: StateAction, handler: (acc, ...args) => KeyValuePair<any>, cb?: ()=>void) {
-		this.props.messenger.addMessageHandler(message, (acc, ...args) => {
-			const nextState = handler(acc, ...args);
+  addMessageHandler<K extends keyof PostMessageMap>(
+    message: K,
+    handler: (e: PostMessageMap[K]["args"]) => KVP<any>,
+    cb?: () => void
+  ) {
+		this.props.messenger.addMessageHandler(message, (args) => {
+			const nextState = handler(args);
 			this.setState({
 				lastUpdateReason: message,
 				...nextState
@@ -247,7 +252,7 @@ export default class App extends React.Component<AppProps, AppState> {
       };
     });
     
-    this.addMessageHandler(Actions.SET_SELECTION, (acc, objects) => {
+    this.addMessageHandler(Actions.SET_SELECTION, (objects) => {
       if (objects instanceof Array) {
         return {
           canDuplicate: objects.filter(x=>["source", "receiver"].includes(x.kind)).length == objects.length,
@@ -258,7 +263,7 @@ export default class App extends React.Component<AppProps, AppState> {
       else return {}
     })
     
-    this.addMessageHandler(Actions.APPEND_SELECTION, (acc, objects) => {
+    this.addMessageHandler(Actions.APPEND_SELECTION, (objects) => {
       if (objects instanceof Array) {
         return {
           selectedObject: objects[objects.length - 1],
@@ -266,20 +271,8 @@ export default class App extends React.Component<AppProps, AppState> {
         };
       } else return {};
     })
-    
-    this.addMessageHandler(Actions.SET_OBJECT_VIEW, (acc, object) => {
-      if (!object.uuid) {
-        return {}
-      }
-      else {
-        return {
-          selectedObject: object,
-          lastUpdateReason: Actions.SET_OBJECT_VIEW
-        };
-      }
-    });
         
-    this.addMessageHandler(Actions.SHOW_TOAST, (acc, toastProps: IToastProps) => {
+    this.addMessageHandler(Actions.SHOW_TOAST, (toastProps: IToastProps) => {
       AppToaster.show(toastProps);
       return {};
     });
@@ -323,25 +316,6 @@ export default class App extends React.Component<AppProps, AppState> {
     });
     
 
-		// this.addMessageHandler(Actions.ASSIGN_MATERIAL,
-    //   (acc, material, id) => {
-    //     if (id) {
-    //       const surface = this.props.messenger.postMessage(Actions.FETCH_SURFACE, id)[0] as Surface;
-    //       surface.acousticMaterial = material;
-    //     }
-    //     else if ((this.state.selectedObject) && (this.state.selectedObject instanceof Surface)) {
-		// 		// this.state.selectedObject.acousticMaterial = material;
-		// 		const { selectedObject } = this.state;
-		// 		selectedObject.acousticMaterial = material;
-		// 		return ({
-		// 			selectedObject,
-		// 			materialDrawerOpen: false
-		// 		})
-		// 	}
-		// 	return ({
-		// 		selectedObject: this.state.selectedObject
-		// 	})
-		// });
 
 		this.addMessageHandler(Actions.TOGGLE_MATERIAL_SEARCH,
 			(acc, ...args) => {
@@ -349,20 +323,15 @@ export default class App extends React.Component<AppProps, AppState> {
         materialDrawerOpen: !this.state.materialDrawerOpen
       };
     });
-		this.addMessageHandler(Actions.UPDATE_CHART_DATA,
-			(acc, ...args) => {
-			return ({
-				chartData: args[0]
-			})
-		})
 		this.addMessageHandler(Actions.SHOW_IMPORT_DIALOG,
-			(acc, ...args) => {
-			return {
-				importDialogVisible: !this.state.importDialogVisible,
-			};
-		});
+      () => {
+        return {
+          importDialogVisible: !this.state.importDialogVisible
+        };
+      }
+    );
 		this.addMessageHandler(Actions.SHOW_IMPORT_DIALOG,
-			(acc, ...args) => {
+			() => {
 				return ({
           importDialogVisible: !this.state.importDialogVisible,
         });
@@ -370,13 +339,13 @@ export default class App extends React.Component<AppProps, AppState> {
     );
     
     this.addMessageHandler(Actions.SHOULD_REMOVE_CONTAINER,
-      (acc, ...args) => {
-      if (args[0] && this.state.containers[args[0]]) {
+      ({ id }) => {
+      if (this.state.containers[id]) {
         const containers = { ...this.state.containers };
         const selectedObject = this.state.selectedObject;
-        delete containers[args[0]];
+        delete containers[id];
         return {
-          selectedObject: selectedObject && selectedObject.uuid === args[0] ? {} as Container : selectedObject,
+          selectedObject: selectedObject && selectedObject.uuid === id ? {} as Container : selectedObject,
           containers,
           lastUpdateReason: Actions.SHOULD_REMOVE_CONTAINER
         }
@@ -385,40 +354,40 @@ export default class App extends React.Component<AppProps, AppState> {
         return {}
       }
     })
-		this.addMessageHandler(Actions.SHOULD_ADD_SOURCE,
-			(acc, ...args) => {
-				const containers = this.props.messenger.postMessage(Actions.GET_CONTAINERS);
-				// containers[acc[0].uuid] = acc[0];
-				return ({
+		this.addMessageHandler(Actions.ADDED_SOURCE,
+      ({ container }) => {
+				const containers = this.props.messenger.postMessage(Actions.GET_CONTAINERS)!;
+        // containers[container.uuid] = container;
+				return {
           containers,
-          lastUpdateReason: Actions.SHOULD_ADD_SOURCE
-        });
+          lastUpdateReason: Actions.ADDED_SOURCE
+        };
 			}
 		);
-		this.addMessageHandler(Actions.SHOULD_ADD_RECEIVER,
-			(acc, ...args) => {
-        const containers = this.props.messenger.postMessage(Actions.GET_CONTAINERS);
-				// containers[acc[0].uuid] = acc[0];
-        return ({
+		this.addMessageHandler(Actions.ADDED_RECEIVER,
+      ({ container }) => {
+        const containers = this.props.messenger.postMessage(Actions.GET_CONTAINERS)!;
+        // containers[container.uuid] = container;
+        return {
           containers,
-          lastUpdateReason: Actions.SHOULD_ADD_RECEIVER
-        });
-			}
+          lastUpdateReason: Actions.ADDED_SOURCE
+        };
+      }
 		);
-		this.addMessageHandler(Actions.SHOULD_ADD_RAYTRACER,
-      ({ props }) => {
+		this.addMessageHandler(Actions.ADDED_RAYTRACER,
+      ({ solver }) => {
 				const solvers = { ...this.state.solvers };
-				solvers[props.uuid] = props;
+        solvers[solver.uuid] = solver;
 				return ({ solvers });
 			}
     );
-    this.addMessageHandler(Actions.SHOULD_REMOVE_SOLVER, (acc, ...args) => {
-      if (args[0] && this.state.solvers[args[0]]) {
+    this.addMessageHandler(Actions.SHOULD_REMOVE_SOLVER, ({ id }) => {
+      if (this.state.solvers[id]) {
         const solvers = { ...this.state.solvers };
         const selectedObject = this.state.selectedObject;
-        delete solvers[args[0]];
+        delete solvers[id];
         return {
-          selectedObject: selectedObject && selectedObject.uuid === args[0] ? ({} as Container) : selectedObject,
+          selectedObject: selectedObject && selectedObject.uuid === id ? ({} as Container) : selectedObject,
           solvers,
           lastUpdateReason: Actions.SHOULD_REMOVE_SOLVER
         };
@@ -427,32 +396,27 @@ export default class App extends React.Component<AppProps, AppState> {
         return {}
       }
     });
-		this.addMessageHandler(Actions.SHOULD_ADD_RT60,
-      (acc, ...args) => {
-        if (acc && acc[0]) {
-          const solvers = { ...this.state.solvers };
-          solvers[acc[0].uuid] = acc[0];
-          return ({ solvers });
-        }
-        else {
-          return ({});
-        }
-			}
+		this.addMessageHandler(Actions.ADDED_RT60,
+      ({ solver }) => {
+        const solvers = { ...this.state.solvers };
+        solvers[solver.uuid] = solver;
+        return ({ solvers });
+      }
 		);
-		this.addMessageHandler(Actions.SHOULD_ADD_FDTD,
-			(acc, ...args) => {
-				const solvers = { ...this.state.solvers };
-				solvers[acc[0].uuid] = acc[0];
-				return ({ solvers });
-			}
+		this.addMessageHandler(Actions.ADDED_FDTD,
+      ({ solver }) => {
+        const solvers = { ...this.state.solvers };
+        solvers[solver.uuid] = solver;
+        return ({ solvers });
+      }
 		);		
 
-    this.addMessageHandler(Actions.SHOULD_ADD_FDTD_2D,
-			(acc, ...args) => {
-				const solvers = { ...this.state.solvers };
-				solvers[acc[0].uuid] = acc[0];
-				return ({ solvers });
-			}
+    this.addMessageHandler(Actions.ADDED_FDTD_2D,
+      ({ solver }) => {
+        const solvers = { ...this.state.solvers };
+        solvers[solver.uuid] = solver;
+        return ({ solvers });
+      }
 		);		
 
 		this.addMessageHandler(Actions.ADDED_ROOM,
@@ -490,9 +454,9 @@ export default class App extends React.Component<AppProps, AppState> {
         openAfterSave: true
       })
     })
-    this.addMessageHandler(Actions.SET_PROJECT_NAME, (acc, ...args) => {
+    this.addMessageHandler(Actions.SET_PROJECT_NAME, ({name}) => {
       return {
-        projectName: (args && args[0]) || this.state.projectName
+        projectName: name || this.state.projectName
       };
     })
 

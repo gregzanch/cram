@@ -20,7 +20,7 @@ export interface ReceiverSaveObject {
 }
 
 export interface ReceiverProps extends ContainerProps{
-    
+  
 }
 
 const defaults = {

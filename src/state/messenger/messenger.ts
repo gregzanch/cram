@@ -63,11 +63,11 @@ type ArgConstruction = { construction: Container; } & PostMessageArgs;
 type ArgRoom = { room: Room; } & PostMessageArgs;
 type ArgObjectsArray = { objects: Container[] } & PostMessageArgs;
 type ArgQueryString = { query: string; } & PostMessageArgs;
-type ArgAddRayTracer = { props: RayTracerParams; } & PostMessageArgs;
-type ArgAddRT60 = { props: RT60Props; } & PostMessageArgs;
-type ArgAdd2DFDTD = { props: RT60Props; } & PostMessageArgs;
-type ArgAddSource = { source: Source; addMoment: boolean; } & PostMessageArgs;
-type ArgAddReceiver =  { receiver: Receiver; addMoment: boolean; }& PostMessageArgs;
+type ArgAddRayTracer = { props?: RayTracerParams; } & PostMessageArgs;
+type ArgAddRT60 = { props?: RT60Props; } & PostMessageArgs;
+type ArgAdd2DFDTD = { props?: FDTD_2D_Props; } & PostMessageArgs;
+type ArgAddSource = { props?: Source; addMoment?: boolean; } & PostMessageArgs;
+type ArgAddReceiver = { props?: Receiver; addMoment?: boolean; }& PostMessageArgs;
 type ArgRayTracerResponse = { id: string, frequencies: number[]; };
 type ArgsRestore = { file: File | { name: string; }, json: any; } & PostMessageArgs;
 type ArgMaterial = { material: AcousticMaterial; } & PostMessageArgs;
@@ -84,11 +84,14 @@ type ArgRayTracerSourceChange = { id: string, sources: Array<any>; } & PostMessa
 type ArgRayTracerReceiverChange = { id: string, receivers: Array<any>; } & PostMessageArgs;
 type ArgOpenMaterialDrawer = { object: Surface; } & PostMessageArgs;
 type ArgStats = { stats: KVP<Stat>; } & PostMessageArgs;
+type ArgContainer = { container: Container; } & PostMessageArgs;
+type ArgSolver = { solver: Solver; } & PostMessageArgs;
+
 
 
 type ArgRes<A, R> = { args: A, res: R }
 
-interface PostMessageMap {
+export interface PostMessageMap {
     
   [Actions.FETCH_ALL_SETTINGS]: ArgRes<PostMessageArgs, ApplicationSettings>;
   [Actions.FETCH_SETTINGS__GENERAL]: ArgRes<PostMessageArgs, GeneralSettings>;
@@ -108,10 +111,14 @@ interface PostMessageMap {
   [Actions.SEARCH_ALL_MATERIALS]: ArgRes<ArgQueryString, AcousticMaterial[]>;
   
   
-  [Actions.SHOULD_ADD_RAYTRACER]: ArgRes<ArgAddRayTracer, RayTracer>;
   [Actions.SHOULD_REMOVE_SOLVER]: ArgRes<ArgId, undefined>;
+  [Actions.SHOULD_ADD_RAYTRACER]: ArgRes<ArgAddRayTracer, RayTracer>;
   [Actions.SHOULD_ADD_RT60]: ArgRes<ArgAddRT60, RT60>;
-  [Actions.SHOULD_ADD_FDTD_2D]:ArgRes<ArgAdd2DFDTD, FDTD_2D>;
+  [Actions.SHOULD_ADD_FDTD_2D]: ArgRes<ArgAdd2DFDTD, FDTD_2D>;
+  [Actions.SHOULD_ADD_FDTD]: ArgRes<PostMessageArgs, undefined>;
+  [Actions.SHOULD_ADD_SOURCE]: ArgRes<ArgAddSource, Source>;
+  [Actions.SHOULD_ADD_RECEIVER]: ArgRes<ArgAddReceiver, Receiver>;
+  [Actions.SHOULD_ADD_SKETCH]: ArgRes<PostMessageArgs, undefined>;
   
   [Actions.GET_SELECTED_OBJECTS]: ArgRes<PostMessageArgs, ContainerObject[]>;
   [Actions.FETCH_CONTAINER]: ArgRes<ArgId, ContainerObject>;
@@ -146,10 +153,12 @@ interface PostMessageMap {
   [Actions.ASSIGN_MATERIAL]: ArgRes<ArgMaterial, undefined>;
 
 
-  [Actions.SHOULD_ADD_FDTD]: ArgRes<PostMessageArgs, undefined>;
-  [Actions.SHOULD_ADD_SOURCE]: ArgRes<ArgAddSource, Source>;
-  [Actions.SHOULD_ADD_RECEIVER]:ArgRes<ArgAddReceiver, Receiver>;
-  [Actions.SHOULD_ADD_SKETCH]: ArgRes<PostMessageArgs, undefined>;
+
+  
+
+  
+  
+  
 
   [Actions.SHOULD_REMOVE_SKETCH]: ArgRes<ArgId, undefined>;
   [Actions.SHOULD_REMOVE_CONTAINER]: ArgRes<ArgId, undefined>;
@@ -157,6 +166,12 @@ interface PostMessageMap {
   [Actions.RAYTRACER_RECEIVER_CHANGE]: ArgRes<ArgRayTracerReceiverChange, undefined>;
   [Actions.CAN_DUPLICATE]: ArgRes<PostMessageArgs, undefined>;
   [Actions.SHOULD_DUPLICATE_SELECTED_OBJECTS]: ArgRes<PostMessageArgs, undefined>;
+  [Actions.ADDED_SOURCE]: ArgRes<ArgContainer, undefined>;
+  [Actions.ADDED_RECEIVER]: ArgRes<ArgContainer, undefined>;
+  [Actions.ADDED_FDTD]: ArgRes<ArgSolver, undefined>;
+  [Actions.ADDED_FDTD_2D]: ArgRes<ArgSolver, undefined>;
+  [Actions.ADDED_RAYTRACER]: ArgRes<ArgSolver, undefined>;
+  [Actions.ADDED_RT60]: ArgRes<ArgSolver, undefined>;
   [Actions.ADDED_ROOM]: ArgRes<ArgRoom, undefined>;
   [Actions.ADDED_AUDIO_FILE]: ArgRes<ArgAudioFile, undefined>;
   [Actions.APP_MOUNTED]: ArgRes<ArgCanvas, undefined>;

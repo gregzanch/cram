@@ -261,7 +261,8 @@ state.messenger.addMessageHandler(Actions.SEARCH_ALL_MATERIALS, ({ query }) => {
   return res;
 });
 
-state.messenger.addMessageHandler(Actions.SHOULD_ADD_RAYTRACER, ({ props }) => {
+state.messenger.addMessageHandler(Actions.SHOULD_ADD_RAYTRACER, (args) => {
+  const props = args && args.props || {};
   const raytracer = new RayTracer({
     ...props,
     renderer: state.renderer,
@@ -269,6 +270,9 @@ state.messenger.addMessageHandler(Actions.SHOULD_ADD_RAYTRACER, ({ props }) => {
     containers: state.containers
   });
   state.solvers[raytracer.uuid] = raytracer;
+  
+  state.messenger.postMessage(Actions.ADDED_RAYTRACER, { solver: state.solvers[raytracer.uuid] });
+  
   return raytracer;
 });
 
@@ -279,20 +283,22 @@ state.messenger.addMessageHandler(Actions.SHOULD_REMOVE_SOLVER, ({ id }) => {
  }
 });
 
-state.messenger.addMessageHandler(Actions.SHOULD_ADD_RT60, ({ props }) => {
+state.messenger.addMessageHandler(Actions.SHOULD_ADD_RT60, (args) => {
+  const props = (args && args.props) || {};
   const rt60 = new RT60({
     ...props,
     messenger: state.messenger,
   });
   state.solvers[rt60.uuid] = rt60;
+  state.messenger.postMessage(Actions.ADDED_RT60, { solver: state.solvers[rt60.uuid] });
   return state.solvers[rt60.uuid];
 });
 
-state.messenger.addMessageHandler(Actions.SHOULD_ADD_FDTD_2D, ({ props }) => {
-  const defaults = FDTD_2D_Defaults;
+state.messenger.addMessageHandler(Actions.SHOULD_ADD_FDTD_2D, (args) => {
+  const props = (args && args.props) || FDTD_2D_Defaults;
   const selection = state.messenger.postMessage(Actions.GET_SELECTED_OBJECTS);
-  let width = (props && props.width) || defaults.width;
-  let height = (props && props.height) || defaults.height;
+  let width = (props && props.width) || FDTD_2D_Defaults.width;
+  let height = (props && props.height) || FDTD_2D_Defaults.height;
   let offsetX = 0;
   let offsetY = 0;
   let cellSize = (props && props.cellSize) || Math.max(width, height) / 128;
@@ -344,7 +350,7 @@ state.messenger.addMessageHandler(Actions.SHOULD_ADD_FDTD_2D, ({ props }) => {
     receivers.forEach((rec) => fdtd2d.addReceiver(rec));
   }
   state.solvers[fdtd2d.uuid] = fdtd2d;
-
+  state.messenger.postMessage(Actions.ADDED_FDTD_2D, { solver: state.solvers[fdtd2d.uuid] });
   return state.solvers[fdtd2d.uuid];
 });
 
@@ -382,34 +388,10 @@ state.messenger.addMessageHandler(Actions.FETCH_SOURCE, ({ id }) => {
   return state.containers[id];
 });
 
-state.messenger.addMessageHandler(Actions.SHOULD_ADD_SOURCE, ({source, addMoment}) => {
+state.messenger.addMessageHandler(Actions.SHOULD_ADD_SOURCE, () => {
+
   const src = new Source("new source");
-  let shouldAddMoment = true;
-  if (source) {
-    if (!addMoment) {
-      src.uuid = source.uuid;
-    }
-    src.position.set(source.position.x, source.position.y, source.position.z);
-    src.scale.set(source.scale.x, source.scale.y, source.scale.z);
-    // src.rotation.set(source.rotation);
-    if (!addMoment) {
-      src.name = source.name;
-    } else {
-      src.name = source.name + "-copy";
-    }
-    // src.color = source.color;
-    src.visible = source.visible;
-    shouldAddMoment = addMoment || false;
-  }
-  const staticSource = {
-    uuid: src.uuid,
-    position: src.position.clone(),
-    scale: src.scale.clone(),
-    // rotation: src.rotation.clone(),
-    name: src.name,
-    color: src.color,
-    visible: src.visible
-  } as Source;
+  
   state.containers[src.uuid] = src;
   state.sources.push(src.uuid);
   state.renderer.add(src);
@@ -418,22 +400,10 @@ state.messenger.addMessageHandler(Actions.SHOULD_ADD_SOURCE, ({source, addMoment
       (state.solvers[x] as RayTracer).addSource(src);
   });
   
-  if (shouldAddMoment) {
-    state.history.addMoment({
-      category: "SHOULD_ADD_SOURCE",
-      objectId: src.uuid,
-      recallFunction: (direction: keyof Directions) => {
-        if (direction === state.history.DIRECTIONS.UNDO) {
-          state.messenger.postMessage(Actions.SHOULD_REMOVE_CONTAINER, { id: staticSource.uuid });
-        } else if (direction === state.history.DIRECTIONS.REDO) {
-          state.messenger.postMessage(Actions.SHOULD_ADD_SOURCE, { source: staticSource, addMoment: false });
-        }
-      }
-    });
-  }
-  
+  state.messenger.postMessage(Actions.ADDED_SOURCE, {container: src})
   
   return src;
+  
 });
 
 state.messenger.addMessageHandler(Actions.SHOULD_REMOVE_CONTAINER, ({ id }) => {
@@ -462,59 +432,23 @@ state.messenger.addMessageHandler(Actions.SHOULD_REMOVE_CONTAINER, ({ id }) => {
   }
 });
 
-state.messenger.addMessageHandler(Actions.SHOULD_ADD_RECEIVER, ({ receiver, addMoment }) => {
+state.messenger.addMessageHandler(Actions.SHOULD_ADD_RECEIVER, () => {
   const rec = new Receiver("new receiver");
-  let shouldAddMoment = true;
-  if (receiver) {
-    if (!addMoment) {
-      rec.uuid = receiver.uuid;
-    }
-    rec.position.set(receiver.position.x, receiver.position.y, receiver.position.z);
-    rec.scale.set(receiver.scale.x, receiver.scale.y, receiver.scale.z);
-    // source.rotation.set(receiver.rotation);
-    if (!addMoment) {
-      rec.name = receiver.name;
-    } else {
-      rec.name = receiver.name + "-copy";
-    }
-    // rec.color = receiver.color;
-    rec.visible = receiver.visible;
-    shouldAddMoment = addMoment || false;
-  }
-  const staticRec = {
-    uuid: rec.uuid,
-    position: rec.position.clone(),
-    scale: rec.scale.clone(),
-    // rotation: rec.rotation.clone(),
-    name: rec.name,
-    color: rec.color,
-    visible: rec.visible
-  } as Receiver;
+
+
   state.containers[rec.uuid] = rec;
-  state.receivers.push(rec.uuid);
+  state.sources.push(rec.uuid);
   state.renderer.add(rec);
   Object.keys(state.solvers).forEach(x => {
     state.solvers[x] instanceof RayTracer &&
       (state.solvers[x] as RayTracer).addReceiver(rec);
   });
-  
-  if (shouldAddMoment) {
-    state.history.addMoment({
-      category: "SHOULD_ADD_RECEIVER",
-      objectId: rec.uuid,
-      recallFunction: (direction: keyof Directions) => {
-        if (direction === state.history.DIRECTIONS.UNDO) {
-          state.messenger.postMessage(Actions.SHOULD_REMOVE_CONTAINER, { id: staticRec.uuid });
-        }
-        else if (direction === state.history.DIRECTIONS.REDO) {
-          state.messenger.postMessage(Actions.SHOULD_ADD_RECEIVER, { receiver: staticRec, addMoment: false });
-        }
-      }
-    });
-  }
-  
+
+  state.messenger.postMessage(Actions.ADDED_RECEIVER, { container: rec })
   
   return rec;
+  
+  
 });
 
 state.messenger.addMessageHandler(Actions.SHOULD_DUPLICATE_SELECTED_OBJECTS, () => {
@@ -525,10 +459,8 @@ state.messenger.addMessageHandler(Actions.SHOULD_DUPLICATE_SELECTED_OBJECTS, () 
         switch (selection[i].kind) {
           case "source":
             {
-              const src = state.messenger.postMessage(Actions.SHOULD_ADD_SOURCE, {
-                source: selection[i] as Source,
-                addMoment: true
-              });
+              const src = state.messenger.postMessage(Actions.SHOULD_ADD_SOURCE);
+              src?.copy(selection[i] as Source);
               if (src) {
                 objs.push(src);
               }
@@ -536,10 +468,8 @@ state.messenger.addMessageHandler(Actions.SHOULD_DUPLICATE_SELECTED_OBJECTS, () 
             break;
           case "receiver":
             {
-               const rec = state.messenger.postMessage(Actions.SHOULD_ADD_RECEIVER, {
-                 receiver: selection[i] as Receiver,
-                 addMoment: true
-               });
+              const rec = state.messenger.postMessage(Actions.SHOULD_ADD_RECEIVER);
+              rec?.copy(selection[i] as Receiver);
                if (rec) {
                  objs.push(rec);
                }
@@ -867,8 +797,10 @@ state.messenger.addMessageHandler(Actions.RESTORE_CONTAINERS, ({containers}) => 
         case "source":
           {
             const source = saveObj as SourceProps;
-            const src = new Source("new source", source).restore(saveObj);
-            state.messenger.postMessage(Actions.SHOULD_ADD_SOURCE, { source: src, addMoment: false });
+            // const src = new Source("new source", source).restore(saveObj);
+            const src = state.messenger.postMessage(Actions.SHOULD_ADD_SOURCE);
+            src!.restore(saveObj);
+            
             // state.containers[src.uuid] = src;
             // state.sources.push(src.uuid);
             // state.renderer.add(src);
@@ -877,8 +809,8 @@ state.messenger.addMessageHandler(Actions.RESTORE_CONTAINERS, ({containers}) => 
         case "receiver":
           {
             const receiver = saveObj as ReceiverProps;
-            const rec = new Receiver("new receiver", receiver).restore(saveObj);
-            state.messenger.postMessage(Actions.SHOULD_ADD_RECEIVER, { receiver: rec, addMoment: false });
+            const rec = state.messenger.postMessage(Actions.SHOULD_ADD_RECEIVER);
+            rec!.restore(saveObj);
             // state.containers[rec.uuid] = rec;
             // state.sources.push(rec.uuid);
             // state.renderer.add(rec);

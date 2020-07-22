@@ -69,6 +69,14 @@ export const SHOULD_DUPLICATE_SELECTED_OBJECTS = "SHOULD_DUPLICATE_SELECTED_OBJE
 export const IMPORT_FILE = "IMPORT_FILE";
 
 //events
+
+export const ADDED_SOURCE = "ADDED_SOURCE";
+export const ADDED_RECEIVER = "ADDED_RECEIVER";
+export const ADDED_RAYTRACER = "ADDED_RAYTRACER";
+export const ADDED_RT60 = "ADDED_RT60";
+export const ADDED_FDTD = "ADDED_FDTD";
+export const ADDED_FDTD_2D = "ADDED_FDTD_2D";
+
 export const ADDED_ROOM = "ADDED_ROOM";
 export const ADDED_AUDIO_FILE = "ADDED_AUDIO_FILE";
 export const APP_MOUNTED = "APP_MOUNTED";
@@ -155,3 +163,5 @@ export const STATS_UPDATE = "STATS_UPDATE";
 export const NULL = "NULL";
 
 export const CLEAR_LOCAL_STORAGE = "CLEAR_LOCAL_STORAGE";
+
+

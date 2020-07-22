@@ -21,7 +21,7 @@ export interface ContainerSaveObject {
 	color?: number; 
 }
 
-export interface ContainerProps {
+export interface ContainerProps extends Partial<ContainerSaveObject>{
 	userData?: UserData;
 	type?: string;
 	children?: Array<THREE.Object3D | Container | THREE.Group>;
