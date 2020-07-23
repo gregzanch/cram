@@ -129,7 +129,7 @@ export class Markup extends Container{
     //update version
     this.colorBufferAttribute.version++;
   }
-  addPoint(p1: [number, number, number], color: [number, number, number]) {
+  addPoint(p1: [number, number, number], color: [number, number, number] = [0, 0, 0]) {
     // set p1
     this.pointsBufferAttribute.setXYZ(this.pointsPositionIndex++, p1[0], p1[1], p1[2]);
 

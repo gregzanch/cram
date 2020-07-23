@@ -164,8 +164,9 @@ class Surface extends Container {
   area!: number;
   isPlanar!: boolean;
   edgeLoop!: THREE.Vector3[];
-  polygon!: poly3type
+  polygon!: poly3type;
   normal!: THREE.Vector3;
+  plane!: THREE.Plane;
   // renderer: Renderer;
   constructor(name: string, props?: SurfaceProps) {
     super(name);
@@ -201,18 +202,16 @@ class Surface extends Container {
     this._triangles = this.triangles.map(
       (x) => new THREE.Triangle(new THREE.Vector3(...x[0]), new THREE.Vector3(...x[1]), new THREE.Vector3(...x[2]))
     );
-    
-
 
     this.isPlanar = this._triangles
       .map((x) => x.getNormal(new THREE.Vector3()))
       .reduce((a, b, i, arr) => a && v3eq(b, arr[0]), true);
-    
+
     if (!this.isPlanar) {
       console.error(new Error(`Surface '${this.name}' is not planar`));
       debugger;
     }
-    
+
     this.normal = new THREE.Vector3();
     this._triangles[0].getNormal(this.normal);
 
@@ -302,32 +301,30 @@ class Surface extends Container {
       );
     }
     this.getArea();
-    
-    this.edgeLoop = this.calculateEdgeLoop();
-    
-    
-    const points = this.edgeLoop.map(x => csg.math.vec3.fromArray([x.x, x.y, x.z]));
-    const plane = csg.math.plane.fromPoints(points[0], points[1], points[2])
-    
-    this.polygon = csg.geometry.poly3.fromPointsAndPlane(points, plane);
-    
 
-    
+    this.edgeLoop = this.calculateEdgeLoop();
+
+    const points = this.edgeLoop.map((x) => csg.math.vec3.fromArray([x.x, x.y, x.z]));
+    const plane = csg.math.plane.fromPoints(points[0], points[1], points[2]);
+
+    this.polygon = csg.geometry.poly3.fromPointsAndPlane(points, plane);
+
     const eqeps = numbersEqualWithinTolerence(csg.math.constants.EPS as number);
     const n0 = this.normal;
     const n1 = this.polygon.plane;
     if (!eqeps(n0.x, n1[0]) || !eqeps(n0.y, n1[1]) || !eqeps(n0.z, n1[2])) {
-      
       this.polygon.plane[0] *= -1;
       this.polygon.plane[1] *= -1;
       this.polygon.plane[2] *= -1;
-      
+
       if (!eqeps(n0.x, n1[0]) || !eqeps(n0.y, n1[1]) || !eqeps(n0.z, n1[2])) {
         console.error(new Error(`Surface '${this.name}' has a normal vector issue`));
       }
     }
-   
-    
+
+    this.plane = new THREE.Plane();
+    this._triangles[0].getPlane(this.plane);
+
     // this.polygon.parentSurface = this;
   }
   save() {
@@ -367,7 +364,21 @@ class Surface extends Container {
     (this.mesh.material as THREE.MeshLambertMaterial).needsUpdate = true;
   }
   flipNormals() {}
-
+  distanceToPoint(point: THREE.Vector3) {
+    return this.plane.distanceToPoint(point);
+  }
+  reflectPoint(point: THREE.Vector3, checkInFront: boolean = true) {
+    const t = this.distanceToPoint(point) * 2;
+    if (checkInFront && t < 0) {
+      return;
+    }
+    const newPoint = new THREE.Vector3(
+      point.x - this.normal.x * t,
+      point.y - this.normal.y * t,
+      point.z - this.normal.z * t
+    );
+    return newPoint;
+  }
   resetHits() {
     this.numHits = 0;
   }
@@ -382,11 +393,10 @@ class Surface extends Container {
     return this.edges;
   }
   calculateEdgeLoop() {
-
     const verts = (this.edges.geometry as THREE.Geometry).vertices;
     const edgePairs = chunk(verts, 2);
     const edgeLoop = [] as THREE.Vector3[];
-    
+
     let j = 0;
     edgeLoop.push(edgePairs[j][0]);
     edgeLoop.push(edgePairs[j][1]);
@@ -397,8 +407,7 @@ class Surface extends Container {
             edgeLoop.push(edgePairs[i][1]);
             j = i;
             break;
-          }
-          else if (edgeLoop[edgeLoop.length - 1].equals(edgePairs[i][1])) {
+          } else if (edgeLoop[edgeLoop.length - 1].equals(edgePairs[i][1])) {
             edgeLoop.push(edgePairs[i][0]);
             j = i;
             break;
@@ -410,8 +419,6 @@ class Surface extends Container {
     return edgeLoop;
   }
 
-  
-  
   mergeSurfaces(surfaces: Surface[]) {
     const name = this.name + "-merged";
     const acousticMaterial = this.acousticMaterial;

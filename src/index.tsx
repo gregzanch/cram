@@ -26,7 +26,7 @@ import Solver from "./compute/solver";
 import RayTracer, { RayTracerParams } from "./compute/raytracer";
 import RT60 from './compute/rt';
 import { FDTD_2D, FDTD_2D_Defaults } from "./compute/2d-fdtd";
-import FDTD_3D from "./compute/3d-fdtd";
+// import FDTD_3D from "./compute/3d-fdtd";
 import * as ac from "./compute/acoustics";
 
 // rendering
@@ -61,21 +61,13 @@ import { chunk } from './common/chunk';
 import { sizeof } from './common/sizeof';
 import { addToGlobalVars } from './common/global-vars';
 import { gt, lt, gte, lte } from 'semver';
-
-// TODO remove these imports for prod
-//@ts-ignore
-import baps from "!raw-loader!./res/models/baps-better.obj";
-//@ts-ignore
-import rect from "!raw-loader!./res/models/rect10x13.obj";
-//@ts-ignore
-import plane from "!raw-loader!./res/models/plane.stl";
 import expose from "./common/expose";
+
+
 import { CSG, CAG } from '@jscad/csg';
 import csg from './compute/csg';
 import * as THREE from "three";
 import FileSaver from "file-saver";
-import { BufferGeometry } from "three";
-import { Theme } from "@material-ui/core";
 
 
 expose({
