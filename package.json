@@ -4,6 +4,7 @@
   "repository": {
     "url": "https://github.com/gregzanch/cram.git"
   },
+  "license": "MIT",
   "description": "interface for computational room acoustics",
   "keywords": [
     "acoustics",
