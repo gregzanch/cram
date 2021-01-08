@@ -1,50 +1,45 @@
 // user interface
 import React, { createContext, useReducer } from "react";
 import ReactDOM from "react-dom";
-import Themes from './themes';
 import App from "./components/App";
 import { IToastProps } from "@blueprintjs/core";
-
 
 // command handling
 import hotkeys from "hotkeys-js";
 import Messenger from "./messenger";
-import { History, Moment, Directions } from './history';
+import { History, Directions } from "./history";
 
 // objects
 import Container from "./objects/container";
-import Source, { SourceSaveObject } from "./objects/source";
+import Source from "./objects/source";
 import Receiver from "./objects/receiver";
 import Polygon from "./objects/polygon";
 import Room from "./objects/room";
 import Surface, { SurfaceSaveObject, BufferGeometrySaveObject } from "./objects/surface";
-import AudioFile from './objects/audio-file';
-import Sketch from './objects/sketch';
+import AudioFile from "./objects/audio-file";
+import Sketch from "./objects/sketch";
 
 // compute/solvers
 import Solver from "./compute/solver";
-import RayTracer, { RayTracerParams } from "./compute/raytracer";
-import RT60 from './compute/rt';
+import RayTracer from "./compute/raytracer";
+import RT60 from "./compute/rt";
 import { FDTD_2D, FDTD_2D_Defaults } from "./compute/2d-fdtd";
-import FDTD_3D from "./compute/3d-fdtd";
 import * as ac from "./compute/acoustics";
 
 // rendering
 import Renderer from "./render/renderer";
 
 // file i/o
-import * as importHandlers from './import-handlers';
+import * as importHandlers from "./import-handlers";
 import { fileType, allowed } from "./common/file-type";
-
-
 
 // data structures / storage
 import { uuid } from "uuidv4";
-import { KeyValuePair, KVP } from "./common/key-value-pair";
+import { KeyValuePair } from "./common/key-value-pair";
 import { Setting } from "./setting";
-import { defaultSettings, ApplicationSettings, SettingsCategories } from './default-settings';
+import { defaultSettings, ApplicationSettings, SettingsCategories } from "./default-settings";
 import { SettingsManager, StoredSetting } from "./settings-manager";
-import { layout as defaultLayout} from './default-storage';
+import { layout as defaultLayout } from "./default-storage";
 
 // constants
 import { EditorModes } from "./constants/editor-modes";
@@ -52,46 +47,33 @@ import { Processes } from "./constants/processes";
 
 // databases
 import materials from "./db/material.json";
-import { AcousticMaterial } from './db/acoustic-material';
+import { AcousticMaterial } from "./db/acoustic-material";
 
 // utility
 import { Searcher } from "fast-fuzzy";
 import browserReport from "./common/browser-report";
-import { chunk } from './common/chunk';
-import { sizeof } from './common/sizeof';
-import { addToGlobalVars } from './common/global-vars';
-import { gt, lt, gte, lte } from 'semver';
+import { chunk } from "./common/chunk";
+import { sizeof } from "./common/sizeof";
+import { addToGlobalVars } from "./common/global-vars";
+import { gte } from "semver";
 
-// TODO remove these imports for prod
-//@ts-ignore
-import baps from "!raw-loader!./res/models/baps-better.obj";
-//@ts-ignore
-import rect from "!raw-loader!./res/models/rect10x13.obj";
-//@ts-ignore
-import plane from "!raw-loader!./res/models/plane.stl";
 import expose from "./common/expose";
-import { CSG, CAG } from '@jscad/csg';
-import csg from './compute/csg';
+import { CSG, CAG } from "@jscad/csg";
+import csg from "./compute/csg";
 import * as THREE from "three";
 import FileSaver from "file-saver";
-import { BufferGeometry } from "three";
-import { Theme } from "@material-ui/core";
-
 
 expose({
   vars: {}
 });
 
-
 const materialsIndex = {} as KeyValuePair<AcousticMaterial>;
 
-materials.forEach(x => {
-    materialsIndex[x.uuid] = x;
+materials.forEach((x) => {
+  materialsIndex[x.uuid] = x;
 });
 
 const layout = JSON.parse(localStorage.getItem("layout") || defaultLayout);
-
-
 
 const state = {
   leftPanelInitialSize: layout.leftPanelInitialSize,
@@ -130,9 +112,9 @@ Object.keys(defaultSettings).map(async (category) => {
     state.messenger,
     category,
     defaultSettings[category],
-    async (manager, event) => {
+    async () => {
       const settings = (await state.settingsManagers[category].read()) as StoredSetting[];
-      settings.forEach(setting => {
+      settings.forEach((setting) => {
         state.settings[category][setting.id].value = setting.value;
         state.settings[category][setting.id].default_value = setting.default_value;
         state.settings[category][setting.id].setStagedValue(setting.value);
@@ -144,7 +126,6 @@ Object.keys(defaultSettings).map(async (category) => {
     }
   );
 });
-
 
 state.renderer = new Renderer({
   messenger: state.messenger,
@@ -162,11 +143,11 @@ state.messenger.addMessageHandler("REMOVE_CONSTRUCTION", (acc, id) => {
   if (id) {
     if (state.constructions[id]) {
       delete state.constructions[id];
-    } 
+    }
   }
 });
 
-state.messenger.addMessageHandler("GET_CONSTRUCTIONS", (acc, ...args) => {
+state.messenger.addMessageHandler("GET_CONSTRUCTIONS", () => {
   return state.constructions;
 });
 
@@ -175,7 +156,7 @@ state.messenger.addMessageHandler("SET_SELECTION", (acc, objects) => {
   state.messenger.postMessage("APPEND_SELECTION", objects);
 });
 
-state.messenger.addMessageHandler("DESELECT_ALL_OBJECTS", (acc, ...args) => {
+state.messenger.addMessageHandler("DESELECT_ALL_OBJECTS", () => {
   Object.keys(state.containers).forEach((x) => {
     state.containers[x].deselect();
   });
@@ -183,31 +164,31 @@ state.messenger.addMessageHandler("DESELECT_ALL_OBJECTS", (acc, ...args) => {
 });
 
 state.messenger.addMessageHandler("APPEND_SELECTION", (acc, objects) => {
-  hotkeys.setScope("editor")
+  hotkeys.setScope("editor");
   if (objects instanceof Array) {
-    for (let i = 0; i < objects.length; i++){
+    for (let i = 0; i < objects.length; i++) {
       if (objects[i] instanceof Container) {
         objects[i].select();
         state.selectedObjects.push(objects[i]);
       }
     }
   }
-})
+});
 
-state.messenger.addMessageHandler("GET_SELECTED_OBJECTS", (acc, ...args) => {
+state.messenger.addMessageHandler("GET_SELECTED_OBJECTS", () => {
   return state.selectedObjects;
-})
+});
 
-state.messenger.addMessageHandler("GET_SELECTED_OBJECT_TYPES", (acc, ...args) => {
-  return state.selectedObjects.map(obj=>obj.kind);
-})
+state.messenger.addMessageHandler("GET_SELECTED_OBJECT_TYPES", () => {
+  return state.selectedObjects.map((obj) => obj.kind);
+});
 
 state.messenger.addMessageHandler("FETCH_ROOMS", () => {
-  const roomkeys = Object.keys(state.containers).filter(x => {
+  const roomkeys = Object.keys(state.containers).filter((x) => {
     return state.containers[x].kind === "room";
   });
   if (roomkeys && roomkeys.length > 0) {
-    return roomkeys.map(x => state.containers[x] as Room);
+    return roomkeys.map((x) => state.containers[x] as Room);
   }
 });
 
@@ -217,19 +198,19 @@ state.messenger.addMessageHandler("FETCH_CONTAINER", (acc, ...args) => {
 
 state.messenger.addMessageHandler("FETCH_ALL_SETTINGS", () => {
   return state.settings;
-})
+});
 
 state.messenger.addMessageHandler("FETCH_SETTINGS__GENERAL", () => {
   return state.settings.general;
-})
+});
 
 state.messenger.addMessageHandler("FETCH_SETTINGS__EDITOR", () => {
   return state.settings.editor;
-})
+});
 
 state.messenger.addMessageHandler("FETCH_SETTINGS__KEYBINDINGS", () => {
   return state.settings.keybindings;
-})
+});
 
 state.messenger.addMessageHandler("SUBMIT_ALL_SETTINGS", () => {
   for (const key in state.settings) {
@@ -261,7 +242,7 @@ state.messenger.addMessageHandler("SUBMIT_SETTINGS__EDITOR", () => {
   return state.settings;
 });
 
-state.messenger.addMessageHandler("FETCH_ALL_MATERIALS", (acc, ...args) => {
+state.messenger.addMessageHandler("FETCH_ALL_MATERIALS", () => {
   return state.materials;
 });
 
@@ -271,7 +252,7 @@ state.messenger.addMessageHandler("SEARCH_ALL_MATERIALS", (acc, ...args) => {
 });
 
 state.messenger.addMessageHandler("SHOULD_ADD_RAYTRACER", (acc, ...args) => {
-  const props = args && args[0] || {};
+  const props = (args && args[0]) || {};
   const raytracer = new RayTracer({
     ...props[0],
     renderer: state.renderer,
@@ -286,14 +267,14 @@ state.messenger.addMessageHandler("SHOULD_REMOVE_SOLVER", (acc, id) => {
   if (state.solvers && state.solvers[id]) {
     state.solvers[id].dispose();
     delete state.solvers[id];
- }
+  }
 });
 
 state.messenger.addMessageHandler("SHOULD_ADD_RT60", (acc, ...args) => {
   const props = (args && args[0]) || {};
   const rt60 = new RT60({
     ...props,
-    messenger: state.messenger,
+    messenger: state.messenger
   });
   state.solvers[rt60.uuid] = rt60;
   return state.solvers[rt60.uuid];
@@ -302,32 +283,39 @@ state.messenger.addMessageHandler("SHOULD_ADD_RT60", (acc, ...args) => {
 state.messenger.addMessageHandler("SHOULD_ADD_FDTD_2D", (acc, args) => {
   const defaults = FDTD_2D_Defaults;
   const selection = state.messenger.postMessage("GET_SELECTED_OBJECTS")[0];
-  let width = args && args.width || defaults.width;
-  let height = args && args.height || defaults.height;
+  let width = (args && args.width) || defaults.width;
+  let height = (args && args.height) || defaults.height;
   let offsetX = 0;
   let offsetY = 0;
-  let cellSize = args && args.cellSize || Math.max(width, height) / 128;
+  let cellSize = (args && args.cellSize) || Math.max(width, height) / 128;
   const sources = [] as Source[];
   const receivers = [] as Receiver[];
   const surfaces = [] as Surface[];
-  let surface = undefined as Surface|undefined;
+  let surface = undefined as Surface | undefined;
   if (selection.length > 0) {
-    selection.forEach(obj => {
+    selection.forEach((obj) => {
       switch (obj.kind) {
-        case 'source': {
-          sources.push(obj);
-        } break;
-        case 'receiver': {
-          receivers.push(obj);
-        } break;
-        case 'surface': {
-          surfaces.push(obj);
-        } break;
-        default: break;
+        case "source":
+          {
+            sources.push(obj);
+          }
+          break;
+        case "receiver":
+          {
+            receivers.push(obj);
+          }
+          break;
+        case "surface":
+          {
+            surfaces.push(obj);
+          }
+          break;
+        default:
+          break;
       }
     });
     if (surfaces.length > 0) {
-      surface = (surfaces.length > 1) ? surfaces[0].mergeSurfaces(surfaces) : surfaces[0];
+      surface = surfaces.length > 1 ? surfaces[0].mergeSurfaces(surfaces) : surfaces[0];
       const { max, min } = surface.mesh.geometry.boundingBox;
       width = max.x - min.x;
       height = max.y - min.y;
@@ -344,12 +332,12 @@ state.messenger.addMessageHandler("SHOULD_ADD_FDTD_2D", (acc, args) => {
     offsetY,
     cellSize
   });
-  fdtd2d.name = "FDTD-2D"
+  fdtd2d.name = "FDTD-2D";
   if (surface) {
     fdtd2d.addWallsFromSurfaceEdges(surface);
   }
   if (sources.length > 0) {
-    sources.forEach(src => fdtd2d.addSource(src));
+    sources.forEach((src) => fdtd2d.addSource(src));
   }
   if (receivers.length > 0) {
     receivers.forEach((rec) => fdtd2d.addReceiver(rec));
@@ -360,33 +348,33 @@ state.messenger.addMessageHandler("SHOULD_ADD_FDTD_2D", (acc, args) => {
 });
 
 state.messenger.addMessageHandler("RAYTRACER_CALCULATE_RESPONSE", (acc, id, frequencies) => {
-  (state.solvers[id] instanceof RayTracer) && (state.solvers[id] as RayTracer).calculateReflectionLoss(frequencies);
+  state.solvers[id] instanceof RayTracer && (state.solvers[id] as RayTracer).calculateReflectionLoss(frequencies);
 });
 
 state.messenger.addMessageHandler("RAYTRACER_QUICK_ESTIMATE", (acc, id) => {
-  (state.solvers[id] instanceof RayTracer) && (state.solvers[id] as RayTracer).startQuickEstimate();
+  state.solvers[id] instanceof RayTracer && (state.solvers[id] as RayTracer).startQuickEstimate();
 });
 
 state.messenger.addMessageHandler("FETCH_ALL_SOURCES", (acc, ...args) => {
-  return state.sources.map(x => {
+  return state.sources.map((x) => {
     if (args && args[0] && args[0] instanceof Array) {
-      return args[0].map(y => state.containers[x][y]);
+      return args[0].map((y) => state.containers[x][y]);
     } else return state.containers[x];
   });
 });
 
-state.messenger.addMessageHandler("FETCH_ALL_SOURCES_AS_MAP", (acc, ...args) => {
+state.messenger.addMessageHandler("FETCH_ALL_SOURCES_AS_MAP", () => {
   const sourcemap = new Map<string, Source>();
-  for (let i = 0; i < state.sources.length; i++){
+  for (let i = 0; i < state.sources.length; i++) {
     sourcemap.set(state.sources[i], state.containers[state.sources[i]] as Source);
   }
   return sourcemap;
 });
 
 state.messenger.addMessageHandler("FETCH_ALL_RECEIVERS", (acc, ...args) => {
-  return state.receivers.map(x => {
+  return state.receivers.map((x) => {
     if (args && args[0] && args[0] instanceof Array) {
-      return args[0].map(y => state.containers[x][y]);
+      return args[0].map((y) => state.containers[x][y]);
     } else return state.containers[x];
   });
 });
@@ -407,9 +395,8 @@ state.messenger.addMessageHandler("SHOULD_ADD_SOURCE", (acc, ...args) => {
     // source.rotation.set(args[0].rotation);
     if (!args[1]) {
       source.name = args[0].name;
-    }
-    else {
-      source.name = args[0].name+"-copy"
+    } else {
+      source.name = args[0].name + "-copy";
     }
     // source.color = args[0].color;
     source.visible = args[0].visible;
@@ -423,15 +410,14 @@ state.messenger.addMessageHandler("SHOULD_ADD_SOURCE", (acc, ...args) => {
     name: source.name,
     color: source.color,
     visible: source.visible
-  }
+  };
   state.containers[source.uuid] = source;
   state.sources.push(source.uuid);
   state.renderer.add(source);
-  Object.keys(state.solvers).forEach(x => {
-    state.solvers[x] instanceof RayTracer &&
-      (state.solvers[x] as RayTracer).addSource(source);
+  Object.keys(state.solvers).forEach((x) => {
+    state.solvers[x] instanceof RayTracer && (state.solvers[x] as RayTracer).addSource(source);
   });
-  
+
   if (shouldAddMoment) {
     state.history.addMoment({
       category: "SHOULD_ADD_SOURCE",
@@ -445,30 +431,33 @@ state.messenger.addMessageHandler("SHOULD_ADD_SOURCE", (acc, ...args) => {
       }
     });
   }
-  
-  
+
   return source;
 });
 
 state.messenger.addMessageHandler("SHOULD_REMOVE_CONTAINER", (acc, id) => {
   if (state.containers[id]) {
     switch (state.containers[id].kind) {
-      case "source": {
-        state.sources = state.sources.reduce((a, b) => {
-          if (b !== id) {
-            a.push(b);
-          }
-          return a;
-        }, [] as string[]);
-      } break;
-      case "receiver": {
-        state.receivers = state.receivers.reduce((a, b) => {
-          if (b !== id) {
-            a.push(b);
-          }
-          return a;
-        }, [] as string[]);
-      } break;
+      case "source":
+        {
+          state.sources = state.sources.reduce((a, b) => {
+            if (b !== id) {
+              a.push(b);
+            }
+            return a;
+          }, [] as string[]);
+        }
+        break;
+      case "receiver":
+        {
+          state.receivers = state.receivers.reduce((a, b) => {
+            if (b !== id) {
+              a.push(b);
+            }
+            return a;
+          }, [] as string[]);
+        }
+        break;
     }
     state.selectedObjects = state.selectedObjects.filter((x) => x.uuid !== id);
     state.renderer.remove(state.containers[id]);
@@ -507,11 +496,10 @@ state.messenger.addMessageHandler("SHOULD_ADD_RECEIVER", (acc, ...args) => {
   state.containers[rec.uuid] = rec;
   state.receivers.push(rec.uuid);
   state.renderer.add(rec);
-  Object.keys(state.solvers).forEach(x => {
-    state.solvers[x] instanceof RayTracer &&
-      (state.solvers[x] as RayTracer).addReceiver(rec);
+  Object.keys(state.solvers).forEach((x) => {
+    state.solvers[x] instanceof RayTracer && (state.solvers[x] as RayTracer).addReceiver(rec);
   });
-  
+
   if (shouldAddMoment) {
     state.history.addMoment({
       category: "SHOULD_ADD_RECEIVER",
@@ -519,44 +507,42 @@ state.messenger.addMessageHandler("SHOULD_ADD_RECEIVER", (acc, ...args) => {
       recallFunction: (direction: keyof Directions) => {
         if (direction === state.history.DIRECTIONS.UNDO) {
           state.messenger.postMessage("SHOULD_REMOVE_CONTAINER", staticRec.uuid);
-        }
-        else if (direction === state.history.DIRECTIONS.REDO) {
+        } else if (direction === state.history.DIRECTIONS.REDO) {
           state.messenger.postMessage("SHOULD_ADD_RECEIVER", staticRec, false);
         }
       }
     });
   }
-  
-  
+
   return rec;
 });
 
-state.messenger.addMessageHandler("SHOULD_DUPLICATE_SELECTED_OBJECTS", (acc, ...args) => {
+state.messenger.addMessageHandler("SHOULD_DUPLICATE_SELECTED_OBJECTS", () => {
   const objs = [] as Container[];
   const selection = state.messenger.postMessage("GET_SELECTED_OBJECTS")[0];
   if (selection && selection.length > 0) {
     for (let i = 0; i < selection.length; i++) {
-        switch (selection[i].kind) {
-          case "source":
-            {
-              objs.push(state.messenger.postMessage("SHOULD_ADD_SOURCE", selection[i], true)[0]);
-            }
-            break;
-          case "receiver":
-            {
-              objs.push(state.messenger.postMessage("SHOULD_ADD_RECEIVER", selection[i], true)[0]);
-            }
-            break;
-          default:
-            break;
-        }
+      switch (selection[i].kind) {
+        case "source":
+          {
+            objs.push(state.messenger.postMessage("SHOULD_ADD_SOURCE", selection[i], true)[0]);
+          }
+          break;
+        case "receiver":
+          {
+            objs.push(state.messenger.postMessage("SHOULD_ADD_RECEIVER", selection[i], true)[0]);
+          }
+          break;
+        default:
+          break;
+      }
     }
   }
 
   state.messenger.postMessage("SET_SELECTION", objs);
 });
 
-state.messenger.addMessageHandler("GET_CONTAINERS", (acc, ...args) => {
+state.messenger.addMessageHandler("GET_CONTAINERS", () => {
   return state.containers;
 });
 
@@ -567,7 +553,7 @@ state.messenger.addMessageHandler("ADDED_ROOM", (acc, ...args) => {
 state.messenger.addMessageHandler("ADDED_AUDIO_FILE", (acc, args) => {
   const audiofile = args[0] as AudioFile;
   state.audiofiles[audiofile.uuid] = audiofile;
-})
+});
 
 state.messenger.addMessageHandler("IMPORT_FILE", (acc, ...args) => {
   const files = Array.from(args[0]);
@@ -577,7 +563,7 @@ state.messenger.addMessageHandler("IMPORT_FILE", (acc, ...args) => {
       switch (fileType(file.name)) {
         case "obj":
           {
-            const result = await(await fetch(objectURL)).text();
+            const result = await (await fetch(objectURL)).text();
             const models = importHandlers.obj(result);
             const surfaces = models.map(
               (model) =>
@@ -599,7 +585,7 @@ state.messenger.addMessageHandler("IMPORT_FILE", (acc, ...args) => {
           break;
         case "stl":
           {
-            const result = await(await fetch(objectURL)).text();
+            const result = await (await fetch(objectURL)).text();
             const models = importHandlers.stl(result);
             const surfaces = models.map(
               (model) =>
@@ -621,7 +607,7 @@ state.messenger.addMessageHandler("IMPORT_FILE", (acc, ...args) => {
           break;
         case "dae":
           {
-            const result = await(await fetch(objectURL)).text();
+            const result = await (await fetch(objectURL)).text();
             const models = importHandlers.dae(result);
             console.log(models);
           }
@@ -630,7 +616,7 @@ state.messenger.addMessageHandler("IMPORT_FILE", (acc, ...args) => {
         case "wav":
           {
             try {
-              const result = await(await fetch(objectURL)).arrayBuffer();
+              const result = await (await fetch(objectURL)).arrayBuffer();
               const audioContext = new AudioContext();
               audioContext.decodeAudioData(result, (buffer: AudioBuffer) => {
                 const channelData = [] as Float32Array[];
@@ -665,15 +651,15 @@ state.messenger.addMessageHandler("APP_MOUNTED", (acc, ...args) => {
   state.renderer.init(args[0], (cateogry: SettingsCategories) => state.settings[cateogry]);
 });
 
-state.messenger.addMessageHandler("RENDERER_UPDATED", (acc, ...args) => {
+state.messenger.addMessageHandler("RENDERER_UPDATED", () => {
   state.time += 0.01666666667;
   if (state.simulation.length > 0) {
     state.solvers[state.simulation].update();
   }
   if (state.selectedObjects.length > 0) {
-    state.selectedObjects.forEach(x => {
+    state.selectedObjects.forEach((x) => {
       x.renderCallback(state.time);
-    })
+    });
   }
 });
 
@@ -703,27 +689,29 @@ state.messenger.addMessageHandler("FETCH_SURFACES", (acc, ...args) => {
     ids = [ids];
   }
   if (ids) {
-    const surfaces = ids.map(id => {
-      const rooms = state.messenger.postMessage("FETCH_ROOMS")[0];
-      if (rooms && rooms.length > 0) {
-        for (let i = 0; i < rooms.length; i++) {
-          const room = (rooms[i] as Room);
-          const surface = room.surfaces.getObjectByProperty("uuid", id);
-          if (surface && surface instanceof Surface) {
-            return surface;
+    const surfaces = ids
+      .map((id) => {
+        const rooms = state.messenger.postMessage("FETCH_ROOMS")[0];
+        if (rooms && rooms.length > 0) {
+          for (let i = 0; i < rooms.length; i++) {
+            const room = rooms[i] as Room;
+            const surface = room.surfaces.getObjectByProperty("uuid", id);
+            if (surface && surface instanceof Surface) {
+              return surface;
+            }
           }
         }
-      }
-      return null;
-    }).filter(x => x);
+        return null;
+      })
+      .filter((x) => x);
     return surfaces;
   }
-})
+});
 
 state.messenger.addMessageHandler("ASSIGN_MATERIAL", (acc, material) => {
   let surfaceCount = 0;
-  const previousAcousticMaterials = [] as Array<{ uuid: string; acousticMaterial: AcousticMaterial}>;
-  for (let i = 0; i < state.selectedObjects.length; i++){
+  const previousAcousticMaterials = [] as Array<{ uuid: string; acousticMaterial: AcousticMaterial }>;
+  for (let i = 0; i < state.selectedObjects.length; i++) {
     if (state.selectedObjects[i] instanceof Surface) {
       previousAcousticMaterials.push({
         uuid: state.selectedObjects[i].uuid,
@@ -737,14 +725,17 @@ state.messenger.addMessageHandler("ASSIGN_MATERIAL", (acc, material) => {
     category: "ASSIGN_MATERIAL",
     objectId: uuid(),
     recallFunction: () => {
-      const surfaces = state.messenger.postMessage("FETCH_SURFACES", previousAcousticMaterials.map(x => x.uuid))[0];
-      for (let i = 0; i < previousAcousticMaterials.length; i++){
+      const surfaces = state.messenger.postMessage(
+        "FETCH_SURFACES",
+        previousAcousticMaterials.map((x) => x.uuid)
+      )[0];
+      for (let i = 0; i < previousAcousticMaterials.length; i++) {
         if (surfaces[i].uuid === previousAcousticMaterials[i].uuid) {
           (surfaces[i] as Surface).acousticMaterial = previousAcousticMaterials[i].acousticMaterial;
         }
       }
     }
-  })
+  });
   if (surfaceCount > 0) {
     state.messenger.postMessage("SHOW_TOAST", {
       message: `Assigned material to ${surfaceCount} surface${surfaceCount > 1 ? "s" : ""}.`,
@@ -752,14 +743,13 @@ state.messenger.addMessageHandler("ASSIGN_MATERIAL", (acc, material) => {
       timeout: 1750,
       icon: "tick"
     } as IToastProps);
-  }
-  else {
-     state.messenger.postMessage("SHOW_TOAST", {
-       message: `No surfaces are selected.`,
-       intent: "warning",
-       timeout: 1750,
-       icon: "issue"
-     } as IToastProps);
+  } else {
+    state.messenger.postMessage("SHOW_TOAST", {
+      message: `No surfaces are selected.`,
+      intent: "warning",
+      timeout: 1750,
+      icon: "issue"
+    } as IToastProps);
   }
 });
 
@@ -771,38 +761,37 @@ state.messenger.addMessageHandler("SETTING_CHANGE", (acc, ...args) => {
 });
 
 // new project
-state.messenger.addMessageHandler("NEW", (acc, ...args) => {
-  Object.keys(state.solvers).forEach(x => {
+state.messenger.addMessageHandler("NEW", () => {
+  Object.keys(state.solvers).forEach((x) => {
     state.messenger.postMessage("SHOULD_REMOVE_SOLVER", x);
-  })
-  Object.keys(state.containers).forEach(x => {
-    state.messenger.postMessage('SHOULD_REMOVE_CONTAINER', x);
+  });
+  Object.keys(state.containers).forEach((x) => {
+    state.messenger.postMessage("SHOULD_REMOVE_CONTAINER", x);
   });
   state.messenger.postMessage("DESELECT_ALL_OBJECTS");
-  
 });
 
 state.messenger.addMessageHandler("CAN_UNDO", () => {
   return state.history.canUndo;
-})
+});
 
 state.messenger.addMessageHandler("CAN_REDO", () => {
   return state.history.canRedo;
-})
+});
 
-state.messenger.addMessageHandler("UNDO", (acc, ...args) => {
+state.messenger.addMessageHandler("UNDO", () => {
   state.history.undo();
   return [state.history.canUndo, state.history.canRedo];
-})
+});
 
-state.messenger.addMessageHandler("REDO", (acc, ...args) => {
+state.messenger.addMessageHandler("REDO", () => {
   state.history.redo();
- return [state.history.canUndo, state.history.canRedo];
-})
+  return [state.history.canUndo, state.history.canRedo];
+});
 
-state.messenger.addMessageHandler("GET_RENDERER", (acc, ...args) => {
+state.messenger.addMessageHandler("GET_RENDERER", () => {
   return state.renderer;
-})
+});
 
 state.messenger.addMessageHandler("SET_EDITOR_MODE", (acc, ...args) => {
   if (EditorModes[args[0]]) {
@@ -817,7 +806,7 @@ state.messenger.addMessageHandler("SET_EDITOR_MODE", (acc, ...args) => {
   state.renderer.needsToRender = true;
 });
 
-state.messenger.addMessageHandler("GET_EDITOR_MODE", (acc, ...args) => {
+state.messenger.addMessageHandler("GET_EDITOR_MODE", () => {
   return state.editorMode;
 });
 
@@ -829,11 +818,11 @@ state.messenger.addMessageHandler("SET_PROCESS", (acc, ...args) => {
   }
 });
 
-state.messenger.addMessageHandler("GET_PROCESS", (acc, ...args) => {
+state.messenger.addMessageHandler("GET_PROCESS", () => {
   return state.currentProcess;
 });
 
-state.messenger.addMessageHandler("SHOULD_ADD_SKETCH", (acc, ...args) => {
+state.messenger.addMessageHandler("SHOULD_ADD_SKETCH", () => {
   // state.messenger.postMessage("PHASE_OUT");
   // state.messenger.postMessage("SET_PROCESS", Processes.PICKING_SURFACE)
   const selectedObjects = state.messenger.postMessage("GET_SELECTED_OBJECTS")[0];
@@ -857,13 +846,13 @@ state.messenger.addMessageHandler("SHOULD_REMOVE_SKETCH", (acc, id) => {
   }
 });
 
-state.messenger.addMessageHandler("SAVE_CONTAINERS", (acc, ...args) => {
+state.messenger.addMessageHandler("SAVE_CONTAINERS", () => {
   const keys = Object.keys(state.containers);
-  const saveObjects = keys.map(key => state.containers[key].save());
+  const saveObjects = keys.map((key) => state.containers[key].save());
   return saveObjects;
 });
 
-state.messenger.addMessageHandler("SAVE_SOLVERS", (acc, ...args) => {
+state.messenger.addMessageHandler("SAVE_SOLVERS", () => {
   const keys = Object.keys(state.solvers);
   const saveObjects = keys.map((key) => state.solvers[key].save());
   return saveObjects;
@@ -872,21 +861,21 @@ state.messenger.addMessageHandler("SAVE_SOLVERS", (acc, ...args) => {
 state.messenger.addMessageHandler("SET_PROJECT_NAME", (acc, ...args) => {
   state.projectName = (args && args[0]) || state.projectName;
   document.title = state.projectName + " | cram.ui";
-})
+});
 
-state.messenger.addMessageHandler("GET_PROJECT_NAME", (acc, ...args) => {
+state.messenger.addMessageHandler("GET_PROJECT_NAME", () => {
   return state.projectName;
-})
+});
 
 state.messenger.addMessageHandler("RESTORE_CONTAINERS", (acc, ...args) => {
   const keys = Object.keys(state.containers);
-  keys.forEach(key => {
+  keys.forEach((key) => {
     state.messenger.postMessage("SHOULD_REMOVE_CONTAINER", key);
   });
   if (args && args[0] && args[0] instanceof Array) {
     // console.log(args[0]);
     console.log(args[0]);
-    args[0].forEach(saveObj => {
+    args[0].forEach((saveObj) => {
       switch (saveObj["kind"]) {
         case "source":
           {
@@ -912,9 +901,30 @@ state.messenger.addMessageHandler("RESTORE_CONTAINERS", (acc, ...args) => {
               const geometry = new THREE.BufferGeometry();
               if (!(surfaceState.geometry instanceof THREE.BufferGeometry)) {
                 const geom = surfaceState.geometry as BufferGeometrySaveObject;
-                geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(geom.data.attributes.position.array), geom.data.attributes.position.itemSize, geom.data.attributes.position.normalized));
-                geometry.setAttribute("normals", new THREE.BufferAttribute(new Float32Array(geom.data.attributes.normals.array), geom.data.attributes.normals.itemSize, geom.data.attributes.normals.normalized));
-                geometry.setAttribute("texCoords", new THREE.BufferAttribute(new Float32Array(geom.data.attributes.texCoords.array), geom.data.attributes.texCoords.itemSize, geom.data.attributes.texCoords.normalized));
+                geometry.setAttribute(
+                  "position",
+                  new THREE.BufferAttribute(
+                    new Float32Array(geom.data.attributes.position.array),
+                    geom.data.attributes.position.itemSize,
+                    geom.data.attributes.position.normalized
+                  )
+                );
+                geometry.setAttribute(
+                  "normals",
+                  new THREE.BufferAttribute(
+                    new Float32Array(geom.data.attributes.normals.array),
+                    geom.data.attributes.normals.itemSize,
+                    geom.data.attributes.normals.normalized
+                  )
+                );
+                geometry.setAttribute(
+                  "texCoords",
+                  new THREE.BufferAttribute(
+                    new Float32Array(geom.data.attributes.texCoords.array),
+                    geom.data.attributes.texCoords.itemSize,
+                    geom.data.attributes.texCoords.normalized
+                  )
+                );
               }
               geometry.name = surfaceState.geometry.name;
               geometry.uuid = surfaceState.geometry.uuid;
@@ -943,7 +953,8 @@ state.messenger.addMessageHandler("RESTORE_CONTAINERS", (acc, ...args) => {
             state.messenger.postMessage("ADDED_ROOM", room);
           }
           break;
-        default: break;
+        default:
+          break;
       }
     });
   }
@@ -951,13 +962,13 @@ state.messenger.addMessageHandler("RESTORE_CONTAINERS", (acc, ...args) => {
 
 state.messenger.addMessageHandler("RESTORE_SOLVERS", (acc, ...args) => {
   const keys = Object.keys(state.solvers);
-  keys.forEach(key => {
+  keys.forEach((key) => {
     state.messenger.postMessage("SHOULD_REMOVE_SOLVER", key);
   });
   if (args && args[0] && args[0] instanceof Array) {
     // console.log(args[0]);
     console.log(args[0]);
-    args[0].forEach(saveObj => {
+    args[0].forEach((saveObj) => {
       switch (saveObj["kind"]) {
         case "ray-tracer":
           {
@@ -998,15 +1009,15 @@ state.messenger.addMessageHandler("SAVE", (acc, ...args) => {
   if (args && args[0] && args[0].callback) {
     args[0].callback();
   }
-})
+});
 
-state.messenger.addMessageHandler("OPEN", (acc, ...args) => {
+state.messenger.addMessageHandler("OPEN", () => {
   const tempinput = document.createElement("input");
   tempinput.type = "file";
   tempinput.accept = "application/json";
-  tempinput.setAttribute('style', 'display: none');
+  tempinput.setAttribute("style", "display: none");
   document.body.appendChild(tempinput);
-  tempinput.addEventListener('change', async e => {
+  tempinput.addEventListener("change", async (e) => {
     const files = (e.target as HTMLInputElement).files;
     if (!files) {
       tempinput.remove();
@@ -1018,19 +1029,16 @@ state.messenger.addMessageHandler("OPEN", (acc, ...args) => {
       const result = await (await fetch(objectURL)).text();
       const json = JSON.parse(result);
       state.messenger.postMessage("RESTORE", { file, json });
-     
+
       tempinput.remove();
-    }
-    catch (e) {
+    } catch (e) {
       console.warn(e);
     }
-    
-  })
+  });
   tempinput.click();
-})
+});
 
 state.messenger.addMessageHandler("RESTORE", (acc, ...args) => {
-  
   const props = args && args[0];
   const file = props.file;
   const json = props.json;
@@ -1044,9 +1052,9 @@ state.messenger.addMessageHandler("RESTORE", (acc, ...args) => {
     state.messenger.postMessage("RESTORE_CONTAINERS", json);
     state.messenger.postMessage("SET_PROJECT_NAME", file.name.replace(".json", ""));
   }
-})
+});
 
-state.messenger.addMessageHandler("ADD_SELECTED_OBJECTS_TO_GLOBAL_VARIABLES", (acc, ...args) => {
+state.messenger.addMessageHandler("ADD_SELECTED_OBJECTS_TO_GLOBAL_VARIABLES", () => {
   const selectedObjects = state.messenger.postMessage("GET_SELECTED_OBJECTS")[0];
   if (selectedObjects && selectedObjects.length) {
     selectedObjects.forEach((x, i, a) => {
@@ -1055,39 +1063,37 @@ state.messenger.addMessageHandler("ADD_SELECTED_OBJECTS_TO_GLOBAL_VARIABLES", (a
   }
 });
 
-
 function addHotKey(keybinding, scopes, message, ...args) {
-  scopes.forEach(scope => {
-    hotkeys(keybinding, scope, () => state.messenger.postMessage(message, args));  
-  })
+  scopes.forEach((scope) => {
+    hotkeys(keybinding, scope, () => state.messenger.postMessage(message, args));
+  });
 }
 
 function registerHotKeys() {
-  addHotKey("ctrl+i, command+i", ["normal", "editor"],"SHOW_IMPORT_DIALOG");
+  addHotKey("ctrl+i, command+i", ["normal", "editor"], "SHOW_IMPORT_DIALOG");
   addHotKey("shift+m", ["normal", "editor"], "TOGGLE_MATERIAL_SEARCH");
   addHotKey("shift+n", ["normal", "editor"], "SHOW_NEW_WARNING");
   addHotKey("shift+o", ["normal", "editor"], "TOGGLE_CAMERA_ORTHO");
-  addHotKey("ctrl+shift+f, command+shift+f",["normal" , "editor", "editor-moving"], "TOGGLE_FULLSCREEN");
-  addHotKey("ctrl+z, command+z", ["normal", "editor"],"UNDO");
-  addHotKey("ctrl+shift+z, command+shift+z",["normal", "editor"], "REDO");
-  
+  addHotKey("ctrl+shift+f, command+shift+f", ["normal", "editor", "editor-moving"], "TOGGLE_FULLSCREEN");
+  addHotKey("ctrl+z, command+z", ["normal", "editor"], "UNDO");
+  addHotKey("ctrl+shift+z, command+shift+z", ["normal", "editor"], "REDO");
+
   addHotKey("m", ["editor"], "MOVE_SELECTED_OBJECTS");
   addHotKey("f", ["editor"], "FOCUS_ON_SELECTED_OBJECTS");
   addHotKey("shift+f", ["editor"], "FOCUS_ON_CURSOR");
-  addHotKey("shift+g", ["editor"], "ADD_SELECTED_OBJECTS_TO_GLOBAL_VARIABLES")
+  addHotKey("shift+g", ["editor"], "ADD_SELECTED_OBJECTS_TO_GLOBAL_VARIABLES");
   addHotKey("escape", ["editor", "editor-moving"], "PHASE_OUT");
-  
 }
 
 registerHotKeys();
 
 hotkeys.setScope("normal");
 
-window.addEventListener('resize', e => {
+window.addEventListener("resize", () => {
   state.renderer.needsToRender = true;
-})
+});
 
-export default function GlobalReducer(state, action){
+export default function GlobalReducer(state, action) {
   switch (action.type) {
     case "DELETE_TRANSACTION":
       return {
@@ -1102,28 +1108,21 @@ export default function GlobalReducer(state, action){
     default:
       return state;
   }
-};
-
-
+}
 
 const initialState = {
   messenger: state.messenger
-}
+};
 
 // Create context
 export const GlobalContext = createContext(initialState);
 
 // Provider component
 export const GlobalProvider = ({ children }) => {
-  const [state, dispatch] = useReducer(GlobalReducer, initialState);
+  const [state] = useReducer(GlobalReducer, initialState);
 
-  return (
-    <GlobalContext.Provider value={state}>
-      {children}
-    </GlobalContext.Provider>
-  );
+  return <GlobalContext.Provider value={state}>{children}</GlobalContext.Provider>;
 };
-
 
 // the main app
 ReactDOM.render(
@@ -1133,20 +1132,15 @@ ReactDOM.render(
   document.getElementById("root")
 );
 
+if (process.env.NODE_ENV === "development") {
+  setTimeout(async () => {
+    const filepath = "/res/saves/10x13.json";
+    const filename = filepath.split("/").slice(-1)[0];
+    const savedStateFetchResult = await fetch(filepath);
+    const json = await savedStateFetchResult.json();
 
-
-setTimeout(async () => {
-  const filepath = "/res/saves/concord3.json";
-  const filename = filepath.split("/").slice(-1)[0];
-  const savedStateFetchResult = await fetch(filepath);
-  const json = await savedStateFetchResult.json();
-  
-  state.messenger.postMessage("RESTORE", { json, file: { name: filename } });
-
-}, 200);
-
-
-
+    state.messenger.postMessage("RESTORE", { json, file: { name: filename } });
+  }, 200);
 
   expose({
     sizeof,
@@ -1162,6 +1156,6 @@ setTimeout(async () => {
     THREE,
     chunk
   });
+}
 
-  state.history.clear();
-  
+state.history.clear();
