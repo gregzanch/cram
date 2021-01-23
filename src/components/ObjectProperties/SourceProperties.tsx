@@ -2,8 +2,8 @@ import React from "react";
 import TextInput from "../text-input/TextInput";
 import NumberInput from "../number-input/NumberInput";
 import CheckboxInput from "../checkbox-input/CheckboxInput";
-import Source, { SignalSource } from '../../objects/source';
-import GridRow from '../grid-row/GridRow';
+import Source, { SignalSource } from "../../objects/source";
+import GridRow from "../grid-row/GridRow";
 import Messenger from "../../messenger";
 import ColorInput from "../color-input/ColorInput";
 import Slider, { SliderChangeEvent } from "../slider/Slider";
@@ -14,44 +14,33 @@ import PropertyRowButton from "../parameter-config/property-row/property-row-but
 import PropertyRowCheckbox from "../parameter-config/property-row/property-row-checkbox/PropertyRowCheckbox";
 import { ObjectPropertyInputEvent } from ".";
 import { IToastProps } from "@blueprintjs/core/lib/esm/components/toast/toast";
+import decimalPrecision from "../../common/decimal-precision";
 
 export interface SourcePropertiesProps {
   object: Source;
   messenger: Messenger;
   onPropertyChange: (e: ObjectPropertyInputEvent) => void;
-  onPropertyValueChangeAsNumber: (
-    id: string,
-    prop: string,
-    valueAsNumber: number
-  ) => void;
-  onPropertyValueChangeAsString: (
-    id: string,
-    prop: string,
-    valueAsString: string
-  ) => void;
+  onPropertyValueChangeAsNumber: (id: string, prop: string, valueAsNumber: number) => void;
+  onPropertyValueChangeAsString: (id: string, prop: string, valueAsString: string) => void;
 }
 
-
-
 const SourcePropertiesContainerStyle: React.CSSProperties = {
-	display: "grid",
-	gridTemplateColumns: "auto auto",
-	padding: ".25em",
-	gridRowGap: ".25em",
-	gridColumnGap: ".25em"
+  display: "grid",
+  gridTemplateColumns: "auto auto",
+  padding: ".25em",
+  gridRowGap: ".25em",
+  gridColumnGap: ".25em"
 };
 
-
 export default function SourceProperties(props: SourcePropertiesProps) {
-
-	const XYZProps = {
+  const XYZProps = {
     style: {
-		  width: "30%"
-	  },
-		onChange: props.onPropertyChange,
-	}
-	// const source = props.messenger.postMessage("FETCH_SOURCE", props.object.uuid)[0];
-	return (
+      width: "30%"
+    },
+    onChange: props.onPropertyChange
+  };
+  // const source = props.messenger.postMessage("FETCH_SOURCE", props.object.uuid)[0];
+  return (
     <div>
       <div style={SourcePropertiesContainerStyle}>
         {props.object.hasOwnProperty("name") && (
@@ -135,6 +124,7 @@ export default function SourceProperties(props: SourcePropertiesProps) {
           <option value={SignalSource.OSCILLATOR}>Oscillator</option>
           <option value={SignalSource.PINK_NOISE}>Pink Noise</option>
           <option value={SignalSource.WHITE_NOISE}>White Noise</option>
+          <option value={SignalSource.PULSE}>Pulse</option>
         </select>
       </PropertyRow>
       <Slider
@@ -142,13 +132,30 @@ export default function SourceProperties(props: SourcePropertiesProps) {
         label="Frequency"
         labelPosition="left"
         tooltipText="Changes the source's frequency"
-        min={0}
-        max={200}
-        step={0.1}
+        min={Math.min(props.object.frequency, 0)}
+        max={Math.max(props.object.frequency, 200)}
+        step={Math.min(decimalPrecision(props.object.frequency), 0.1)}
         value={props.object.frequency}
         onChange={(e: SliderChangeEvent) => {
           props.onPropertyChange({
             name: "frequency",
+            type: "number",
+            value: e.value
+          });
+        }}
+      />
+      <Slider
+        id="amplitude"
+        label="Amplitude"
+        labelPosition="left"
+        tooltipText="Changes the source's amplitude"
+        min={0}
+        max={10}
+        step={0.1}
+        value={props.object.amplitude}
+        onChange={(e: SliderChangeEvent) => {
+          props.onPropertyChange({
+            name: "amplitude",
             type: "number",
             value: e.value
           });

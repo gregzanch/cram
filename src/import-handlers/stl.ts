@@ -114,17 +114,17 @@ export class STLLoader {
 			}
 		}
 
-		geometry.addAttribute(
+		geometry.setAttribute(
 			"position",
 			new THREE.BufferAttribute(new Float32Array(vertices), 3)
 		);
-		geometry.addAttribute(
+		geometry.setAttribute(
 			"normal",
 			new THREE.BufferAttribute(new Float32Array(normals), 3)
 		);
 
 		if (hasColors) {
-			geometry.addAttribute(
+			geometry.setAttribute(
 				"color",
 				new THREE.BufferAttribute(new Float32Array(colors), 3)
 			);
@@ -175,11 +175,11 @@ export class STLLoader {
 			}
 		}
 
-		geometry.addAttribute(
+		geometry.setAttribute(
 			"position",
 			new THREE.BufferAttribute(new Float32Array(vertices), 3)
 		);
-		geometry.addAttribute(
+		geometry.setAttribute(
 			"normal",
 			new THREE.BufferAttribute(new Float32Array(normals), 3)
 		);

@@ -1,11 +1,3 @@
-import { Hann } from './functions/hann';
-
-export interface WindowFunctionDictionary {
-  [index: string]: (N: number) => number[];
-}
-
-export const WindowFunctions = {
-  Hann,
-} as WindowFunctionDictionary;
-
-export { Hann };
+import WindowFunctions from "./functions";
+export type WindowFunction = keyof typeof WindowFunctions;
+export default WindowFunctions;

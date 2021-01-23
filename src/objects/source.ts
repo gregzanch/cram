@@ -1,12 +1,11 @@
 import * as THREE from "three";
 import Container, { ContainerProps } from "./container";
-import chroma from 'chroma-js';
+import chroma from "chroma-js";
 import map from "../common/map";
 import { MATCAP_PORCELAIN_WHITE, MATCAP_UNDER_SHADOW } from "./asset-store";
 import { EditorModes } from "../constants/editor-modes";
-import { P2I, Lp2P } from '../compute/acoustics';
+import { P2I, Lp2P } from "../compute/acoustics";
 import FileSaver from "file-saver";
-
 
 const defaults = {
   color: 0xa2c982
@@ -19,10 +18,13 @@ export interface SourceSaveObject {
   scale: number[];
   rotation: Array<string | number>;
   uuid: string;
-  kind: string;
+  kind: "source";
   color: number;
+  signalSource: SignalSource;
+  amplitude: number;
+  frequency: number;
+  phase: number;
 }
-
 
 export interface SourceProps extends ContainerProps {
   f?: (t: number) => number;
@@ -35,8 +37,8 @@ export enum SignalSource {
   OSCILLATOR = 1,
   PINK_NOISE = 2,
   WHITE_NOISE = 3,
+  PULSE = 4
 }
-
 
 export default class Source extends Container {
   f: (t: number) => number;
@@ -62,6 +64,7 @@ export default class Source extends Container {
   _initialSPL: number;
   _initialIntensity: number;
   fdtdSamples: number[];
+
   constructor(name: string, props?: SourceProps) {
     super(name);
     this.kind = "source";
@@ -80,7 +83,6 @@ export default class Source extends Container {
     this.velocity = 0;
     this.rgba = [0, 0, 0, 1];
     this.fdtdSamples = [] as number[];
-    
 
     this.selectedMaterial = new THREE.MeshMatcapMaterial({
       fog: false,
@@ -88,7 +90,7 @@ export default class Source extends Container {
       matcap: MATCAP_UNDER_SHADOW,
       name: "source-selected-material"
     });
-    
+
     this.normalMaterial = new THREE.MeshMatcapMaterial({
       fog: false,
       color: defaults.color,
@@ -103,24 +105,20 @@ export default class Source extends Container {
     );
     this.mesh.userData["kind"] = "source";
     this.add(this.mesh);
-    
-   
 
-    
-    
     this.f = (props && props.f) || ((t) => Math.sin(t));
     this.theta = (props && props.theta) || Math.PI / 4;
     this.phi = (props && props.phi) || Math.PI / 2;
     this.numRays = 0;
     this.select = () => {
-     if (!this.selected) {
-       this.selected = true;
-       let brighterColor = chroma((this.mesh.material as THREE.MeshMatcapMaterial).color.getHex())
-         .brighten(1)
-         .num();
-       this.selectedMaterial.color.setHex(brighterColor);
-       this.mesh.material = this.selectedMaterial;
-     }
+      if (!this.selected) {
+        this.selected = true;
+        let brighterColor = chroma((this.mesh.material as THREE.MeshMatcapMaterial).color.getHex())
+          .brighten(1)
+          .num();
+        this.selectedMaterial.color.setHex(brighterColor);
+        this.mesh.material = this.selectedMaterial;
+      }
     };
     this.deselect = () => {
       if (this.selected) {
@@ -128,22 +126,20 @@ export default class Source extends Container {
         this.mesh.material = this.normalMaterial;
       }
     };
-    this.renderCallback = (time?: number) => { };
+    this.renderCallback = (time?: number) => {};
 
-    
     this.updateWave = this.updateWave.bind(this);
     this.updatePreviousPosition = this.updatePreviousPosition.bind(this);
     this.getWhiteNoiseSample = this.getWhiteNoiseSample.bind(this);
     this.getOscillatorSample = this.getOscillatorSample.bind(this);
     this.getPinkNoiseSample = this.getPinkNoiseSample.bind(this);
     this.generatePinkNoiseSamples = this.generatePinkNoiseSamples.bind(this);
-    
-    
+
     this.pinkNoiseSamples = new Float32Array(1024);
     this.generatePinkNoiseSamples();
-
   }
-   save() {
+
+  save() {
     const name = this.name;
     const visible = this.visible;
     const position = this.position.toArray();
@@ -181,34 +177,45 @@ export default class Source extends Container {
   updatePreviousPosition() {
     this.previousX = this.position.x;
     this.previousY = this.position.y;
-    this.previousZ = this.position.z;    
-  }  
-  updateWave(time: number, frame: number) {
-
+    this.previousZ = this.position.z;
+  }
+  updateWave(time: number, frame: number, dt: number) {
     if (this.position.x != this.previousX || this.position.y != this.previousY || this.position.z != this.previousZ) {
       this.shouldClearPreviousPosition = true;
     }
-    
-    
+
     this.previousValue = this.value;
-    
+
     switch (this.signalSource) {
-      case SignalSource.NONE: {
-        this.value = 0;
-      } break;
-      case SignalSource.OSCILLATOR: {
-        this.value = this.getOscillatorSample(time);
-      } break;
-      case SignalSource.PINK_NOISE: {
-        this.value = this.getPinkNoiseSample(frame);
-      } break;
-      case SignalSource.WHITE_NOISE: {
-        this.value = this.getWhiteNoiseSample();
-      } break;
-      default: break;
+      case SignalSource.NONE:
+        {
+          this.value = 0;
+        }
+        break;
+      case SignalSource.OSCILLATOR:
+        {
+          this.value = this.getOscillatorSample(time);
+        }
+        break;
+      case SignalSource.PINK_NOISE:
+        {
+          this.value = this.getPinkNoiseSample(frame);
+        }
+        break;
+      case SignalSource.WHITE_NOISE:
+        {
+          this.value = this.getWhiteNoiseSample();
+        }
+        break;
+      case SignalSource.PULSE:
+        {
+          this.value = this.getPulseSample(time, dt);
+        }
+        break;
+      default:
+        break;
     }
-    
-    
+
     this.velocity = this.value - this.previousValue;
     this.rgba[0] = map(this.value, -2, 2, 0, 255);
     this.rgba[1] = map(this.velocity, -2, 2, 0, 255);
@@ -222,6 +229,11 @@ export default class Source extends Container {
   }
   getOscillatorSample(time: number) {
     return this.amplitude * Math.sin(2 * Math.PI * this.frequency * time + this.phase);
+  }
+  getPulseSample(time: number, dt: number) {
+    const period = 1 / this.frequency;
+
+    return time % period < dt ? this.amplitude : 0;
   }
   getPinkNoiseSample(frame: number) {
     if (frame % this.pinkNoiseSamples.length == this.pinkNoiseSamples.length - 1) {
@@ -255,7 +267,7 @@ export default class Source extends Container {
     this.fdtdSamples = [] as number[];
   }
   saveSamples() {
-    if (this.fdtdSamples.length>0) {
+    if (this.fdtdSamples.length > 0) {
       const blob = new Blob([this.fdtdSamples.join("\n")], {
         type: "text/plain;charset=utf-8"
       });
@@ -270,25 +282,31 @@ export default class Source extends Container {
   }
   onModeChange(mode: EditorModes) {
     switch (mode) {
-      case EditorModes.OBJECT: { 
-      } break;
-      case EditorModes.SKETCH: { 
-      } break;
-      case EditorModes.EDIT: { 
-      } break;
-      default: break;
+      case EditorModes.OBJECT:
+        {
+        }
+        break;
+      case EditorModes.SKETCH:
+        {
+        }
+        break;
+      case EditorModes.EDIT:
+        {
+        }
+        break;
+      default:
+        break;
     }
   }
   get color() {
-    return String.fromCharCode(35)+(this.mesh.material as THREE.MeshBasicMaterial).color.getHexString();
+    return String.fromCharCode(35) + (this.mesh.material as THREE.MeshBasicMaterial).color.getHexString();
   }
   set color(col: string | number) {
     if (typeof col === "string") {
       (this.mesh.material as THREE.MeshMatcapMaterial).color.setStyle(col);
       (this.normalMaterial as THREE.MeshMatcapMaterial).color.setStyle(col);
       (this.selectedMaterial as THREE.MeshMatcapMaterial).color.setStyle(col);
-    }
-    else {
+    } else {
       (this.mesh.material as THREE.MeshMatcapMaterial).color.setHex(col);
       (this.normalMaterial as THREE.MeshMatcapMaterial).color.setHex(col);
       (this.selectedMaterial as THREE.MeshMatcapMaterial).color.setHex(col);
@@ -302,5 +320,14 @@ export default class Source extends Container {
   }
   get initialIntensity() {
     return this._initialIntensity;
+  }
+  get brief() {
+    return {
+      uuid: this.uuid,
+      name: this.name,
+      selected: this.selected,
+      kind: this.kind,
+      children: []
+    };
   }
 }

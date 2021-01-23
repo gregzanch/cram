@@ -8,11 +8,10 @@ import reflectionCoefficient from "../compute/acoustics/reflection-coefficient";
 import { AcousticMaterial } from "../db/acoustic-material";
 import { BRDF } from "../compute/raytracer/brdf";
 import Room from "./room";
-import csg from '../compute/csg';
+import csg from "../compute/csg";
 import { numbersEqualWithinTolerence, equalWithinTolerenceFactory } from "../common/equal-within-range";
 
 const v3eq = equalWithinTolerenceFactory(["x", "y", "z"])(csg.math.constants.EPS as number);
-
 
 const defaults = {
   materials: {
@@ -166,7 +165,6 @@ class Surface extends Container {
   edgeLoop!: THREE.Vector3[];
   polygon!: poly3type;
   normal!: THREE.Vector3;
-  plane!: THREE.Plane;
   // renderer: Renderer;
   constructor(name: string, props?: SurfaceProps) {
     super(name);
@@ -206,12 +204,12 @@ class Surface extends Container {
     this.isPlanar = this._triangles
       .map((x) => x.getNormal(new THREE.Vector3()))
       .reduce((a, b, i, arr) => a && v3eq(b, arr[0]), true);
-
+    
     if (!this.isPlanar) {
       console.error(new Error(`Surface '${this.name}' is not planar`));
       debugger;
     }
-
+    
     this.normal = new THREE.Vector3();
     this._triangles[0].getNormal(this.normal);
 
@@ -322,9 +320,6 @@ class Surface extends Container {
       }
     }
 
-    this.plane = new THREE.Plane();
-    this._triangles[0].getPlane(this.plane);
-
     // this.polygon.parentSurface = this;
   }
   save() {
@@ -364,21 +359,7 @@ class Surface extends Container {
     (this.mesh.material as THREE.MeshLambertMaterial).needsUpdate = true;
   }
   flipNormals() {}
-  distanceToPoint(point: THREE.Vector3) {
-    return this.plane.distanceToPoint(point);
-  }
-  reflectPoint(point: THREE.Vector3, checkInFront: boolean = true) {
-    const t = this.distanceToPoint(point) * 2;
-    if (checkInFront && t < 0) {
-      return;
-    }
-    const newPoint = new THREE.Vector3(
-      point.x - this.normal.x * t,
-      point.y - this.normal.y * t,
-      point.z - this.normal.z * t
-    );
-    return newPoint;
-  }
+
   resetHits() {
     this.numHits = 0;
   }
@@ -499,6 +480,16 @@ class Surface extends Container {
   }
   get room() {
     return this.parent!.parent! as Room;
+  }
+
+  get brief() {
+    return {
+      uuid: this.uuid,
+      name: this.name,
+      selected: this.selected,
+      kind: this.kind,
+      children: []
+    };
   }
 }
 

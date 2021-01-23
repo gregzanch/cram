@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { STLLoader as THREESTLLoader } from "three/examples/jsm/loaders/STLLoader";
 import { STLLoader } from "./stl";
 import { OBJLoader } from "./obj";
 import { TGALoader } from "./tga";
@@ -9,6 +10,12 @@ import roundTo from "../common/round-to";
 export interface Model {
   name: string;
   geometry: THREE.BufferGeometry;
+}
+
+export function stl2(data) {
+  const loader = new THREESTLLoader();
+  const res = loader.parse(data) as THREE.BufferGeometry;
+  return res;
 }
 
 export function stl(data) {

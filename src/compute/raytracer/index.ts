@@ -13,10 +13,10 @@ import { Stat } from "../../components/parameter-config/Stats";
 import Messenger from "../../messenger";
 import sort from "fast-sort";
 import FileSaver from "file-saver";
-import Plotly, { PlotData } from 'plotly.js';
+import Plotly, { PlotData } from "plotly.js";
 import { scatteredEnergy } from "./scattered-energy";
 import PointShader from "./shaders/points";
-import * as ac from '../acoustics';
+import * as ac from "../acoustics";
 // import wasmInit from "../../as/wasm-init";
 // import loader from "@assemblyscript/loader";
 import { clamp } from "../../common/clamp";
@@ -24,16 +24,13 @@ import { lerp } from "../../common/lerp";
 import { movingAverage } from "../../common/moving-average";
 import linearRegression, { LinearRegressionResult } from "../../common/linear-regression";
 // import { BSP } from './bsp';
-import { BVHBuilderAsync, BVHVector3, BVHNode } from './bvh';
-import { BVH } from './bvh/BVH';
-import { ImageSourceTreeNode } from '../image-source';
-
+import { BVHBuilderAsync, BVHVector3, BVHNode } from "./bvh";
+import { BVH } from "./bvh/BVH";
 
 import expose from "../../common/expose";
 import { reverseTraverse } from "../../common/reverse-traverse";
 
 expose({ Plotly });
-
 
 export interface QuickEstimateStepResult {
   rt60s: number[];
@@ -49,13 +46,13 @@ THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
 THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
-export interface RayPathResult{
+export interface RayPathResult {
   time: number;
   bounces: number;
   level: number[];
-};
+}
 
-export interface ResponseByIntensity{
+export interface ResponseByIntensity {
   freqs: number[];
   response: RayPathResult[];
   sampleRate?: number;
@@ -75,7 +72,7 @@ export interface Chain {
   // point: THREE.Vector3;
   point: [number, number, number];
   object: string;
-  faceNormal: [number,number,number];
+  faceNormal: [number, number, number];
   faceIndex: number;
   faceMaterialIndex: number;
   angle: number;
@@ -116,8 +113,6 @@ export class ReceiverData {
     this.data = [] as EnergyTime[];
   }
 }
-
-
 
 export interface RayTracerParams {
   renderer;
@@ -173,6 +168,7 @@ export interface DrawStyle {
   ENERGY: 1.0;
   ANGLE_ENERGY: 2.0;
 }
+
 class RayTracer extends Solver {
   roomID: string;
   sourceIDs: string[];
@@ -375,39 +371,6 @@ class RayTracer extends Solver {
 
     this.setBVH().catch(console.error);
   }
-
-  computeImageSources(surfaces: Surface[], source: THREE.Vector3, depth: number, prevSurface?: Surface) {
-    
-    const node = new ImageSourceTreeNode(source, depth, prevSurface);
-
-    surfaces.forEach((surface: Surface) => {
-      if (!prevSurface || surface.uuid !== prevSurface.uuid) {
-        const imageSource = surface.reflectPoint(source);
-        if (imageSource) {
-          node.children.push(new ImageSourceTreeNode(imageSource, depth+1, surface, node));
-        }
-      }
-    });
-    
-    return node
-  }
-  
-  computeImageSourceTree(source: Source, maxOrder: number = 3) {
-  
-    const computeImageSources = this.computeImageSources;
-    const surfaces = this.room.surfaces.children as Surface[];
-    function mapChildren(x: ImageSourceTreeNode, i: number, a: ImageSourceTreeNode[]){
-      a[i] = computeImageSources(surfaces, x.source, x.depth + 1, x.surface);
-      if (x.depth + 1 < maxOrder) {
-        a[i].children.forEach(mapChildren);
-      }
-    };
-    
-    const is = computeImageSources(surfaces, source.position, 0);
-    is.children.forEach(mapChildren);
-    return is;
-  }
-
   update = () => {};
   save() {
     const {
@@ -842,6 +805,7 @@ class RayTracer extends Solver {
       }, this.updateInterval)
     );
   }
+
   step() {
     for (let i = 0; i < this.sourceIDs.length; i++) {
       this.__num_checked_paths += 1;
@@ -944,12 +908,14 @@ class RayTracer extends Solver {
 
     this.messenger.postMessage("RAYTRACER_RESULTS_SHOULD_UPDATE");
   }
+
   start() {
     this.mapIntersectableObjects();
     this.__start_time = Date.now();
     this.__num_checked_paths = 0;
     this.startAllMonteCarlo();
   }
+
   stop() {
     this.__calc_time = Date.now() - this.__start_time;
     this.intervals.forEach((interval) => {
@@ -1089,6 +1055,8 @@ class RayTracer extends Solver {
     this.messenger.postMessage("UPDATE_CHART_DATA", chartdata && chartdata[0]);
     return this.allReceiverData;
   }
+
+  //TODO change this name to something more appropriate
   calculateReflectionLoss(frequencies: number[] = this.reflectionLossFrequencies) {
     // reset the receiver data
     this.allReceiverData = [] as ReceiverData[];
@@ -1614,6 +1582,17 @@ class RayTracer extends Solver {
     return this.responseByIntensity;
   }
 
+  computeImageSources(source, previousReflector, maxOrder) {
+    //     for each surface in geometry do
+    //         if (not previousReflector) or
+    //         ((inFrontOf(surface, previousReflector)) and (surface.normal dot previousReflector.normal < 0))
+    //             newSource = reflect(source, surface)
+    //             sources[nofSources++] = newSource
+    //             if (maxOrder > 0)
+    //                 computeImageSources(newSource, surface, maxOrder - 1)
+
+    const surfaces = this.room.surfaces.children;
+  }
   onParameterConfigFocus() {
     console.log("focus");
     console.log(this.renderer.overlays.global.cells);

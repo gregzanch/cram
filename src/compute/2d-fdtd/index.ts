@@ -443,7 +443,7 @@ class FDTD_2D extends Solver {
       const x = Math.round((this.sources[this.sourceKeys[i]].x - this.offsetX) / this.cellSize);
       const y = Math.round((this.sources[this.sourceKeys[i]].y - this.offsetY) / this.cellSize);
       const index = 4 * (y * this.nx + x);
-      this.sources[this.sourceKeys[i]].updateWave(this.time, this.frame);
+      this.sources[this.sourceKeys[i]].updateWave(this.time, this.frame, this.dt);
       const value = this.sources[this.sourceKeys[i]].value;
       const vel = this.sources[this.sourceKeys[i]].velocity;
       pixels[index + 0] = map(value, -2, 2, 0, 255);

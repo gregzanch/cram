@@ -1,5 +1,5 @@
-import { allowMultiple } from './util/allowMultiple';
-import { pref, Wref, Iref } from './std/constants';
+import { allowMultiple } from "./util/allowMultiple";
+import { pref, Wref, Iref } from "./std/constants";
 
 /**
  * Convert sound power level to sound pressure level
@@ -7,18 +7,9 @@ import { pref, Wref, Iref } from './std/constants';
  * @param r radius
  * @param Q directivity
  */
-export function Lw2Lp(
-  Lw: number | number[],
-  r: number = 1,
-  Q: number = 1
-): number | number[] {
-  return allowMultiple(
-    (x: number) => x - Math.abs(10 * Math.log10(Q / (4 * Math.PI * r * r))),
-    Lw
-  );
+export function Lw2Lp(Lw: number | number[], r: number = 1, Q: number = 1): number | number[] {
+  return allowMultiple((x: number) => x - Math.abs(10 * Math.log10(Q / (4 * Math.PI * r * r))), Lw);
 }
-
-
 
 /**
  * Convert sound pressure level to sound power level
@@ -26,15 +17,8 @@ export function Lw2Lp(
  * @param r radius
  * @param Q directivity
  */
-export function Lp2Lw(
-  Lp: number | number[],
-  r: number = 1,
-  Q: number = 1
-): number | number[] {
-  return allowMultiple(
-    (x: number) => Math.abs(10 * Math.log10(Q / (4 * Math.PI * r * r))) + x,
-    Lp
-  );
+export function Lp2Lw(Lp: number | number[], r: number = 1, Q: number = 1): number | number[] {
+  return allowMultiple((x: number) => Math.abs(10 * Math.log10(Q / (4 * Math.PI * r * r))) + x, Lp);
 }
 
 /**
@@ -82,27 +66,23 @@ export function Lw2W(Lw: number | number[]): number | number[] {
   return allowMultiple((lw: number) => Math.pow(10, lw / 10) * Wref.value, Lw);
 }
 /**
- * 
+ *
  * @param p pressure in Pa
- * @param z0 specific acoustic impedance (400 N·s/m3 for air) 
+ * @param z0 specific acoustic impedance (400 N·s/m3 for air)
  */
 export function P2I(p: number | number[], z0: number = 400): number | number[] {
   return allowMultiple((p: number) => p ** 2 / z0, p);
 }
 
 /**
- * 
+ *
  * @param I intensity in W/m^2
- * @param z0 specific acoustic impedance (400 N·s/m^3 for air) 
+ * @param z0 specific acoustic impedance (400 N·s/m^3 for air)
  */
 export function I2P(I: number | number[], z0: number = 400): number | number[] {
   return allowMultiple((I: number) => Math.sqrt(I * z0), I);
 }
 
-export function Lp2Ln(
-  Lp: number | number[],
-  Ar: number,
-  Ao: number = 108
-): number | number[] {
+export function Lp2Ln(Lp: number | number[], Ar: number, Ao: number = 108): number | number[] {
   return allowMultiple((lp: number) => lp - 10 * Math.log10(Ao / Ar), Lp);
 }
