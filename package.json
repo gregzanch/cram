@@ -48,7 +48,7 @@
     "file-saver": "^2.0.2",
     "gpu.js": "^2.9.4",
     "hotkeys-js": "^3.7.3",
-    "lodash": "4.17.15",
+    "lodash": "4.17.19",
     "normalize.css": "^8.0.1",
     "object-hash": "^2.0.1",
     "plotly.js": "^1.52.2",
