@@ -17,13 +17,10 @@ import Plotly, { PlotData } from "plotly.js";
 import { scatteredEnergy } from "./scattered-energy";
 import PointShader from "./shaders/points";
 import * as ac from "../acoustics";
-// import wasmInit from "../../as/wasm-init";
-// import loader from "@assemblyscript/loader";
 import { clamp } from "../../common/clamp";
 import { lerp } from "../../common/lerp";
 import { movingAverage } from "../../common/moving-average";
 import linearRegression, { LinearRegressionResult } from "../../common/linear-regression";
-// import { BSP } from './bsp';
 import { BVHBuilderAsync, BVHVector3, BVHNode } from "./bvh";
 import { BVH } from "./bvh/BVH";
 
@@ -180,7 +177,7 @@ class RayTracer extends Solver {
   raycaster: THREE.Raycaster;
   intersections: THREE.Intersection[];
   _isRunning: boolean;
-  intervals: NodeJS.Timeout[];
+  intervals: number[];
   rayBufferGeometry: THREE.BufferGeometry;
   rayBufferAttribute: THREE.Float32BufferAttribute;
   colorBufferAttribute: THREE.Float32BufferAttribute;
@@ -235,7 +232,7 @@ class RayTracer extends Solver {
     this._runningWithoutReceivers = params.runningWithoutReceivers || defaults.runningWithoutReceivers;
     this.renderer = params.renderer;
     this.reflectionLossFrequencies = [4000];
-    this.intervals = [];
+    this.intervals = [] as number[];
     this.plotData = [] as Plotly.Data[];
     this.plotStyle = params.plotStyle || defaults.plotStyle;
     this.lastTime = Date.now();
@@ -685,7 +682,8 @@ class RayTracer extends Solver {
     });
     let done = false;
     this.intervals.push(
-      setInterval(() => {
+      //@ts-ignore
+        setInterval(() => {
         for (let i = 0; i < this.passes; i++, count++) {
           for (let j = 0; j < this.sourceIDs.length; j++) {
             const id = this.sourceIDs[j];
@@ -802,7 +800,7 @@ class RayTracer extends Solver {
           this.step();
         }
         this.renderer.needsToRender = true;
-      }, this.updateInterval)
+      }, this.updateInterval) as unknown as number
     );
   }
 
@@ -921,7 +919,7 @@ class RayTracer extends Solver {
     this.intervals.forEach((interval) => {
       window.clearInterval(interval);
     });
-    this.intervals = [] as NodeJS.Timeout[];
+    this.intervals = [] as number[];
     Object.keys(this.paths).forEach((key) => {
       const calc_time = this.__calc_time / 1000;
       const num_valid_rays = this.paths[key].length;
@@ -1083,7 +1081,7 @@ class RayTracer extends Solver {
         data: [] as EnergyTime[]
       });
 
-      // for each paths chain of intersections
+      // for each path's chain of intersections
       for (let j = 0; j < this.paths[pathkeys[i]].length; j++) {
         // the individual ray path which holds intersection data
         const raypath = this.paths[pathkeys[i]][j];
@@ -1092,6 +1090,7 @@ class RayTracer extends Solver {
          * calculates the loss due to reflection over the ray's path
          */
         function reflectionLossFunction(frequency: number): number {
+          console.log(this);
           const chain = raypath.chain.slice(0, -1);
           if (chain && chain.length > 0) {
             let magnitude = 1;
@@ -1443,6 +1442,7 @@ class RayTracer extends Solver {
           const is = [] as number[];
           this.plotData.forEach((x, i) => {
             xs.push(x.x as Float32Array);
+            //@ts-ignore
             ys.push(x.y as Float32Array);
             is.push(i);
           });

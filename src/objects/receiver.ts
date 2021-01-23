@@ -29,7 +29,6 @@ export default class Receiver extends Container {
   selectedMaterial: THREE.MeshMatcapMaterial;
   normalMaterial: THREE.MeshMatcapMaterial;
   fdtdSamples: number[];
-  static icon:  
   constructor(name: string, props?: ReceiverProps) {
     super(name);
     this.kind = "receiver";

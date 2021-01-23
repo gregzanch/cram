@@ -1,10 +1,9 @@
-import React, {useState} from 'react';
-import Messenger from '../../messenger';
-import { uuid } from 'uuidv4';
-import UPlot from './UPlot';
-import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
+import React, { useState } from "react";
+import Messenger from "../../messenger";
+import { uuid } from "uuidv4";
+import { Tab, Tabs, TabList, TabPanel } from "react-tabs";
 import ContextMenu from "../context-menu/ContextMenu";
-import './Gutter.css';
+import "./Gutter.css";
 
 export enum TabTypes {
   LOG = 0,
@@ -15,7 +14,7 @@ export enum TabTypes {
 export interface TabInfo {
   uuid: string;
   name: string;
-  type: TabTypes
+  type: TabTypes;
 }
 
 export interface GutterProps {
@@ -27,7 +26,7 @@ export interface GutterState {
   tabs: TabInfo[];
 }
 
-export default class Gutter extends React.Component<GutterProps, GutterState>{
+export default class Gutter extends React.Component<GutterProps, GutterState> {
   constructor(props: GutterProps) {
     super(props);
     this.state = {
@@ -37,10 +36,10 @@ export default class Gutter extends React.Component<GutterProps, GutterState>{
         { uuid: uuid(), name: "Log", type: TabTypes.LOG }
       ]
     };
-    
+
     this.handleTabChange = this.handleTabChange.bind(this);
     this.removeTab = this.removeTab.bind(this);
-    
+
     this.props.messenger.addMessageHandler("SHOW_RECEIVER_FDTD", (acc, ...args) => {
       console.log(args);
       const receiver_id = args[0].uuid;
@@ -50,29 +49,29 @@ export default class Gutter extends React.Component<GutterProps, GutterState>{
       this.setState({
         tabs,
         selectedTabIndex
-      })
-    })
-  } 
+      });
+    });
+  }
   handleTabChange(tabIndex: number) {
     this.setState({
-      selectedTabIndex: tabIndex,
-    })
+      selectedTabIndex: tabIndex
+    });
   }
   removeTab(tab: TabInfo) {
-    const newTabs = this.state.tabs.filter(x => x.uuid !== tab.uuid);
+    const newTabs = this.state.tabs.filter((x) => x.uuid !== tab.uuid);
     this.setState({
       selectedTabIndex: this.state.selectedTabIndex - 1,
       tabs: newTabs
     });
   }
   render() {
-    
     return (
       <div
         style={{
           height: "100%",
           margin: "0"
-        }}>
+        }}
+      >
         <Tabs selectedIndex={this.state.selectedTabIndex} onSelect={this.handleTabChange}>
           <TabList>
             <Tab disabled />
@@ -82,11 +81,15 @@ export default class Gutter extends React.Component<GutterProps, GutterState>{
                   items={["Close"]}
                   handleMenuItemClick={(e) => {
                     switch (e.target.textContent) {
-                      case "Close": this.removeTab(x); break;
-                      default: break;
+                      case "Close":
+                        this.removeTab(x);
+                        break;
+                      default:
+                        break;
                     }
                   }}
-                  key={x.uuid + "gutter-context-menu"}>
+                  key={x.uuid + "gutter-context-menu"}
+                >
                   <div className="tab-text-container">{x.name}</div>
                 </ContextMenu>
               </Tab>
@@ -96,20 +99,33 @@ export default class Gutter extends React.Component<GutterProps, GutterState>{
           {this.state.tabs.map((x, i) => {
             switch (x.type) {
               case TabTypes.LOG:
-                return  <TabPanel key={"gutter-tabpanel-log"}><div></div></TabPanel>;
+                return (
+                  <TabPanel key={"gutter-tabpanel-log"}>
+                    <div></div>
+                  </TabPanel>
+                );
               case TabTypes.DEBUG_STATS:
-                return <TabPanel key={"gutter-tabpanel-debug-stats"}>
-                  <div id="gutter-debug-stats"></div>
-                </TabPanel>;
+                return (
+                  <TabPanel key={"gutter-tabpanel-debug-stats"}>
+                    <div id="gutter-debug-stats"></div>
+                  </TabPanel>
+                );
               case TabTypes.RECEIVER_FDTD:
-                return <TabPanel key={"gutter-tabpanel-" + i}><div>{x.name}</div></TabPanel>;
+                return (
+                  <TabPanel key={"gutter-tabpanel-" + i}>
+                    <div>{x.name}</div>
+                  </TabPanel>
+                );
               default:
-                return <TabPanel key={"gutter-tabpanel-" + i}><div></div></TabPanel>;
+                return (
+                  <TabPanel key={"gutter-tabpanel-" + i}>
+                    <div></div>
+                  </TabPanel>
+                );
             }
           })}
         </Tabs>
       </div>
     );
   }
-  
 }
