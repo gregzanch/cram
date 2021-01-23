@@ -47,6 +47,7 @@ import ConstructionPoint from "../objects/construction-point";
 import { Processes } from "../constants/processes";
 
 import { Markup } from "./Markup";
+import Model from "../objects/model";
 
 const colored_number_html = (num: number) =>
   /*html*/ `<span style="color: ${num < 0 ? "#E68380" : "#A2C982"};">${num.toFixed(3)}</span>`;
@@ -658,7 +659,7 @@ export default class Renderer {
         if (e.button == 0) {
           const point = this.pickHelper.getPickedPoint();
           this.cursor.position.set(point[0], point[1], point[2]);
-
+          console.log()
           // if (selection.pickedObject.kind === "surface") {
           // 	window['normal'] = new THREE.Vector3().fromArray(selection.pickedObject.geometry.attributes.normals.array.slice(0, 3));
           // 	window['point'] = new THREE.Vector3().fromArray(point);
@@ -908,7 +909,11 @@ export default class Renderer {
     this.workspace.getObjectByProperty("uuid", obj.uuid)?.remove();
     this.needsToRender = true;
   }
+addModel(model:Model){
+  this.workspaceCursor.add(model);
+  this.needsToRender = true;
 
+}
   addRoom(room: Room) {
     this.workspaceCursor.add(room);
     // const near =

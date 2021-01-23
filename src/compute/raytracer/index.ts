@@ -13,10 +13,10 @@ import { Stat } from "../../components/parameter-config/Stats";
 import Messenger from "../../messenger";
 import sort from "fast-sort";
 import FileSaver from "file-saver";
-import Plotly, { PlotData } from 'plotly.js';
+import Plotly, { PlotData } from "plotly.js";
 import { scatteredEnergy } from "./scattered-energy";
 import PointShader from "./shaders/points";
-import * as ac from '../acoustics';
+import * as ac from "../acoustics";
 // import wasmInit from "../../as/wasm-init";
 // import loader from "@assemblyscript/loader";
 import { clamp } from "../../common/clamp";
@@ -24,16 +24,13 @@ import { lerp } from "../../common/lerp";
 import { movingAverage } from "../../common/moving-average";
 import linearRegression, { LinearRegressionResult } from "../../common/linear-regression";
 // import { BSP } from './bsp';
-import { BVHBuilderAsync, BVHVector3, BVHNode } from './bvh';
-import { BVH } from './bvh/BVH';
-
-
+import { BVHBuilderAsync, BVHVector3, BVHNode } from "./bvh";
+import { BVH } from "./bvh/BVH";
 
 import expose from "../../common/expose";
 import { reverseTraverse } from "../../common/reverse-traverse";
 
 expose({ Plotly });
-
 
 export interface QuickEstimateStepResult {
   rt60s: number[];
@@ -49,13 +46,13 @@ THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
 THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
-export interface RayPathResult{
+export interface RayPathResult {
   time: number;
   bounces: number;
   level: number[];
-};
+}
 
-export interface ResponseByIntensity{
+export interface ResponseByIntensity {
   freqs: number[];
   response: RayPathResult[];
   sampleRate?: number;
@@ -75,7 +72,7 @@ export interface Chain {
   // point: THREE.Vector3;
   point: [number, number, number];
   object: string;
-  faceNormal: [number,number,number];
+  faceNormal: [number, number, number];
   faceIndex: number;
   faceMaterialIndex: number;
   angle: number;
@@ -116,8 +113,6 @@ export class ReceiverData {
     this.data = [] as EnergyTime[];
   }
 }
-
-
 
 export interface RayTracerParams {
   renderer;
@@ -173,6 +168,7 @@ export interface DrawStyle {
   ENERGY: 1.0;
   ANGLE_ENERGY: 2.0;
 }
+
 class RayTracer extends Solver {
   roomID: string;
   sourceIDs: string[];
@@ -320,8 +316,6 @@ class RayTracer extends Solver {
       writable: true
     });
 
-   
-    
     // raycaster.intersectObjects([mesh]);
     this.intersections = [] as THREE.Intersection[];
     this.findIDs();
@@ -374,10 +368,8 @@ class RayTracer extends Solver {
       })
     );
     this.step = this.step.bind(this);
-    
+
     this.setBVH().catch(console.error);
-    
-    
   }
   update = () => {};
   save() {
@@ -420,56 +412,47 @@ class RayTracer extends Solver {
       paths
     };
   }
-  
+
   async setBVH() {
     // this.bsp = new BSP();
     // Have an array of faces (array of stride 9)
-    
+
     const faces = this.room.surfaces.children.map((x: Surface) => x.triangles).flat(3);
-    
+
     // Generate  the Bounding Volume Hierachy from an array of faces
     const maxTrianglesPerNode = 5;
-    const res = await BVHBuilderAsync(
-      faces,
-      maxTrianglesPerNode,
-      { steps: 1 },
-      (obj: BVHProgress) => { }
-    );
-    
+    const res = await BVHBuilderAsync(faces, maxTrianglesPerNode, { steps: 1 }, (obj: BVHProgress) => {});
+
     this.bvh = new BVH(res.rootNode, res.bboxArray, res.trianglesArray);
-    
+
     // this.bvh.rootNode.extentsMin, this.bvh.rootNode.extentsMax;
-    
-  //  this.bvh.rootNode.children = [vars.ra.bvh.rootNode.node0, vars.ra.bvh.rootNode.node1]
-    
-    
+
+    //  this.bvh.rootNode.children = [vars.ra.bvh.rootNode.node0, vars.ra.bvh.rootNode.node1]
+
     // let node = this.bvh.rootNode;
     // while(node)
-    
+
     console.log(this.mapBVHTree());
-    
-    
 
     // Find ray intersections
     // const intersections = this.bvh.intersectRay(new BVHVector3(0.25, 1, 0.25), new BVHVector3(0, -1, 0));
   }
-  
+
   mapBVHTree() {
     function mapTree(node: BVHNode | null) {
       if (node && node.children[0] && node.children[1]) {
         return {
           name: `${node.startIndex},${node.endIndex}`,
-          children: node.children.map((n: BVHNode | null) => mapTree(n)).filter(x=>x)
+          children: node.children.map((n: BVHNode | null) => mapTree(n)).filter((x) => x)
         };
-      }
-      else {
+      } else {
         return null;
       }
-    };
+    }
     const mappedTree = mapTree(this.bvh.rootNode);
     return mappedTree;
   }
-  
+
   removeMessageHandlers() {
     this.messageHandlerIDs.forEach((x) => {
       this.messenger.removeMessageHandler(x[0], x[1]);
@@ -822,6 +805,7 @@ class RayTracer extends Solver {
       }, this.updateInterval)
     );
   }
+
   step() {
     for (let i = 0; i < this.sourceIDs.length; i++) {
       this.__num_checked_paths += 1;
@@ -851,7 +835,12 @@ class RayTracer extends Solver {
         //  ignoring receiver intersections
         if (this._runningWithoutReceivers) {
           // add the first ray onto the buffer
-          this.appendRay([position.x, position.y, position.z], path.chain[0].point, path.chain[0].energy || 1.0, path.chain[0].angle);
+          this.appendRay(
+            [position.x, position.y, position.z],
+            path.chain[0].point,
+            path.chain[0].energy || 1.0,
+            path.chain[0].angle
+          );
 
           // add the rest of the rays onto the buffer
           for (let j = 1; j < path.chain.length; j++) {
@@ -919,12 +908,14 @@ class RayTracer extends Solver {
 
     this.messenger.postMessage("RAYTRACER_RESULTS_SHOULD_UPDATE");
   }
+
   start() {
     this.mapIntersectableObjects();
     this.__start_time = Date.now();
     this.__num_checked_paths = 0;
     this.startAllMonteCarlo();
   }
+
   stop() {
     this.__calc_time = Date.now() - this.__start_time;
     this.intervals.forEach((interval) => {
@@ -1611,11 +1602,12 @@ class RayTracer extends Solver {
     console.log("blur");
     this.renderer.overlays.global.hideCell(this.uuid + "-valid-ray-count");
   }
-  
+
   pathsToLinearBuffer() {
-    const uuidToLinearBuffer = uuid => uuid.split('').map(x => x.charCodeAt(0));
+    const uuidToLinearBuffer = (uuid) => uuid.split("").map((x) => x.charCodeAt(0));
     const chainArrayToLinearBuffer = (chainArray) => {
-      return chainArray.map((chain: Chain) => [
+      return chainArray
+        .map((chain: Chain) => [
           ...uuidToLinearBuffer(chain.object), // 36x8
           chain.angle, // 1x32
           chain.distance, // 1x32
@@ -1624,16 +1616,10 @@ class RayTracer extends Solver {
           chain.faceMaterialIndex, // 1x8
           ...chain.faceNormal, // 3x32
           ...chain.point // 3x32
-        ]).flat();
+        ])
+        .flat();
     };
-    const pathOrder = [
-      "source",
-      "chainLength",
-      "time",
-      "intersectedReceiver",
-      "energy",
-      "chain"
-    ];
+    const pathOrder = ["source", "chainLength", "time", "intersectedReceiver", "energy", "chain"];
     const chainOrder = [
       "object",
       "angle",
@@ -1644,34 +1630,36 @@ class RayTracer extends Solver {
       "faceNormal",
       "point"
     ];
-    
-    const buffer = new Float32Array(Object.keys(this.paths).map(key => {
-      const pathBuffer = this.paths[key].map(path => {
-        return [
-          ...uuidToLinearBuffer(path.source),
-          path.chainLength,
-          path.time,
-          Number(path.intersectedReceiver),
-          path.energy,
-          ...chainArrayToLinearBuffer(path.chain)
-        ];
-      }).flat();
-      return [
-        ...uuidToLinearBuffer(key),
-        pathBuffer.length,
-        ...pathBuffer
-      ]
-    }).flat());
+
+    const buffer = new Float32Array(
+      Object.keys(this.paths)
+        .map((key) => {
+          const pathBuffer = this.paths[key]
+            .map((path) => {
+              return [
+                ...uuidToLinearBuffer(path.source),
+                path.chainLength,
+                path.time,
+                Number(path.intersectedReceiver),
+                path.energy,
+                ...chainArrayToLinearBuffer(path.chain)
+              ];
+            })
+            .flat();
+          return [...uuidToLinearBuffer(key), pathBuffer.length, ...pathBuffer];
+        })
+        .flat()
+    );
     return buffer;
   }
-  
+
   linearBufferToPaths(linearBuffer: Float32Array) {
     const uuidLength = 36;
     const chainItemLength = 47;
     const decodeUUID = (buffer) => String.fromCharCode(...buffer);
     const decodeChainItem = (chainItem: Float32Array) => {
       let o = 0;
-      const object = decodeUUID(chainItem.slice(o, o += uuidLength));
+      const object = decodeUUID(chainItem.slice(o, (o += uuidLength)));
       const angle = chainItem[o++];
       const distance = chainItem[o++];
       const energy = chainItem[o++];
@@ -1690,18 +1678,18 @@ class RayTracer extends Solver {
         point
       } as Chain;
     };
-    const decodePathBuffer = buffer => {
+    const decodePathBuffer = (buffer) => {
       const paths = [] as RayPath[];
       let o = 0;
       while (o < buffer.length) {
-        const source = decodeUUID(buffer.slice(o, o += uuidLength));
+        const source = decodeUUID(buffer.slice(o, (o += uuidLength)));
         const chainLength = buffer[o++];
         const time = buffer[o++];
         const intersectedReceiver = Boolean(buffer[o++]);
         const energy = buffer[o++];
         const chain = [] as Chain[];
         for (let i = 0; i < chainLength; i++) {
-          chain.push(decodeChainItem(buffer.slice(o, o += chainItemLength)));
+          chain.push(decodeChainItem(buffer.slice(o, (o += chainItemLength))));
         }
         paths.push({
           source,
@@ -1717,16 +1705,14 @@ class RayTracer extends Solver {
     let offset = 0;
     const pathsObj = {} as KVP<RayPath[]>;
     while (offset < linearBuffer.length) {
-      const uuid = decodeUUID(linearBuffer.slice(offset, offset += uuidLength));
+      const uuid = decodeUUID(linearBuffer.slice(offset, (offset += uuidLength)));
       const pathBufferLength = linearBuffer[offset++];
-      const paths = decodePathBuffer(linearBuffer.slice(offset, offset += pathBufferLength));
+      const paths = decodePathBuffer(linearBuffer.slice(offset, (offset += pathBufferLength)));
       pathsObj[uuid] = paths;
     }
     return pathsObj;
   }
-  
-  
-  
+
   get sources() {
     if (this.sourceIDs.length > 0) {
       return this.sourceIDs.map((x) => this.containers[x]);

@@ -8,11 +8,10 @@ import reflectionCoefficient from "../compute/acoustics/reflection-coefficient";
 import { AcousticMaterial } from "../db/acoustic-material";
 import { BRDF } from "../compute/raytracer/brdf";
 import Room from "./room";
-import csg from '../compute/csg';
+import csg from "../compute/csg";
 import { numbersEqualWithinTolerence, equalWithinTolerenceFactory } from "../common/equal-within-range";
 
 const v3eq = equalWithinTolerenceFactory(["x", "y", "z"])(csg.math.constants.EPS as number);
-
 
 const defaults = {
   materials: {
@@ -164,7 +163,7 @@ class Surface extends Container {
   area!: number;
   isPlanar!: boolean;
   edgeLoop!: THREE.Vector3[];
-  polygon!: poly3type
+  polygon!: poly3type;
   normal!: THREE.Vector3;
   // renderer: Renderer;
   constructor(name: string, props?: SurfaceProps) {
@@ -201,8 +200,6 @@ class Surface extends Container {
     this._triangles = this.triangles.map(
       (x) => new THREE.Triangle(new THREE.Vector3(...x[0]), new THREE.Vector3(...x[1]), new THREE.Vector3(...x[2]))
     );
-    
-
 
     this.isPlanar = this._triangles
       .map((x) => x.getNormal(new THREE.Vector3()))
@@ -302,32 +299,27 @@ class Surface extends Container {
       );
     }
     this.getArea();
-    
-    this.edgeLoop = this.calculateEdgeLoop();
-    
-    
-    const points = this.edgeLoop.map(x => csg.math.vec3.fromArray([x.x, x.y, x.z]));
-    const plane = csg.math.plane.fromPoints(points[0], points[1], points[2])
-    
-    this.polygon = csg.geometry.poly3.fromPointsAndPlane(points, plane);
-    
 
-    
+    this.edgeLoop = this.calculateEdgeLoop();
+
+    const points = this.edgeLoop.map((x) => csg.math.vec3.fromArray([x.x, x.y, x.z]));
+    const plane = csg.math.plane.fromPoints(points[0], points[1], points[2]);
+
+    this.polygon = csg.geometry.poly3.fromPointsAndPlane(points, plane);
+
     const eqeps = numbersEqualWithinTolerence(csg.math.constants.EPS as number);
     const n0 = this.normal;
     const n1 = this.polygon.plane;
     if (!eqeps(n0.x, n1[0]) || !eqeps(n0.y, n1[1]) || !eqeps(n0.z, n1[2])) {
-      
       this.polygon.plane[0] *= -1;
       this.polygon.plane[1] *= -1;
       this.polygon.plane[2] *= -1;
-      
+
       if (!eqeps(n0.x, n1[0]) || !eqeps(n0.y, n1[1]) || !eqeps(n0.z, n1[2])) {
         console.error(new Error(`Surface '${this.name}' has a normal vector issue`));
       }
     }
-   
-    
+
     // this.polygon.parentSurface = this;
   }
   save() {
@@ -382,11 +374,10 @@ class Surface extends Container {
     return this.edges;
   }
   calculateEdgeLoop() {
-
     const verts = (this.edges.geometry as THREE.Geometry).vertices;
     const edgePairs = chunk(verts, 2);
     const edgeLoop = [] as THREE.Vector3[];
-    
+
     let j = 0;
     edgeLoop.push(edgePairs[j][0]);
     edgeLoop.push(edgePairs[j][1]);
@@ -397,8 +388,7 @@ class Surface extends Container {
             edgeLoop.push(edgePairs[i][1]);
             j = i;
             break;
-          }
-          else if (edgeLoop[edgeLoop.length - 1].equals(edgePairs[i][1])) {
+          } else if (edgeLoop[edgeLoop.length - 1].equals(edgePairs[i][1])) {
             edgeLoop.push(edgePairs[i][0]);
             j = i;
             break;
@@ -410,8 +400,6 @@ class Surface extends Container {
     return edgeLoop;
   }
 
-  
-  
   mergeSurfaces(surfaces: Surface[]) {
     const name = this.name + "-merged";
     const acousticMaterial = this.acousticMaterial;
@@ -492,6 +480,16 @@ class Surface extends Container {
   }
   get room() {
     return this.parent!.parent! as Room;
+  }
+
+  get brief() {
+    return {
+      uuid: this.uuid,
+      name: this.name,
+      selected: this.selected,
+      kind: this.kind,
+      children: []
+    };
   }
 }
 

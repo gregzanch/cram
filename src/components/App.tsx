@@ -36,6 +36,8 @@ import OpenWarning from "./OpenWarning";
 
 import { NavBarComponent } from "./NavBarComponent";
 
+import TreeViewComponent from "../components/TreeViewComponent";
+
 const AppToaster = Toaster.create({
   className: "app-toaster",
   position: Position.TOP,
@@ -83,6 +85,7 @@ interface AppState {
   darkmode: boolean;
   stats: Stat[];
   lastUpdateReason: string;
+  treeViewData: treeitem[];
   chartData?: {
     label: string;
     x: number[];
@@ -98,6 +101,14 @@ interface AppState {
 
   constructions: KeyValuePair<Container>;
 }
+
+type treeitem = {
+  id: string | number;
+  name: string;
+  isExpanded?: boolean;
+  isChecked?: boolean;
+  children?: treeitem[];
+};
 
 export default class App extends React.Component<AppProps, AppState> {
   state: AppState;
@@ -138,6 +149,7 @@ export default class App extends React.Component<AppProps, AppState> {
       stats: [] as Stat[],
       canUndo: false,
       canRedo: false,
+      treeViewData: [],
       chartData: [
         {
           label: "a",
@@ -403,6 +415,11 @@ export default class App extends React.Component<AppProps, AppState> {
       containers[args[0].uuid] = args[0];
       return { containers };
     });
+    this.addMessageHandler("ADDED_MODEL", (acc, ...args) => {
+      const containers = { ...this.state.containers };
+      containers[args[0].uuid] = args[0];
+      return { containers };
+    });
     this.addMessageHandler("IMPORT_FILE", () => {
       // console.log(acc);
       return {};
@@ -609,6 +626,18 @@ export default class App extends React.Component<AppProps, AppState> {
       </PanelContainer>
     );
 
+    const ObjectViewPanel2 = (
+      <PanelContainer>
+        <TreeViewComponent
+          {...TreeViewComponent.defaultProps}
+          data={this.state.treeViewData}
+          onUpdateCb={(updatedData) => {
+            this.setState({ treeViewData: updatedData });
+          }}
+        />
+      </PanelContainer>
+    );
+
     const ObjectPropertiesPanel = (
       <PanelContainer>
         {(() => {
@@ -809,7 +838,14 @@ export default class App extends React.Component<AppProps, AppState> {
             this.setState({ leftPanelSize: value });
           }}
         >
-          {ObjectViewPanel}
+          {
+            <>
+              {ObjectViewPanel}
+              {ObjectViewPanel2}
+            </>
+          }
+
+
 
           {/* center and right */}
           <SplitterLayout
