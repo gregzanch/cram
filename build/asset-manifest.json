@@ -1,6 +1,6 @@
 {
   "main.css": "/static/css/main.6e709971.chunk.css",
-  "main.js": "/static/js/main.e0c00b70.chunk.js",
+  "main.js": "/static/js/main.ced3c950.chunk.js",
   "static/css/1.ea6ad12f.chunk.css": "/static/css/1.ea6ad12f.chunk.css",
   "static/js/1.4084d83c.chunk.js": "/static/js/1.4084d83c.chunk.js",
   "runtime~main.js": "/static/js/runtime~main.229c360f.js",
@@ -15,9 +15,9 @@
   "static/media/back.png": "/static/media/back.cabfacaf.png",
   "static/media/rotate-left.svg": "/static/media/rotate-left.58b22fa8.svg",
   "static/media/rotate-right.svg": "/static/media/rotate-right.c4bd7833.svg",
-  "static/media/blueprint-icons.css": "/static/media/icons-20.cef8cdbb.woff",
-  "static/media/styles.css": "/static/media/untitled-font-1.17fd0515.svg",
+  "static/media/blueprint-icons.css": "/static/media/icons-16.3cde8748.ttf",
+  "static/media/styles.css": "/static/media/untitled-font-1.6343e845.eot",
   "index.html": "/index.html",
-  "precache-manifest.7d7f991f4d0692db8bee8be823855c62.js": "/precache-manifest.7d7f991f4d0692db8bee8be823855c62.js",
+  "precache-manifest.5a1741d47c85b42c0d7cdf9af9f3d284.js": "/precache-manifest.5a1741d47c85b42c0d7cdf9af9f3d284.js",
   "service-worker.js": "/service-worker.js"
 }
