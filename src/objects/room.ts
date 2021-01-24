@@ -17,17 +17,17 @@ export interface RoomProps extends ContainerProps {
 }
 
 export interface RoomSaveObject {
-	kind: string;
+  kind: string;
   surfaces: SurfaceSaveObject[];
   originalFileName: string;
   originalFileData: string;
-	units: UNITS;
-	uuid: string;
-	name: string;
-	visible: boolean;
-	position: number[];
-	rotation: number[];
-	scale: number[];
+  units: UNITS;
+  uuid: string;
+  name: string;
+  visible: boolean;
+  position: number[];
+  rotation: number[];
+  scale: number[];
 }
 
 export default class Room extends Container {
@@ -68,10 +68,10 @@ export default class Room extends Container {
     });
   }
 
-	save() {
-		return {
-			surfaces: this.surfaces.children.map((surf: Surface) => surf.save()),
-			kind: this.kind,
+  save() {
+    return {
+      surfaces: this.surfaces.children.map((surf: Surface) => surf.save()),
+      kind: this.kind,
       name: this.name,
       uuid: this.uuid,
       units: this.units,
@@ -82,21 +82,23 @@ export default class Room extends Container {
       rotation: this.rotation.toArray().slice(0, 3),
       scale: this.scale.toArray()
     } as RoomSaveObject;
-	}
-	restore(state: RoomSaveObject) {
-		const surfaces = state.surfaces.map(surfaceState => new Surface(surfaceState.name, { ...surfaceState }).restore(surfaceState));
-		this.init({
-			...state,
-			surfaces
-		});
-		this.visible = state.visible;
+  }
+  restore(state: RoomSaveObject) {
+    const surfaces = state.surfaces.map((surfaceState) =>
+      new Surface(surfaceState.name, { ...surfaceState }).restore(surfaceState)
+    );
+    this.init({
+      ...state,
+      surfaces
+    });
+    this.visible = state.visible;
     this.position.set(state.position[0], state.position[1], state.position[2]);
     this.rotation.set(state.rotation[0], state.rotation[1], state.rotation[2], "XYZ");
     this.scale.set(state.scale[0], state.scale[1], state.scale[2]);
-		this.uuid = state.uuid;
-		return this;
-	}
-	
+    this.uuid = state.uuid;
+    return this;
+  }
+
   select() {
     this.surfaces.select();
   }
@@ -166,5 +168,16 @@ export default class Room extends Container {
     } else {
       return [frequencies, meanAbsorption];
     }
+  }
+
+  get brief() {
+    return {
+      uuid: this.uuid,
+      name: this.name,
+      selected: this.selected,
+      //@ts-ignore
+      children: this.surfaces.children.map((x) => x.brief),
+      kind: this.kind
+    };
   }
 }

@@ -4,11 +4,11 @@ import { TransformControls } from "./TransformControls";
 type point = {
   x: number;
   y: number;
-}
+};
 const dist = (p1: point, p2: THREE.Vector3) => Math.sqrt((p2.y - p1.y) ** 2 + (p2.x - p1.x) ** 2);
 const THRESHOLD = 1e-8;
 export default class PickHelper {
-  pickPosition: { x: number; y: number; };
+  pickPosition: { x: number; y: number };
   raycaster: THREE.Raycaster;
   pickedObject: any;
   pickedPoint: THREE.Vector3;
@@ -33,31 +33,29 @@ export default class PickHelper {
     this.mount = mount;
   }
 
-  
-  pick(event, objects = this.objects, scene = this.scene, camera=this.camera, mount=this.mount) {
+  // This really needs to be refactored... what a mess
+  pick(event, objects = this.objects, scene = this.scene, camera = this.camera, mount = this.mount) {
     this.setPickPosition(event, mount);
     this.raycaster.setFromCamera(this.pickPosition, this.camera);
 
     const intersectedObjects = this.raycaster.intersectObjects(objects, true);
+
     if (intersectedObjects.length) {
+      console.log(intersectedObjects);
       let i = 0;
       let clickedOnSourceReceiver = false;
       let sourceReceiverIndex = 0;
       let clickedOnTransformControl = false;
       let transformControlIndex = 0;
-      
+
       // console.log(intersectedObjects);
-      
+
       const indicesWithinThreshold = [] as number[];
       for (let i = 0; i < intersectedObjects.length; i++) {
-        const d = dist(
-          this.pickPosition,
-          intersectedObjects[i].point.clone().project(this.camera)
-        );
+        const d = dist(this.pickPosition, intersectedObjects[i].point.clone().project(this.camera));
         if (d < THRESHOLD) {
           indicesWithinThreshold.push(i);
         }
-        
 
         //@ts-ignore
         if (
@@ -84,29 +82,25 @@ export default class PickHelper {
         ) {
           clickedOnSourceReceiver = true;
           sourceReceiverIndex = i;
-        } 
+        }
       }
-      
+
       if (clickedOnTransformControl) {
         return {
           clickedOnTransformControl,
           clickedOnSourceReceiver,
           pickedObject: intersectedObjects[transformControlIndex].object
         };
-      }
-
-      else if (clickedOnSourceReceiver) {
+      } else if (clickedOnSourceReceiver) {
         this.pickedObject = intersectedObjects[sourceReceiverIndex].object.parent;
         this.pickedPoint = intersectedObjects[sourceReceiverIndex].point;
-        
+
         return {
           clickedOnTransformControl,
           clickedOnSourceReceiver,
           pickedObject: this.pickedObject
         };
-      }
-      
-      else if(indicesWithinThreshold[0]){
+      } else if (indicesWithinThreshold[0]) {
         this.pickedObject = intersectedObjects[indicesWithinThreshold[0]].object.parent;
         this.pickedPoint = intersectedObjects[indicesWithinThreshold[0]].point;
         return {
@@ -114,8 +108,7 @@ export default class PickHelper {
           clickedOnTransformControl,
           pickedObject: this.pickedObject
         };
-      }
-      else {
+      } else {
         this.pickedObject = intersectedObjects[0].object.parent;
         this.pickedPoint = intersectedObjects[0].point;
         return {
@@ -124,8 +117,7 @@ export default class PickHelper {
           pickedObject: this.pickedObject
         };
       }
-    }
-    else {
+    } else {
       this.pickedObject = false;
     }
     return {
@@ -133,11 +125,10 @@ export default class PickHelper {
       clickedOnTransformControl: false,
       pickedObject: false
     };
-      
   }
-  
+
   getPickedPoint() {
-    return [this.pickedPoint.x,this.pickedPoint.y,this.pickedPoint.z];
+    return [this.pickedPoint.x, this.pickedPoint.y, this.pickedPoint.z];
   }
 
   pickOnce(event, scene, camera, mount) {

@@ -1,4 +1,4 @@
-import { WindowFunctions } from './window-functions';
+import WindowFunctions from './window-functions';
 import { Complex } from '../complex';
 export const applyWindow = (window: string) => (arr: []) => {
   if (WindowFunctions[window]) {

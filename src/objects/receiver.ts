@@ -1,4 +1,3 @@
-
 import * as THREE from "three";
 import Container, { ContainerProps } from "./container";
 import chroma from "chroma-js";
@@ -6,7 +5,6 @@ import { MATCAP_PORCELAIN_WHITE, MATCAP_UNDER_SHADOW } from "./asset-store";
 import FileSaver from "file-saver";
 import { EditorModes } from "../constants/editor-modes";
 // import { vs, fs } from '../render/shaders/glow';
-
 
 export interface ReceiverSaveObject {
   name: string;
@@ -19,16 +17,14 @@ export interface ReceiverSaveObject {
   color: number;
 }
 
-export interface ReceiverProps extends ContainerProps{
-    
-}
+export interface ReceiverProps extends ContainerProps {}
 
 const defaults = {
   color: 0xdd6f6f,
   selectedColor: 0x9fcbff
 };
 
-export default class Receiver extends Container{
+export default class Receiver extends Container {
   mesh: THREE.Mesh;
   selectedMaterial: THREE.MeshMatcapMaterial;
   normalMaterial: THREE.MeshMatcapMaterial;
@@ -51,16 +47,15 @@ export default class Receiver extends Container{
       matcap: MATCAP_PORCELAIN_WHITE,
       name: "receiver-material"
     });
-    this.mesh = new THREE.Mesh(
-      new THREE.SphereGeometry(0.1, 32, 16),
-      this.normalMaterial
-    );
-    this.mesh.userData['kind'] = 'receiver';
+    this.mesh = new THREE.Mesh(new THREE.SphereGeometry(0.1, 32, 16), this.normalMaterial);
+    this.mesh.userData["kind"] = "receiver";
     this.add(this.mesh);
     this.select = () => {
       if (!this.selected) {
         this.selected = true;
-        let brighterColor = chroma((this.mesh.material as THREE.MeshMatcapMaterial).color.getHex()).brighten(1).num();
+        let brighterColor = chroma((this.mesh.material as THREE.MeshMatcapMaterial).color.getHex())
+          .brighten(1)
+          .num();
         this.selectedMaterial.color.setHex(brighterColor);
         this.mesh.material = this.selectedMaterial;
       }
@@ -72,7 +67,6 @@ export default class Receiver extends Container{
       }
     };
     this.renderCallback = (time?: number) => {};
-    
   }
   save() {
     const name = this.name;
@@ -113,7 +107,7 @@ export default class Receiver extends Container{
     this.fdtdSamples = [] as number[];
   }
   saveSamples() {
-    if (this.fdtdSamples.length>0) {
+    if (this.fdtdSamples.length > 0) {
       const blob = new Blob([this.fdtdSamples.join("\n")], {
         type: "text/plain;charset=utf-8"
       });
@@ -129,29 +123,43 @@ export default class Receiver extends Container{
   }
   onModeChange(mode: EditorModes) {
     switch (mode) {
-      case EditorModes.OBJECT: { 
-      } break;
-      case EditorModes.SKETCH: { 
-      } break;
-      case EditorModes.EDIT: { 
-      } break;
-      default: break;
+      case EditorModes.OBJECT:
+        {
+        }
+        break;
+      case EditorModes.SKETCH:
+        {
+        }
+        break;
+      case EditorModes.EDIT:
+        {
+        }
+        break;
+      default:
+        break;
     }
   }
-  get color(){
-    return String.fromCharCode(35)+(this.mesh.material as THREE.MeshBasicMaterial).color.getHexString();
+  get color() {
+    return String.fromCharCode(35) + (this.mesh.material as THREE.MeshBasicMaterial).color.getHexString();
   }
   set color(col: string | number) {
     if (typeof col === "string") {
       (this.mesh.material as THREE.MeshMatcapMaterial).color.setStyle(col);
       (this.normalMaterial as THREE.MeshMatcapMaterial).color.setStyle(col);
       (this.selectedMaterial as THREE.MeshMatcapMaterial).color.setStyle(col);
-    }
-    else {
+    } else {
       (this.mesh.material as THREE.MeshMatcapMaterial).color.setHex(col);
       (this.normalMaterial as THREE.MeshMatcapMaterial).color.setHex(col);
       (this.selectedMaterial as THREE.MeshMatcapMaterial).color.setHex(col);
     }
   }
-
+  get brief() {
+    return {
+      uuid: this.uuid,
+      name: this.name,
+      selected: this.selected,
+      kind: this.kind,
+      children: []
+    };
+  }
 }

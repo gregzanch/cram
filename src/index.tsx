@@ -5,7 +5,7 @@ import App from "./components/App";
 import { IToastProps } from "@blueprintjs/core";
 
 // command handling
-import hotkeys from "hotkeys-js";
+import hotkeys, { HotkeysEvent, KeyHandler } from "hotkeys-js";
 import Messenger from "./messenger";
 import { History, Directions } from "./history";
 
@@ -135,13 +135,22 @@ export interface State {
   projectName: string;
 }
 
+
+type Version = `${number}.${number}.${number}`;
+
 export interface Cram {
   state: State;
   messenger: Messenger;
+  meta: {
+    version: Version;
+  };
 }
 
 export class Cram implements Cram {
   constructor() {
+    this.meta = {
+      version: "0.2.1"
+    }
     this.state = {
       leftPanelInitialSize: layout.leftPanelInitialSize,
       bottomPanelInitialSize: layout.bottomPanelInitialSize,
@@ -322,7 +331,6 @@ cram.state.messenger.addMessageHandler("SUBMIT_SETTINGS__EDITOR", () => {
 cram.state.messenger.addMessageHandler("FETCH_ALL_MATERIALS", () => {
   return cram.state.materials;
 });
-
 
 cram.state.messenger.addMessageHandler("SEARCH_ALL_MATERIALS", (acc, ...args) => {
   const res = cram.state.materialSearcher.search(args[0]);
@@ -1081,7 +1089,7 @@ cram.state.messenger.addMessageHandler("RESTORE_SOLVERS", (acc, ...args) => {
 cram.state.messenger.addMessageHandler("SAVE", (acc, ...args) => {
   const savedState = {
     meta: {
-      version: process.env.VERSION,
+      version: cram.meta.version,
       name: cram.state.projectName,
       timestamp: new Date().toISOString()
     },
@@ -1154,7 +1162,7 @@ cram.state.messenger.addMessageHandler("ADD_SELECTED_OBJECTS_TO_GLOBAL_VARIABLES
 
 function addHotKey(keybinding, scopes, message, ...args) {
   scopes.forEach((scope) => {
-    hotkeys(keybinding, scope, () => cram.state.messenger.postMessage(message, args));
+    hotkeys(keybinding, scope, () => void cram.state.messenger.postMessage(message, args));
   });
 }
 
@@ -1213,29 +1221,15 @@ export const GlobalProvider = ({ children }) => {
   return <GlobalContext.Provider value={state}>{children}</GlobalContext.Provider>;
 };
 
-// the main app
-ReactDOM.render(
-  <GlobalProvider>
-    <App {...cram.state} />
-  </GlobalProvider>,
-  document.getElementById("root")
-);
+async function finishedLoading() {
+  const filepath = "/res/saves/concord4.json";
+  const filename = filepath.slice(filepath.lastIndexOf("/") + 1);
+  const filedata = await(await fetch(filepath)).text();
+  const json = JSON.parse(filedata);
+  const file = createFileFromData(filename, [filedata]);
+  
+  cram.state.messenger.postMessage("RESTORE", { file, json });
 
-if (process.env.NODE_ENV === "development") {
-  setTimeout(async () => {
-    // const filepath = "/res/saves/10x13.json";
-    // const filename = filepath.split("/").slice(-1)[0];
-    // const savedStateFetchResult = await fetch(filepath);
-    // const json = await savedStateFetchResult.json();
-
-    // cram.state.messenger.postMessage("RESTORE", { json, file: { name: filename } });
-
-    const filepath = "/res/models/ruum-small.stl";
-    const filename = filepath.slice(filepath.lastIndexOf("/") + 1);
-    const file = createFileFromData(filename, [await (await fetch(filepath)).blob()]);
-
-    cram.state.messenger.postMessage("IMPORT_FILE", [file]);
-  }, 200);
 
   expose({
     sizeof,
@@ -1251,5 +1245,14 @@ if (process.env.NODE_ENV === "development") {
     chunk
   });
 }
+
+// the main app
+ReactDOM.render(
+  <GlobalProvider>
+    <App {...cram.state} />
+  </GlobalProvider>,
+  document.getElementById("root"),
+  finishedLoading
+);
 
 cram.state.history.clear();
