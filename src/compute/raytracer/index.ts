@@ -1054,6 +1054,21 @@ class RayTracer extends Solver {
     return this.allReceiverData;
   }
 
+  reflectionLossFunction(room: Room, raypath: RayPath, frequency: number): number {
+    const chain = raypath.chain.slice(0, -1);
+    if (chain && chain.length > 0) {
+      let magnitude = 1;
+      for (let k = 0; k < chain.length; k++) {
+        const intersection = chain[k];
+        const surface = room.surfaceMap[intersection.object] as Surface;
+        const angle = intersection["angle"] || 0;
+        magnitude = magnitude * abs(surface.reflectionFunction(frequency, angle));
+      }
+      return magnitude;
+    }
+    return 1;
+  }
+
   //TODO change this name to something more appropriate
   calculateReflectionLoss(frequencies: number[] = this.reflectionLossFrequencies) {
     // reset the receiver data
@@ -1086,39 +1101,20 @@ class RayTracer extends Solver {
         // the individual ray path which holds intersection data
         const raypath = this.paths[pathkeys[i]][j];
 
-        /**
-         * calculates the loss due to reflection over the ray's path
-         */
-        function reflectionLossFunction(frequency: number): number {
-          console.log(this);
-          const chain = raypath.chain.slice(0, -1);
-          if (chain && chain.length > 0) {
-            let magnitude = 1;
-            for (let k = 0; k < chain.length; k++) {
-              const intersection = chain[k];
-              const surface = this.room.surfaceMap[intersection.object] as Surface;
-              const angle = intersection["angle"] || 0;
-              magnitude = magnitude * abs(surface.reflectionFunction(frequency, angle));
-            }
-            return magnitude;
-          }
-          return 1;
-        }
-
         let refloss;
         // if there was a given frequency array
         if (frequencies) {
           // map the frequencies to reflection loss
           refloss = frequencies.map((freq) => ({
             frequency: freq,
-            value: reflectionLossFunction(freq)
+            value: this.reflectionLossFunction(this.room, raypath, freq)
           }));
           frequencies.forEach((f, i) => {
-            chartdata[i].data.push([raypath.time!, reflectionLossFunction(f)]);
+            chartdata[i].data.push([raypath.time!, this.reflectionLossFunction(this.room, raypath, f)]);
           });
         } else {
           // if no frequencies given, just give back the function that calculates the reflection loss
-          refloss = reflectionLossFunction;
+          refloss = (freq: number) => this.reflectionLossFunction(this.room, raypath, freq);
         }
         this.allReceiverData[this.allReceiverData.length - 1].data.push({
           time: raypath.time!,
