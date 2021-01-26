@@ -65,6 +65,8 @@ import * as THREE from "three";
 import FileSaver from "file-saver";
 import { createFileFromData } from "./common/file";
 
+
+
 const materialsIndex = {} as KeyValuePair<AcousticMaterial>;
 
 materials.forEach((x) => {
