@@ -15,6 +15,7 @@ import PropertyRowCheckbox from "../parameter-config/property-row/property-row-c
 import { ObjectPropertyInputEvent } from ".";
 import { IToastProps } from "@blueprintjs/core/lib/esm/components/toast/toast";
 import decimalPrecision from "../../common/decimal-precision";
+import {CLFParser} from "../../import-handlers/CLFParser";
 
 export interface SourcePropertiesProps {
   object: Source;
@@ -179,6 +180,32 @@ export default function SourceProperties(props: SourcePropertiesProps) {
             }}
             label="Download"
           />
+        </div>
+      </PropertyRow>
+      <PropertyRow>
+        <PropertyRowLabel label="CLF Data" tooltip="Import CLF text files"/>
+        <div>
+          <input
+            type = "file"
+            id = "clfinput"
+            accept = ".tab"
+            onChange={(e) => {
+                console.log(e.target.files);
+                const reader = new FileReader();
+                
+                reader.addEventListener('loadend', (loadEndEvent) => {
+                    let filecontents:string = reader.result as string; 
+                    //console.log(filecontents);
+                    let clf = new CLFParser(filecontents);
+                    console.log(clf);
+                    console.log(clf.parse());
+                });
+
+                reader.readAsText(e.target!.files![0]);
+                
+              }
+            }
+            />
         </div>
       </PropertyRow>
     </div>
