@@ -62,7 +62,7 @@ export default function SourceProperties(props: SourcePropertiesProps) {
             <NumberInput name="y" value={props.object.position.y} {...XYZProps} />
             <NumberInput name="z" value={props.object.position.z} {...XYZProps} />
           </GridRow>
-        )}
+        )} 
 
         {props.object.hasOwnProperty("scale") && (
           <GridRow label={"scale"}>
@@ -183,7 +183,7 @@ export default function SourceProperties(props: SourcePropertiesProps) {
         </div>
       </PropertyRow>
       <PropertyRow>
-        <PropertyRowLabel label="CLF Data" tooltip="Import CLF text files"/>
+        <PropertyRowLabel label="CLF Data" tooltip="Import CLF directivity text files"/>
         <div>
           <input
             type = "file"
@@ -195,9 +195,12 @@ export default function SourceProperties(props: SourcePropertiesProps) {
                 
                 reader.addEventListener('loadend', (loadEndEvent) => {
                     let filecontents:string = reader.result as string; 
-                    //console.log(filecontents);
                     let clf = new CLFParser(filecontents);
+
+                    // display CLF parser object (debugging)
                     console.log(clf);
+
+                    // display CLF parser results (debugging)
                     console.log(clf.parse());
                 });
 

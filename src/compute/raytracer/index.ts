@@ -818,11 +818,11 @@ class RayTracer extends Solver {
     for (let i = 0; i < this.sourceIDs.length; i++) {
       this.__num_checked_paths += 1;
 
-      // random theta within the sources theta limits
-      const theta = 2 * (Math.random() - 0.5) * (this.containers[this.sourceIDs[i]] as Source).theta;
+      // random theta within the sources theta limits (-pi/2 to +pi/2)
+      const theta = 4 * (Math.random() - 0.5) * (this.containers[this.sourceIDs[i]] as Source).theta;
 
-      // random phi within the sources phi limits
-      const phi = 2 * Math.random() * (this.containers[this.sourceIDs[i]] as Source).phi;
+      // random phi within the sources phi limits (-pi to +pi)
+      const phi = 4 * (Math.random()-0.5) * (this.containers[this.sourceIDs[i]] as Source).phi;
 
       // source position
       const position = (this.containers[this.sourceIDs[i]] as Source).position;
@@ -831,8 +831,8 @@ class RayTracer extends Solver {
       const rotation = (this.containers[this.sourceIDs[i]] as Source).rotation;
 
       // random direction
-      const direction = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
-      // const direction = new THREE.Vector3().setFromSphericalCoords(1, 0, Math.PI);
+      // const direction = new THREE.Vector3(0.75, Math.random() - 0.5, Math.random() - 0.5);
+      const direction = new THREE.Vector3().setFromSphericalCoords(1, phi, theta);
       direction.applyEuler(rotation);
 
       // get the path traced by the ray
