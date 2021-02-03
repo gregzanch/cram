@@ -521,21 +521,31 @@ class RayTracer extends Solver {
     this.renderer.needsToRender = true;
   }
 
+  incrementRayPositionIndex() {
+    if (this.rayPositionIndex < this.maxrays) {
+      return this.rayPositionIndex++;
+    } else {
+      this.rayPositionIndex = 0;
+      this.rayPositionIndexDidOverflow = true;
+      return this.rayPositionIndex;
+    }
+  }
+  rayPositionIndexDidOverflow = false;
   appendRay(p1: [number, number, number], p2: [number, number, number], energy: number = 1.0, angle: number = 1.0) {
     // set p1
-    this.rayBufferAttribute.setXYZ(this.rayPositionIndex++, p1[0], p1[1], p1[2]);
+    this.rayBufferAttribute.setXYZ(this.incrementRayPositionIndex(), p1[0], p1[1], p1[2]);
 
     // set the color
     this.colorBufferAttribute.setXY(this.rayPositionIndex, energy, angle);
 
     // set p2
-    this.rayBufferAttribute.setXYZ(this.rayPositionIndex++, p2[0], p2[1], p2[2]);
+    this.rayBufferAttribute.setXYZ(this.incrementRayPositionIndex(), p2[0], p2[1], p2[2]);
 
     // set the color
     this.colorBufferAttribute.setXY(this.rayPositionIndex, energy, angle);
 
     //update the draw range
-    this.rayBufferGeometry.setDrawRange(0, this.rayPositionIndex);
+    this.rayBufferGeometry.setDrawRange(0, this.rayPositionIndexDidOverflow ? this.maxrays : this.rayPositionIndex);
 
     // update three.js
     this.rayBufferAttribute.needsUpdate = true;
@@ -683,7 +693,7 @@ class RayTracer extends Solver {
     let done = false;
     this.intervals.push(
       //@ts-ignore
-        setInterval(() => {
+      setInterval(() => {
         for (let i = 0; i < this.passes; i++, count++) {
           for (let j = 0; j < this.sourceIDs.length; j++) {
             const id = this.sourceIDs[j];
@@ -795,12 +805,12 @@ class RayTracer extends Solver {
 
   startAllMonteCarlo() {
     this.intervals.push(
-      setInterval(() => {
+      (setInterval(() => {
         for (let i = 0; i < this.passes; i++) {
           this.step();
         }
         this.renderer.needsToRender = true;
-      }, this.updateInterval) as unknown as number
+      }, this.updateInterval) as unknown) as number
     );
   }
 
@@ -949,6 +959,7 @@ class RayTracer extends Solver {
     this.renderer.overlays.global.setCellValue(this.uuid + "-valid-ray-count", this.validRayCount);
     this.rayBufferGeometry.setDrawRange(0, 1);
     this.rayPositionIndex = 0;
+    this.rayPositionIndexDidOverflow  =  false;
     this.stats.numRaysShot.value = 0;
     this.stats.numValidRayPaths.value = 0;
     this.messenger.postMessage("STATS_UPDATE", this.stats);
