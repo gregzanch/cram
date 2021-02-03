@@ -1224,7 +1224,7 @@ export const GlobalProvider = ({ children }) => {
 };
 
 async function finishedLoading() {
-  const filepath = "/res/saves/concord4.json";
+  const filepath = "/res/saves/shoebox.json";
   const filename = filepath.slice(filepath.lastIndexOf("/") + 1);
   const filedata = await(await fetch(filepath)).text();
   const json = JSON.parse(filedata);
