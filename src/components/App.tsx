@@ -58,10 +58,10 @@ export interface AppProps {
 }
 
 interface AppState {
-  rightPanelTopSize: number;
-  bottomPanelSize: number;
-  rightPanelSize: number;
-  leftPanelSize: number;
+  // rightPanelTopSize: number;
+  // bottomPanelSize: number;
+  // rightPanelSize: number;
+  // leftPanelSize: number;
 
   rendererStatsVisible: boolean;
 
@@ -118,14 +118,14 @@ export default class App extends React.Component<AppProps, AppState> {
   responseOverlay: React.RefObject<HTMLDivElement>;
   statsCanvas: React.RefObject<HTMLCanvasElement>;
   prog: any;
+  rightPanelTopSize = this.props.rightPanelTopInitialSize;
+  bottomPanelSize = this.props.bottomPanelInitialSize;
+  rightPanelSize = this.props.rightPanelInitialSize;
+  leftPanelSize = this.props.leftPanelInitialSize;
   constructor(props: AppProps) {
     super(props);
     this.state = {
       canDuplicate: false,
-      rightPanelTopSize: this.props.rightPanelTopInitialSize,
-      bottomPanelSize: this.props.bottomPanelInitialSize,
-      rightPanelSize: this.props.rightPanelInitialSize,
-      leftPanelSize: this.props.leftPanelInitialSize,
       rendererStatsVisible: true,
       saveDialogVisible: false,
       projectName: this.props.messenger.postMessage("GET_PROJECT_NAME")[0],
@@ -605,10 +605,10 @@ export default class App extends React.Component<AppProps, AppState> {
 
   saveLayout() {
     const layout = {
-      bottomPanelInitialSize: this.state.bottomPanelSize,
-      rightPanelInitialSize: this.state.rightPanelSize,
-      leftPanelInitialSize: this.state.leftPanelSize,
-      rightPanelTopInitialSize: this.state.rightPanelTopSize
+      bottomPanelInitialSize: this.bottomPanelSize,
+      rightPanelInitialSize: this.rightPanelSize,
+      leftPanelInitialSize: this.leftPanelSize,
+      rightPanelTopInitialSize: this.rightPanelTopSize
     };
     localStorage.setItem("layout", JSON.stringify(layout));
   }
@@ -820,7 +820,7 @@ export default class App extends React.Component<AppProps, AppState> {
             this.props.messenger.postMessage("IMPORT_FILE", file);
           }}
         />
-
+                 
         <SplitterLayout
           secondaryMinSize={5}
           primaryMinSize={50}
@@ -835,17 +835,16 @@ export default class App extends React.Component<AppProps, AppState> {
             this.saveLayout();
           }}
           onSecondaryPaneSizeChange={(value: number) => {
-            this.setState({ leftPanelSize: value });
+            this.leftPanelSize = value;
+            // this.setState({ leftPanelSize: value });
           }}
         >
           {
             <>
               {ObjectViewPanel}
-              {ObjectViewPanel2}
+              {/* {ObjectViewPanel2} */}
             </>
           }
-
-
 
           {/* center and right */}
           <SplitterLayout
@@ -861,10 +860,11 @@ export default class App extends React.Component<AppProps, AppState> {
               this.saveLayout();
             }}
             onSecondaryPaneSizeChange={(value: number) => {
-              this.setState({ rightPanelSize: value });
+              this.rightPanelSize = value;
+              // this.setState({ rightPanelSize: value });
             }}
           >
-            <div className="webgl-canvas">
+   <div className="webgl-canvas">
               <div
                 id="response-overlay"
                 className={"response_overlay response_overlay-hidden"}
@@ -874,6 +874,7 @@ export default class App extends React.Component<AppProps, AppState> {
               <div id="orientation-overlay" ref={this.orientationOverlay}></div>
               <canvas id="renderer-canvas" ref={this.canvas} />
             </div>
+
 
             <SplitterLayout
               vertical={true}
@@ -885,7 +886,8 @@ export default class App extends React.Component<AppProps, AppState> {
                 this.saveLayout();
               }}
               onSecondaryPaneSizeChange={(value: number) => {
-                this.setState({ rightPanelTopSize: value });
+                this.rightPanelTopSize = value;
+                // this.setState({ rightPanelTopSize: value });
               }}
             >
               {ObjectPropertiesPanel}
