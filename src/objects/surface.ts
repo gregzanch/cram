@@ -197,8 +197,14 @@ class Surface extends Container {
       chunk(Array.from((props.geometry.getAttribute("position") as THREE.BufferAttribute).array), 3),
       3
     );
+    console.log(this.triangles.map((x) => []));
     this._triangles = this.triangles.map(
-      (x) => new THREE.Triangle(new THREE.Vector3(...x[0]), new THREE.Vector3(...x[1]), new THREE.Vector3(...x[2]))
+      (x) =>
+        new THREE.Triangle(
+          new THREE.Vector3(x[0][0], x[0][1], x[0][2]),
+          new THREE.Vector3(x[1][0], x[1][1], x[1][2]),
+          new THREE.Vector3(x[2][0], x[2][1], x[2][2])
+        )
     );
 
     this.isPlanar = this._triangles

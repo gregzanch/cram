@@ -82,11 +82,11 @@ export const diff = (A: any[], B: any[]) => {
   return [A, B].map((x, i, a) => x.filter((y) => !a[(i + 1) % 2].includes(y)));
 };
 
-const transpose = <T>(array: T[][]) => array[0].map((_, colIndex) => array.map((row) => row[colIndex]));
-const flipHor = <T>(array: T[][]) => array.map((x) => x.reverse());
-const flipVer = <T>(array: T[][]) => array.map((x) => [...x]).reverse();
-const rotate = <T>(array: T[][]) => flipVer(transpose(array));
-const derotate = <T>(array: T[][]) => transpose(flipVer(array));
+export const transpose = <T>(array: T[][]) => array[0].map((_, colIndex) => array.map((row) => row[colIndex]));
+export const flipHor = <T>(array: T[][]) => array.map((x) => x.reverse());
+export const flipVer = <T>(array: T[][]) => array.map((x) => [...x]).reverse();
+export const rotate = <T>(array: T[][]) => flipVer(transpose(array));
+export const derotate = <T>(array: T[][]) => transpose(flipVer(array));
 
 export const clamp = (a: number, b: number) => (v: number): number => {
   return v < a ? a : v > b ? b : v;
