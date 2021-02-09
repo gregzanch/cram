@@ -23,6 +23,7 @@ import Sketch from "./objects/sketch";
 // compute/solvers
 import Solver from "./compute/solver";
 import RayTracer from "./compute/raytracer";
+import {ImageSource} from "./compute/raytracer/image-source/index"
 import RT60 from "./compute/rt";
 import { FDTD_2D, FDTD_2D_Defaults } from "./compute/2d-fdtd";
 import * as ac from "./compute/acoustics";
@@ -64,6 +65,8 @@ import csg from "./compute/csg";
 import * as THREE from "three";
 import FileSaver from "file-saver";
 import { createFileFromData } from "./common/file";
+
+import {CLFViewer} from "./objects/CLFViewer";
 
 
 
@@ -135,6 +138,7 @@ export interface State {
   currentProcess: Processes;
   browser: Report;
   projectName: string;
+  //clfviewer: CLFViewer;
 }
 
 
@@ -182,7 +186,8 @@ export class Cram implements Cram {
       editorMode: EditorModes.OBJECT as EditorModes,
       currentProcess: Processes.NONE as Processes,
       browser: browserReport(navigator.userAgent),
-      projectName: defaultSettings.general.default_save_name.value
+      projectName: defaultSettings.general.default_save_name.value,
+      //clfviewer: new CLFViewer(),
     };
     this.messenger = this.state.messenger;
   }
@@ -262,6 +267,14 @@ cram.state.messenger.addMessageHandler("APPEND_SELECTION", (acc, objects) => {
     }
   }
 });
+
+cram.state.messenger.addMessageHandler("OPEN_CLF_VIEWER", () => {
+  console.log("will open CLF viewer");
+});
+
+cram.state.messenger.addMessageHandler("CLOSE_CLF_VIEWER", () => {
+  console.log("will close CLF viewer");
+})
 
 cram.state.messenger.addMessageHandler("GET_SELECTED_OBJECTS", () => {
   return cram.state.selectedObjects;
@@ -350,6 +363,28 @@ cram.state.messenger.addMessageHandler("SHOULD_ADD_RAYTRACER", (acc, ...args) =>
   cram.state.solvers[raytracer.uuid] = raytracer;
   return raytracer;
 });
+
+cram.state.messenger.addMessageHandler("SHOULD_ADD_IMAGE_SOURCE", () => {
+  const imagesource = new ImageSource({
+    renderer: cram.state.renderer, 
+    messenger: cram.state.messenger,
+    containers: cram.state.containers
+  }); 
+
+  const numsolvers:number = Object.keys(cram.state.solvers).length;
+
+  Object.keys(cram.state.solvers).forEach(function(key) {
+    if((cram.state.solvers[key]).kind==="image-source"){
+      delete cram.state.solvers[key]; 
+    }
+  })
+
+  cram.state.solvers[imagesource.uuid] = imagesource; 
+
+  imagesource.test(); 
+
+  return imagesource; 
+})
 
 cram.state.messenger.addMessageHandler("SHOULD_REMOVE_SOLVER", (acc, id) => {
   if (cram.state.solvers && cram.state.solvers[id]) {

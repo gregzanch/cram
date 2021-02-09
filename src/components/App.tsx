@@ -116,6 +116,7 @@ export default class App extends React.Component<AppProps, AppState> {
   canvasOverlay: React.RefObject<HTMLDivElement>;
   orientationOverlay: React.RefObject<HTMLDivElement>;
   responseOverlay: React.RefObject<HTMLDivElement>;
+  //clfViewerOverlay: React.RefObject<HTMLDivElement>;
   statsCanvas: React.RefObject<HTMLCanvasElement>;
   prog: any;
   rightPanelTopSize = this.props.rightPanelTopInitialSize;
@@ -165,6 +166,7 @@ export default class App extends React.Component<AppProps, AppState> {
 
     this.canvas = React.createRef<HTMLCanvasElement>();
     this.responseOverlay = React.createRef<HTMLDivElement>();
+    //this.clfViewerOverlay = React.createRef<HTMLDivElement>();
     this.canvasOverlay = React.createRef<HTMLDivElement>();
     this.orientationOverlay = React.createRef<HTMLDivElement>();
     this.statsCanvas = React.createRef<HTMLCanvasElement>();
@@ -870,6 +872,11 @@ export default class App extends React.Component<AppProps, AppState> {
                 className={"response_overlay response_overlay-hidden"}
                 ref={this.responseOverlay}
               ></div>
+              {/* {<div
+                id="clf_viewer_overaly"
+                className={"clf_viewer_overlay clv_viewer_overlay-hidden"}
+                ref={this.clfViewerOverlay}
+              ></div>} */}
               <div id="canvas_overlay" ref={this.canvasOverlay}></div>
               <div id="orientation-overlay" ref={this.orientationOverlay}></div>
               <canvas id="renderer-canvas" ref={this.canvas} />

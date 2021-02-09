@@ -155,6 +155,27 @@ export function ViewMenu(props: MenuProps) {
   );
 }
 
+export function ToolMenu(props: MenuProps) {
+  return (
+    <Popover2
+    minimal={true}
+    onInteraction={(e)=>props.onInteraction(e)}
+    isOpen={props.isOpen}
+    transitionDuration={0}
+    renderTarget={({ isOpen, ref, ...p }) => (
+      <Button {...p} active={isOpen} elementRef={ref as React.RefObject<HTMLButtonElement>} text="Tools" />
+    )}
+    content={
+      <Menu>
+        <MenuItemWithMessenger label="CLF Viewer" message="OPEN_CLF_VIEWER" />
+        <MenuItemWithMessenger label="Image Source Test" message="SHOULD_ADD_IMAGE_SOURCE" />
+      </Menu>
+    }
+    placement="bottom-start"
+    />
+  );
+}
+
 export function ExamplesMenu(props: MenuProps) {
   return (
     <Popover2
@@ -197,7 +218,8 @@ export function NavBarComponent(props: NavBarComponentProps) {
             <EditMenu onInteraction={(e)=>e ? setOpenMenu(2): setOpenMenu(0)} isOpen={openMenu === 2}/>
             <AddMenu  onInteraction={(e)=>e ? setOpenMenu(3): setOpenMenu(0)} isOpen={openMenu === 3}/>
             <ViewMenu onInteraction={(e)=>e ? setOpenMenu(4): setOpenMenu(0)} isOpen={openMenu === 4}/>
-            <ExamplesMenu onInteraction={(e)=>e ? setOpenMenu(5): setOpenMenu(0)} isOpen={openMenu === 5}/>
+            <ToolMenu onInteraction={(e)=>e ? setOpenMenu(5): setOpenMenu(0)} isOpen={openMenu === 5}/>
+            <ExamplesMenu onInteraction={(e)=>e ? setOpenMenu(6): setOpenMenu(0)} isOpen={openMenu === 6}/>
           </ButtonGroup>
         </Menu>
       </Navbar.Group>
