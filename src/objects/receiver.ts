@@ -4,6 +4,8 @@ import chroma from "chroma-js";
 import { MATCAP_PORCELAIN_WHITE, MATCAP_UNDER_SHADOW } from "./asset-store";
 import FileSaver from "file-saver";
 import { EditorModes } from "../constants/editor-modes";
+import { on } from "../messenger";
+import { addContainer, useContainer } from "../store";
 // import { vs, fs } from '../render/shaders/glow';
 
 export interface ReceiverSaveObject {
@@ -29,8 +31,8 @@ export default class Receiver extends Container {
   selectedMaterial: THREE.MeshMatcapMaterial;
   normalMaterial: THREE.MeshMatcapMaterial;
   fdtdSamples: number[];
-  constructor(name: string, props?: ReceiverProps) {
-    super(name);
+  constructor(name?: string, props?: ReceiverProps) {
+    super(name||"new receiver");
     this.kind = "receiver";
     this.fdtdSamples = [] as number[];
 
@@ -163,3 +165,14 @@ export default class Receiver extends Container {
     };
   }
 }
+
+
+// this allows for nice type checking with 'on' and 'emit' from messenger
+declare global {
+  interface EventTypes {
+    ADD_RECEIVER: Receiver | undefined;
+  }
+}
+
+on("ADD_RECEIVER", addContainer(Receiver))
+

@@ -23,9 +23,9 @@ import defaults from "../default-storage";
 import Axes from "./env/axes";
 import Lights from "./env/lights";
 import Room from "../objects/room";
-import Messenger from "../messenger";
+import Messenger, { messenger } from "../messenger";
 
-import { History, Directions } from "../history";
+import { addMoment, Directions } from "../history";
 
 import PickHelper from "./pick-helper";
 
@@ -48,6 +48,8 @@ import { Processes } from "../constants/processes";
 
 import { Markup } from "./Markup";
 import Model from "../objects/model";
+
+
 
 const colored_number_html = (num: number) =>
   /*html*/ `<span style="color: ${num < 0 ? "#E68380" : "#A2C982"};">${num.toFixed(3)}</span>`;
@@ -107,11 +109,7 @@ export interface ModifierKeyState {
   Meta: number;
 }
 
-export interface RendererParams {
-  elt?: HTMLCanvasElement;
-  messenger: Messenger;
-  history: History;
-}
+
 
 export interface Overlays {
   transform: TransformOverlay;
@@ -168,8 +166,7 @@ export default class Renderer {
   textures!: KeyValuePair<THREE.Texture>;
   smoothingCameraCallback!: any;
   smoothingCamera!: boolean;
-  messenger: Messenger;
-  history!: History;
+
   pickHelper!: PickHelper;
   cursor!: Cursor;
   composer!: EffectComposer;
@@ -194,13 +191,11 @@ export default class Renderer {
 
   currentProcess!: Processes;
 
-  constructor(params: RendererParams) {
+  constructor() {
     ["init", "render", "smoothCameraTo", "setOrtho", "storeCameraState", "onOrbitControlsChange"].forEach((method) => {
       this[method] = this[method].bind(this);
     });
 
-    this.messenger = params.messenger;
-    this.history = params.history;
     this.shouldAnimate = false;
     this.currentProcess = Processes.NONE;
   }
@@ -345,15 +340,15 @@ export default class Renderer {
           undoSaves.set(objects[i].uuid, Object.assign({}, objects[i].userData.lastSave));
           redoSaves.set(objects[i].uuid, Object.assign({}, objects[i].save()));
         }
-        this.history.addMoment({
+        addMoment({
           category: "OBJECT_TRANSFORM",
           objectId: e.target.object.uuid,
           recallFunction: (direction: keyof Directions) => {
-            if (direction === this.history.DIRECTIONS.UNDO) {
+            if (direction === "UNDO") {
               for (let i = 0; i < objects.length; i++) {
                 objects[i].restore(undoSaves.get(objects[i].uuid));
               }
-            } else if (direction === this.history.DIRECTIONS.REDO) {
+            } else if (direction === "REDO") {
               for (let i = 0; i < objects.length; i++) {
                 objects[i].restore(redoSaves.get(objects[i].uuid));
               }
@@ -411,24 +406,24 @@ export default class Renderer {
       this.lights.setHelpersVisible(val);
     };
 
-    this.messenger.addMessageHandler("SET_RENDERER_SHOULD_ANIMATE", (acc, ...args) => {
+    messenger.addMessageHandler("SET_RENDERER_SHOULD_ANIMATE", (acc, ...args) => {
       this.shouldAnimate = args[0];
     });
 
-    this.messenger.addMessageHandler("RENDERER_SHOULD_CHANGE_BACKGROUND", (acc, ...args) => {
+    messenger.addMessageHandler("RENDERER_SHOULD_CHANGE_BACKGROUND", (acc, ...args) => {
       this.background = args[0];
       this.needsToRender = true;
     });
-    this.messenger.addMessageHandler("RENDERER_SHOULD_CHANGE_FOG_COLOR", (acc, ...args) => {
+    messenger.addMessageHandler("RENDERER_SHOULD_CHANGE_FOG_COLOR", (acc, ...args) => {
       this.fogColor = args[0];
       this.needsToRender = true;
     });
-    this.messenger.addMessageHandler("TOGGLE_CAMERA_ORTHO", (acc, ...args) => {
+    messenger.addMessageHandler("TOGGLE_CAMERA_ORTHO", (acc, ...args) => {
       this.setOrtho(this.camera instanceof THREE.PerspectiveCamera);
       this.needsToRender = true;
       this.storeCameraState();
     });
-    this.messenger.addMessageHandler("SHOULD_REMOVE_CONTAINER", (acc, ...args) => {
+    messenger.addMessageHandler("SHOULD_REMOVE_CONTAINER", (acc, ...args) => {
       const id = args[0];
       const object = this.scene.getObjectByProperty("uuid", id);
       if (object) {
@@ -439,8 +434,8 @@ export default class Renderer {
       this.needsToRender = true;
     });
 
-    this.messenger.addMessageHandler("FOCUS_ON_SELECTED_OBJECTS", (acc, ...args) => {
-      const selectedObjects = this.messenger.postMessage("GET_SELECTED_OBJECTS")[0];
+    messenger.addMessageHandler("FOCUS_ON_SELECTED_OBJECTS", (acc, ...args) => {
+      const selectedObjects = messenger.postMessage("GET_SELECTED_OBJECTS")[0];
       if (selectedObjects && selectedObjects.length > 0) {
         const easingFunction = EasingFunctions.linear;
         const position = this.camera.position;
@@ -463,7 +458,7 @@ export default class Renderer {
       this.needsToRender = true;
     });
 
-    this.messenger.addMessageHandler("FOCUS_ON_CURSOR", (acc, ...args) => {
+    messenger.addMessageHandler("FOCUS_ON_CURSOR", (acc, ...args) => {
       const easingFunction = EasingFunctions.linear;
       const position = this.camera.position;
       const target = this.cursor.position;
@@ -475,7 +470,7 @@ export default class Renderer {
       this.needsToRender = true;
     });
 
-    this.messenger.addMessageHandler("LOOK_ALONG_AXIS", (acc, ...args) => {
+    messenger.addMessageHandler("LOOK_ALONG_AXIS", (acc, ...args) => {
       const axis = args[0];
       if (!OrientationAxisAdds[axis]) {
         console.warn("invalid args");
@@ -501,8 +496,8 @@ export default class Renderer {
       this.needsToRender = true;
     });
 
-    this.messenger.addMessageHandler("MOVE_SELECTED_OBJECTS", () => {
-      const selectedObjects = this.messenger.postMessage("GET_SELECTED_OBJECTS")[0];
+    messenger.addMessageHandler("MOVE_SELECTED_OBJECTS", () => {
+      const selectedObjects = messenger.postMessage("GET_SELECTED_OBJECTS")[0];
       if (selectedObjects && selectedObjects.length > 0) {
         for (let i = 0; i < selectedObjects.length; i++) {
           selectedObjects[i].userData.lastSave = selectedObjects[i].save();
@@ -520,18 +515,18 @@ export default class Renderer {
       this.needsToRender = true;
     });
 
-    this.messenger.addMessageHandler("PHASE_OUT", () => {
+    messenger.addMessageHandler("PHASE_OUT", () => {
       if (this.isPerformingOperation) {
-        this.messenger.postMessage("STOP_OPERATIONS");
+        messenger.postMessage("STOP_OPERATIONS");
         hotkeys.setScope("editor");
       } else {
-        this.messenger.postMessage("DESELECT_ALL_OBJECTS");
+        messenger.postMessage("DESELECT_ALL_OBJECTS");
         hotkeys.setScope("normal");
       }
       this.needsToRender = true;
     });
 
-    this.messenger.addMessageHandler("STOP_OPERATIONS", () => {
+    messenger.addMessageHandler("STOP_OPERATIONS", () => {
       //@ts-ignore
       this.interactables.remove(this.transformControls);
       this.transformControls.detach();
@@ -540,7 +535,7 @@ export default class Renderer {
       this.needsToRender = true;
     });
 
-    this.messenger.addMessageHandler("TOGGLE_RENDERER_STATS_VISIBLE", () => {
+    messenger.addMessageHandler("TOGGLE_RENDERER_STATS_VISIBLE", () => {
       if (this.stats.hidden) {
         this.stats.unhide();
       } else {
@@ -548,7 +543,7 @@ export default class Renderer {
       }
     });
 
-    this.messenger.addMessageHandler("GET_RENDERER_STATS_VISIBLE", () => !this.stats.hidden);
+    messenger.addMessageHandler("GET_RENDERER_STATS_VISIBLE", () => !this.stats.hidden);
 
     // save the state of the camera
     window.addEventListener("mouseup", (e) => {
@@ -659,7 +654,7 @@ export default class Renderer {
         if (e.button == 0) {
           const point = this.pickHelper.getPickedPoint();
           this.cursor.position.set(point[0], point[1], point[2]);
-          console.log()
+          console.log();
           // if (selection.pickedObject.kind === "surface") {
           // 	window['normal'] = new THREE.Vector3().fromArray(selection.pickedObject.geometry.attributes.normals.array.slice(0, 3));
           // 	window['point'] = new THREE.Vector3().fromArray(point);
@@ -667,16 +662,16 @@ export default class Renderer {
 
           if (!this.currentlyMovingObjects) {
             if (e.shiftKey) {
-              this.messenger.postMessage("APPEND_SELECTION", [selection.pickedObject]);
+              messenger.postMessage("APPEND_SELECTION", [selection.pickedObject]);
             } else if (!e.altKey) {
-              this.messenger.postMessage("SET_SELECTION", [selection.pickedObject]);
+              messenger.postMessage("SET_SELECTION", [selection.pickedObject]);
             }
           }
         }
       } else {
         if (e.button == 0) {
           if (!e.shiftKey && !e.altKey) {
-            this.messenger.postMessage("PHASE_OUT");
+            messenger.postMessage("PHASE_OUT");
           }
         }
       }
@@ -737,7 +732,7 @@ export default class Renderer {
 
     this.orientationControl.addClickListener((e) => {
       if (e.target.match(/top|bottom|right|left|front|back/gim)) {
-        this.messenger.postMessage("LOOK_ALONG_AXIS", e.target);
+        messenger.postMessage("LOOK_ALONG_AXIS", e.target);
       }
     });
 
@@ -909,11 +904,10 @@ export default class Renderer {
     this.workspace.getObjectByProperty("uuid", obj.uuid)?.remove();
     this.needsToRender = true;
   }
-addModel(model:Model){
-  this.workspaceCursor.add(model);
-  this.needsToRender = true;
-
-}
+  addModel(model: Model) {
+    this.workspaceCursor.add(model);
+    this.needsToRender = true;
+  }
   addRoom(room: Room) {
     this.workspaceCursor.add(room);
     // const near =
@@ -1056,7 +1050,7 @@ addModel(model:Model){
     });
     origin.visible = false;
 
-    this.messenger.postMessage("ADD_CONSTRUCTION", origin);
+    messenger.postMessage("ADD_CONSTRUCTION", origin);
     this.constructions.add(origin);
 
     const xAxis = new ConstructionAxis("X-Axis", {
@@ -1078,9 +1072,9 @@ addModel(model:Model){
     });
     zAxis.visible = false;
 
-    this.messenger.postMessage("ADD_CONSTRUCTION", xAxis);
-    this.messenger.postMessage("ADD_CONSTRUCTION", yAxis);
-    this.messenger.postMessage("ADD_CONSTRUCTION", zAxis);
+    messenger.postMessage("ADD_CONSTRUCTION", xAxis);
+    messenger.postMessage("ADD_CONSTRUCTION", yAxis);
+    messenger.postMessage("ADD_CONSTRUCTION", zAxis);
     this.constructions.add(xAxis, yAxis, zAxis);
 
     const xyPlane = new ConstructionPlane("XY-Plane", {
@@ -1104,9 +1098,9 @@ addModel(model:Model){
       height: 2
     });
     xzPlane.visible = false;
-    this.messenger.postMessage("ADD_CONSTRUCTION", xyPlane);
-    this.messenger.postMessage("ADD_CONSTRUCTION", zyPlane);
-    this.messenger.postMessage("ADD_CONSTRUCTION", xzPlane);
+    messenger.postMessage("ADD_CONSTRUCTION", xyPlane);
+    messenger.postMessage("ADD_CONSTRUCTION", zyPlane);
+    messenger.postMessage("ADD_CONSTRUCTION", xzPlane);
     this.constructions.add(xyPlane, zyPlane, xzPlane);
   }
 
@@ -1142,7 +1136,7 @@ addModel(model:Model){
 
       this.orientationControl.shouldRender = true;
 
-      this.messenger.postMessage("RENDERER_UPDATED");
+      messenger.postMessage("RENDERER_UPDATED");
       this.needsToRender = false;
     }
     if (this.orientationControl.shouldRender) {
@@ -1255,7 +1249,7 @@ addModel(model:Model){
 
   set isOrtho(ortho: boolean) {
     if (ortho != this.isOrtho) {
-      this.messenger.postMessage("TOGGLE_CAMERA_ORTHO");
+      messenger.postMessage("TOGGLE_CAMERA_ORTHO");
     }
   }
 
@@ -1292,6 +1286,8 @@ addModel(model:Model){
     return this.clientWidth / this.clientHeight;
   }
   private get mode() {
-    return this.messenger.postMessage("GET_EDITOR_MODE")[0];
+    return messenger.postMessage("GET_EDITOR_MODE")[0];
   }
 }
+
+export const renderer = new Renderer();

@@ -9,13 +9,12 @@ import PropertyRowLabel from "../property-row/property-row-label/PropertyRowLabe
 import PropertyRowButton from "../property-row/property-row-button/PropertyRowButton";
 import PropertyRowCheckbox from "../property-row/property-row-checkbox/PropertyRowCheckbox";
 import PropertyRowFolder from "../property-row/property-row-folder/PropertyRowFolder";
+import { postMessage } from "../../../messenger";
 
-export interface RendererTabProps {
-  messenger: Messenger;
-}
+export interface RendererTabProps {}
 
 export default function RendererTab(props: RendererTabProps) {
-  const renderer = props.messenger.postMessage("GET_RENDERER")[0] as Renderer;
+  const renderer = postMessage("GET_RENDERER")[0] as Renderer;
   const [fov, setFov] = useState(renderer.fov as number);
   const [zoom, setZoom] = useState(renderer.zoom as number);
   const [near, setNear] = useState(renderer.near as number);
@@ -110,7 +109,7 @@ export default function RendererTab(props: RendererTabProps) {
           <PropertyRowButton
             onClick={(e) => {
               setIsOrtho(!isOrtho);
-              props.messenger.postMessage("TOGGLE_CAMERA_ORTHO");
+              postMessage("TOGGLE_CAMERA_ORTHO");
             }}
             label={isOrtho ? "Orthographic" : "Perspective"}
           />

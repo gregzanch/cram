@@ -4,9 +4,11 @@ import Surface from "../../objects/surface";
 import { third_octave } from '../acoustics';
 import { RT_CONSTANTS } from '../../constants/rt-constants';
 import { UNITS } from "../../enums/units";
-import Messenger from "../../messenger";
+import Messenger, { on } from "../../messenger";
 import { transpose } from '../../common/helpers'
 import { Matrix4, Triangle, Vector3 } from "three";
+import { useSolver } from "../../store";
+
 
 export interface RT60Props extends SolverParams{
   uuid?: string;
@@ -115,3 +117,19 @@ export class RT60 extends Solver{
 }
 
 export default RT60;
+
+
+
+// this allows for nice type checking with 'on' and 'emit' from messenger
+declare global {
+  interface EventTypes {
+    ADD_RT60: RT60 | undefined;
+  }
+}
+
+// add event listener 
+on("ADD_RT60", (rt60) => {
+  rt60 = rt60 || new RT60({ name: "new rt60" });
+  useSolver.setState((state) => ({ ...state, [rt60!.uuid]: rt60 }), true);
+});
+

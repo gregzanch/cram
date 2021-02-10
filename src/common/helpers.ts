@@ -1,15 +1,12 @@
 export function intersection<T>(set1: Set<T>, set2: Set<T>): Set<T> {
-  // intersect can be simulated via
   return new Set([...set1].filter((x) => set2.has(x)));
 }
 
 export function difference<T>(set1: Set<T>, set2: Set<T>): Set<T> {
-  // difference can be simulated via
   return new Set([...set1].filter((x) => !set2.has(x)));
 }
 
 export function union<T>(set1: Set<T>, set2: Set<T>): Set<T> {
-  // union can be simulated via
   return new Set([...set1, ...set2]);
 }
 
@@ -372,3 +369,27 @@ export const fromEntries = <T extends [PropertyKey, any]>(entries: Iterable<T>):
  * @param item the item that will be added if it is unique
  */
 export const addIfUnique = <T>(set: Set<T>) => (item: T) => !set.has(item) && set.add(item);
+
+
+export type Values<T> = T extends unknown[] ? T[number] : T[keyof T];
+
+export const pickProps = <T extends Object, K extends keyof T>(props: K[], obj: T) => {
+  return props.reduce(
+    (acc, prop) => ({ ...acc, [prop]: obj[prop] }),
+    {} as {
+      [key in Values<typeof props>]: T[key];
+    }
+  );
+};
+
+export const omit = <T extends Object, K extends keyof T>(props: K[], obj: T) => {
+  const keys =  Object.keys(obj) as K[];
+  return keys.filter(key => !props.includes(key)).reduce(
+    (acc, prop) => ({ ...acc, [prop]: obj[prop] }),
+    {} as {
+      [key in Values<typeof props>]: T[key];
+    }
+  );
+};
+
+

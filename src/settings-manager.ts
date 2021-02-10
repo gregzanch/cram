@@ -9,19 +9,16 @@ export interface StoredSetting {
 }
 
 class SettingsManager {
-  messenger: Messenger;
   DBOpenRequest: IDBOpenDBRequest;
   category: string;
   db!: IDBDatabase;
   defaults: KeyValuePair<Setting<number | string | boolean>>;
   constructor(
-    messenger: Messenger,
     category: string,
     defaults: KeyValuePair<Setting<number | string | boolean>>,
     onOpen: (settingsManager: SettingsManager, ...args) => void,
     onError: (...args) => void
   ) {
-    this.messenger = messenger;
     this.category = category;
     this.defaults = defaults;
     this.DBOpenRequest = this.indexedDB.open(category);

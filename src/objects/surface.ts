@@ -13,6 +13,16 @@ import { numbersEqualWithinTolerence, equalWithinTolerenceFactory } from "../com
 
 const v3eq = equalWithinTolerenceFactory(["x", "y", "z"])(csg.math.constants.EPS as number);
 
+/** Vector3 as an array (i.e. [x,y,z]) */
+export type Vector3A = [number, number, number];
+
+/** Triangle as an array (i.e. [p1,p2,p3]) */
+export type TriangleA= [Vector3A, Vector3A, Vector3A];
+
+/** Triangle Array */
+export type Triangles = TriangleA[];
+
+
 const defaults = {
   materials: {
     selected: new THREE.MeshLambertMaterial({
@@ -144,7 +154,7 @@ class Surface extends Container {
 
   center!: THREE.Vector3;
 
-  triangles!: number[][][];
+  triangles!: Triangles;
   fillSurface!: boolean;
   vertexNormals!: THREE.VertexNormalsHelper;
   _triangles!: THREE.Triangle[];
@@ -210,12 +220,12 @@ class Surface extends Container {
     this.isPlanar = this._triangles
       .map((x) => x.getNormal(new THREE.Vector3()))
       .reduce((a, b, i, arr) => a && v3eq(b, arr[0]), true);
-    
+
     if (!this.isPlanar) {
       console.error(new Error(`Surface '${this.name}' is not planar`));
       debugger;
     }
-    
+
     this.normal = new THREE.Vector3();
     this._triangles[0].getNormal(this.normal);
 

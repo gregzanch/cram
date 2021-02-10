@@ -6,6 +6,8 @@ import { MATCAP_PORCELAIN_WHITE, MATCAP_UNDER_SHADOW } from "./asset-store";
 import { EditorModes } from "../constants/editor-modes";
 import { P2I, Lp2P } from "../compute/acoustics";
 import FileSaver from "file-saver";
+import { on } from "../messenger";
+import { addContainer, useContainer } from "../store";
 
 const defaults = {
   color: 0xa2c982
@@ -65,8 +67,8 @@ export default class Source extends Container {
   _initialIntensity: number;
   fdtdSamples: number[];
 
-  constructor(name: string, props?: SourceProps) {
-    super(name);
+  constructor(name?: string, props?: SourceProps) {
+    super(name||"new source");
     this.kind = "source";
     this.signalSource = SignalSource.OSCILLATOR;
     this.previousX = this.position.x;
@@ -331,3 +333,12 @@ export default class Source extends Container {
     };
   }
 }
+
+// this allows for nice type checking with 'on' and 'emit' from messenger
+declare global {
+  interface EventTypes {
+    ADD_SOURCE: Source | undefined;
+  }
+}
+
+on("ADD_SOURCE", addContainer(Source));

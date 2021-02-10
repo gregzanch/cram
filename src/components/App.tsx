@@ -8,7 +8,7 @@ import ObjectView from "./object-view/ObjectView";
 import Container from "../objects/container";
 import PanelContainer from "./panel-container/PanelContainer";
 import ObjectProperties from "./ObjectProperties/index";
-import Messenger from "../messenger";
+import Messenger, { messenger } from "../messenger";
 import { KeyValuePair } from "../common/key-value-pair";
 import SettingsDrawer from "./settings-drawer/SettingsDrawer";
 import { Report } from "../common/browser-report";
@@ -38,6 +38,10 @@ import { NavBarComponent } from "./NavBarComponent";
 
 import TreeViewComponent from "../components/TreeViewComponent";
 
+
+import create from 'zustand';
+
+
 const AppToaster = Toaster.create({
   className: "app-toaster",
   position: Position.TOP,
@@ -47,7 +51,6 @@ const AppToaster = Toaster.create({
 FocusStyleManager.onlyShowFocusOnTabs();
 
 export interface AppProps {
-  messenger: Messenger;
   containers: KeyValuePair<Container>;
   settings: ApplicationSettings;
   browser: Report;
@@ -57,7 +60,7 @@ export interface AppProps {
   leftPanelInitialSize: number;
 }
 
-interface AppState {
+type AppState = {
   // rightPanelTopSize: number;
   // bottomPanelSize: number;
   // rightPanelSize: number;
@@ -102,6 +105,8 @@ interface AppState {
   constructions: KeyValuePair<Container>;
 }
 
+
+
 type treeitem = {
   id: string | number;
   name: string;
@@ -128,8 +133,8 @@ export default class App extends React.Component<AppProps, AppState> {
       canDuplicate: false,
       rendererStatsVisible: true,
       saveDialogVisible: false,
-      projectName: this.props.messenger.postMessage("GET_PROJECT_NAME")[0],
-      constructions: this.props.messenger.postMessage("GET_CONSTRUCTIONS")[0],
+      projectName: messenger.postMessage("GET_PROJECT_NAME")[0],
+      constructions: messenger.postMessage("GET_CONSTRUCTIONS")[0],
       openWarningVisible: false,
       terminalOpen: false,
       newWarningVisible: false,
@@ -186,7 +191,7 @@ export default class App extends React.Component<AppProps, AppState> {
     this.saveLayout = this.saveLayout.bind(this);
   }
   addMessageHandler(message: string, handler: (acc, ...args) => KeyValuePair<any>, cb?: () => void) {
-    this.props.messenger.addMessageHandler(message, (acc, ...args) => {
+    messenger.addMessageHandler(message, (acc, ...args) => {
       const nextState = handler(acc, ...args);
       this.setState(
         {
@@ -198,7 +203,7 @@ export default class App extends React.Component<AppProps, AppState> {
     });
   }
   setupMessageHandlers() {
-    this.props.messenger.addMessageHandler("CAN_DUPLICATE", () => {
+    messenger.addMessageHandler("CAN_DUPLICATE", () => {
       return this.state.canDuplicate;
     });
 
@@ -302,7 +307,7 @@ export default class App extends React.Component<AppProps, AppState> {
     // this.addMessageHandler("ASSIGN_MATERIAL",
     //   (acc, material, id) => {
     //     if (id) {
-    //       const surface = this.props.messenger.postMessage("FETCH_SURFACE", id)[0] as Surface;
+    //       const surface = messenger.postMessage("FETCH_SURFACE", id)[0] as Surface;
     //       surface.acousticMaterial = material;
     //     }
     //     else if ((this.state.selectedObject) && (this.state.selectedObject instanceof Surface)) {
@@ -355,7 +360,7 @@ export default class App extends React.Component<AppProps, AppState> {
       }
     });
     this.addMessageHandler("SHOULD_ADD_SOURCE", () => {
-      const containers = this.props.messenger.postMessage("GET_CONTAINERS")[0];
+      const containers = messenger.postMessage("GET_CONTAINERS")[0];
       // containers[acc[0].uuid] = acc[0];
       return {
         containers,
@@ -363,7 +368,7 @@ export default class App extends React.Component<AppProps, AppState> {
       };
     });
     this.addMessageHandler("SHOULD_ADD_RECEIVER", () => {
-      const containers = this.props.messenger.postMessage("GET_CONTAINERS")[0];
+      const containers = messenger.postMessage("GET_CONTAINERS")[0];
       // containers[acc[0].uuid] = acc[0];
       return {
         containers,
@@ -463,19 +468,19 @@ export default class App extends React.Component<AppProps, AppState> {
 
     this.addMessageHandler("ADD_CONSTRUCTION", () => {
       return {
-        constructions: this.props.messenger.postMessage("GET_CONSTRUCTIONS")[0]
+        constructions: messenger.postMessage("GET_CONSTRUCTIONS")[0]
       };
     });
 
     this.addMessageHandler("REMOVE_CONSTRUCTION", () => {
       return {
-        constructions: this.props.messenger.postMessage("GET_CONSTRUCTIONS")[0]
+        constructions: messenger.postMessage("GET_CONSTRUCTIONS")[0]
       };
     });
   }
 
   componentDidMount() {
-    this.canvas.current && this.props.messenger.postMessage("APP_MOUNTED", this.canvas.current);
+    this.canvas.current && messenger.postMessage("APP_MOUNTED", this.canvas.current);
   }
 
   showImportDialog() {
@@ -501,15 +506,15 @@ export default class App extends React.Component<AppProps, AppState> {
     console.log(e.currentTarget);
     if (object instanceof Container && object["kind"] !== "room") {
       if (e.shiftKey) {
-        this.props.messenger.postMessage("APPEND_SELECTION", [object]);
+        messenger.postMessage("APPEND_SELECTION", [object]);
       } else {
-        this.props.messenger.postMessage("SET_SELECTION", [object]);
+        messenger.postMessage("SET_SELECTION", [object]);
       }
     }
   }
   handleObjectViewDelete(object: Container) {
     if (object instanceof Container) {
-      this.props.messenger.postMessage("SHOULD_REMOVE_CONTAINER", object.uuid);
+      messenger.postMessage("SHOULD_REMOVE_CONTAINER", object.uuid);
     }
   }
   handleObjectPropertyButtonClick() {}
@@ -565,7 +570,7 @@ export default class App extends React.Component<AppProps, AppState> {
         lastUpdateReason: "handleSettingChange"
       },
       () => {
-        this.props.messenger.postMessage("SETTING_CHANGE", {
+        messenger.postMessage("SETTING_CHANGE", {
           setting: id,
           value: settings[id].value
         });
@@ -621,7 +626,7 @@ export default class App extends React.Component<AppProps, AppState> {
           solvers={this.state.solvers}
           onClick={this.handleObjectViewClick}
           onDelete={this.handleObjectViewDelete}
-          messenger={this.props.messenger}
+          messenger={messenger}
         />
       </PanelContainer>
     );
@@ -644,7 +649,7 @@ export default class App extends React.Component<AppProps, AppState> {
           if (Object.keys(this.state.selectedObject).length > 0) {
             return (
               <ObjectProperties
-                messenger={this.props.messenger}
+                messenger={messenger}
                 object={this.state.selectedObject}
                 onPropertyChange={this.handleObjectPropertyChange}
                 onPropertyValueChangeAsNumber={(id: string, prop: string, value: number) =>
@@ -661,7 +666,7 @@ export default class App extends React.Component<AppProps, AppState> {
 
     const ParameterConfigPanel = (
       <PanelContainer className="panel full parameter-config-panel">
-        <ParameterConfig messenger={this.props.messenger} solvers={this.state.solvers} key={"parameter-config-panel"} />
+        <ParameterConfig messenger={messenger} solvers={this.state.solvers} key={"parameter-config-panel"} />
       </PanelContainer>
     );
 
@@ -683,7 +688,7 @@ export default class App extends React.Component<AppProps, AppState> {
           confirmButtonText="Yes, start over"
           intent={Intent.DANGER}
           onConfirm={() => {
-            this.props.messenger.postMessage("NEW");
+            messenger.postMessage("NEW");
             this.setState({
               newWarningVisible: false
             });
@@ -703,7 +708,7 @@ export default class App extends React.Component<AppProps, AppState> {
               {
                 openWarningVisible: false
               },
-              () => this.props.messenger.postMessage("OPEN")
+              () => messenger.postMessage("OPEN")
             );
           }}
           onSave={() => {
@@ -712,7 +717,7 @@ export default class App extends React.Component<AppProps, AppState> {
                 openWarningVisible: false
               },
               () => {
-                this.props.messenger.postMessage("SHOW_SAVE_DIALOG_THEN_OPEN");
+                messenger.postMessage("SHOW_SAVE_DIALOG_THEN_OPEN");
               }
             );
           }}
@@ -723,9 +728,9 @@ export default class App extends React.Component<AppProps, AppState> {
           }}
         />
         <SaveDialog
-          messenger={this.props.messenger}
+          messenger={messenger}
           isOpen={this.state.saveDialogVisible}
-          filename={this.props.messenger.postMessage("GET_PROJECT_NAME")[0]}
+          filename={messenger.postMessage("GET_PROJECT_NAME")[0]}
           onCancel={() => this.setState({ saveDialogVisible: false })}
           onSave={(e) => {
             let openAfterSaveCallback = () => {
@@ -733,7 +738,7 @@ export default class App extends React.Component<AppProps, AppState> {
                 {
                   openAfterSave: false
                 },
-                () => this.props.messenger.postMessage("OPEN")
+                () => messenger.postMessage("OPEN")
               );
             };
             openAfterSaveCallback = openAfterSaveCallback.bind(this);
@@ -744,7 +749,7 @@ export default class App extends React.Component<AppProps, AppState> {
                 saveDialogVisible: false
               },
               () => {
-                this.props.messenger.postMessage("SAVE", {
+                messenger.postMessage("SAVE", {
                   filename: this.state.projectName,
                   callback
                 });
@@ -758,7 +763,7 @@ export default class App extends React.Component<AppProps, AppState> {
           isOpen={this.state.settingsDrawerVisible}
           onSubmit={() => {
             this.setState({
-              settings: this.props.messenger.postMessage("SUBMIT_ALL_SETTINGS")[0]
+              settings: messenger.postMessage("SUBMIT_ALL_SETTINGS")[0]
             });
           }}
         >
@@ -773,7 +778,7 @@ export default class App extends React.Component<AppProps, AppState> {
             {Object.keys(this.state.settings).map((key) => {
               return (
                 <TabPanel key={"settings-tabpanel-" + key}>
-                  <SettingsPanel messenger={this.props.messenger} category={key} />
+                  <SettingsPanel messenger={messenger} category={key} />
                 </TabPanel>
               );
             })}
@@ -794,7 +799,7 @@ export default class App extends React.Component<AppProps, AppState> {
           isOpen={this.state.materialDrawerOpen}
         >
           <MaterialDrawer
-            messenger={this.props.messenger}
+            messenger={messenger}
             object={
               this.state.selectedObject && this.state.selectedObject instanceof Surface
                 ? this.state.selectedObject
@@ -805,7 +810,7 @@ export default class App extends React.Component<AppProps, AppState> {
 
         <ImportDialog
           onImport={(file) => {
-            this.props.messenger.postMessage("IMPORT_FILE", file);
+            messenger.postMessage("IMPORT_FILE", file);
             this.handleImportDialogClose();
           }}
           isOpen={this.state.importDialogVisible}
@@ -817,7 +822,7 @@ export default class App extends React.Component<AppProps, AppState> {
           data={{ themeName: "dark" }}
           onClose={this.handleImportDialogClose}
           onDrop={(file) => {
-            this.props.messenger.postMessage("IMPORT_FILE", file);
+            messenger.postMessage("IMPORT_FILE", file);
           }}
         />
                  
@@ -828,10 +833,10 @@ export default class App extends React.Component<AppProps, AppState> {
           primaryIndex={1}
           customClassName="modified-splitter-layout"
           onDragStart={() => {
-            this.props.messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", true);
+            messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", true);
           }}
           onDragEnd={() => {
-            this.props.messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", false);
+            messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", false);
             this.saveLayout();
           }}
           onSecondaryPaneSizeChange={(value: number) => {
@@ -853,10 +858,10 @@ export default class App extends React.Component<AppProps, AppState> {
             secondaryInitialSize={this.props.rightPanelInitialSize}
             primaryIndex={0}
             onDragStart={() => {
-              this.props.messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", true);
+              messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", true);
             }}
             onDragEnd={() => {
-              this.props.messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", false);
+              messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", false);
               this.saveLayout();
             }}
             onSecondaryPaneSizeChange={(value: number) => {
