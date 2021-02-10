@@ -2,6 +2,7 @@ import { BREADCRUMBS_COLLAPSED } from "@blueprintjs/core/lib/esm/common/classes"
 import { ifError } from "assert";
 import { forInRight, fromPairs } from "lodash";
 import {Octave, ThirdOctave} from "../compute/acoustics/bands";
+import {directivityData} from "../objects/source";
 
 export class CLFParser{
 
@@ -339,7 +340,6 @@ export class CLFParser{
 
             default: 
                 //no symmetry or type not recognized. return unmodified directivity array
-                console.log("none")
                 resultDir = baseDirData.directivity; 
                 break;
         }
@@ -391,7 +391,7 @@ interface parsePropertyResult{
     nextIndex: number;
 }
 
-interface CLFResult {
+export interface CLFResult {
     clfversion: number; 
 
     speakerName: string;
@@ -417,9 +417,4 @@ interface CLFResult {
     axialspectrum: number[];
     
     directivity: directivityData[]; 
-}
-
-interface directivityData {
-    frequency: number;
-    directivity: number[][]; 
 }

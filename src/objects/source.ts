@@ -6,8 +6,14 @@ import { MATCAP_PORCELAIN_WHITE, MATCAP_UNDER_SHADOW } from "./asset-store";
 import { EditorModes } from "../constants/editor-modes";
 import { P2I, Lp2P } from "../compute/acoustics";
 import FileSaver from "file-saver";
+<<<<<<< HEAD
 import { on } from "../messenger";
 import { addContainer, useContainer } from "../store";
+import { CLFResult } from "../import-handlers/CLFParser";
+=======
+import {CLFResult} from "../import-handlers/CLFParser";
+import {dirinterp, dirDataPoint} from "../common/dir-interpolation";
+>>>>>>> 5cdfecccefb587e5ee5541f811960da85a159574
 
 const defaults = {
   color: 0xa2c982
@@ -44,8 +50,12 @@ export enum SignalSource {
 
 export default class Source extends Container {
   f: (t: number) => number;
+  
   theta: number;
   phi: number;
+
+  //clfdata: CLFResult; 
+  
   numRays: number;
   mesh: THREE.Mesh;
   selectedMaterial: THREE.MeshMatcapMaterial;
@@ -342,3 +352,88 @@ declare global {
 }
 
 on("ADD_SOURCE", addContainer(Source));
+
+
+/**
+ * Directivity Handler
+ */
+class DirectivityHandler {
+  private dirDataList: directivityData[];
+  private frequencies: number[]; 
+  private sourceDirType: number; 
+  private phi: number[]; 
+  private theta: number[]; 
+
+  constructor(sourceType: number, importData?: CLFResult){ // if we add more input types, make corresponding result types acceptable as importData type
+
+    this.sourceDirType = sourceType; 
+
+    switch (sourceType){
+      case 0: // omni source
+        this.frequencies = [0]; // any frequency 
+        this.dirDataList = []; 
+        this.phi = []; 
+        this.theta = []; 
+
+        break; 
+      
+      case 1: // user defined CLF
+      
+        if (importData){
+          this.frequencies = importData.frequencies; 
+          this.dirDataList = importData.directivity; 
+          this.phi = importData.phi;
+          this.theta = importData.theta; 
+        }else{
+          console.error("CLF Import Type Specified but no CLFResult data was provided")
+          this.frequencies = [0]; // any frequency 
+          this.dirDataList = []; 
+          this.phi = []; 
+          this.theta = []; 
+        }
+
+        break;
+      
+      default: // other (behave as omni)
+        this.frequencies = [0]; 
+        this.dirDataList = []; 
+        this.phi = []; 
+        this.theta = []; 
+        
+        console.error("Unknown Source Directivity Type");
+        break; 
+    }
+
+  } 
+
+  getDirectivityAtPosition(freqency:number,phi:number,theta:number){
+    // returns relative dBSPL of source at a position w.r.t on-axis value 
+
+    switch(this.sourceDirType){
+
+      case 0: // omni
+        return 0; 
+
+      case 1: // CLF defined
+
+
+      default: // behave as omni
+        return 0;
+    
+    }
+
+  }
+
+  
+
+}
+
+enum sourceDirTypes {
+  Omni = 0,
+  UserDefinedCLF
+}
+
+export interface directivityData{
+  frequency: number;
+  directivity: number[][]; 
+}
