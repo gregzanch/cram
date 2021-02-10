@@ -6,14 +6,10 @@ import { MATCAP_PORCELAIN_WHITE, MATCAP_UNDER_SHADOW } from "./asset-store";
 import { EditorModes } from "../constants/editor-modes";
 import { P2I, Lp2P } from "../compute/acoustics";
 import FileSaver from "file-saver";
-<<<<<<< HEAD
 import { on } from "../messenger";
 import { addContainer, useContainer } from "../store";
-import { CLFResult } from "../import-handlers/CLFParser";
-=======
 import {CLFResult} from "../import-handlers/CLFParser";
 import {dirinterp, dirDataPoint} from "../common/dir-interpolation";
->>>>>>> 5cdfecccefb587e5ee5541f811960da85a159574
 
 const defaults = {
   color: 0xa2c982
