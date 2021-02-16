@@ -23,7 +23,7 @@ import Sketch from "./objects/sketch";
 // compute/solvers
 import Solver from "./compute/solver";
 import RayTracer from "./compute/raytracer";
-import {ImageSource} from "./compute/raytracer/image-source/index"
+import {ImageSourceSolver} from "./compute/raytracer/image-source/index"
 import RT60 from "./compute/rt";
 import { FDTD_2D, FDTD_2D_Defaults } from "./compute/2d-fdtd";
 import * as ac from "./compute/acoustics";
@@ -365,7 +365,7 @@ cram.state.messenger.addMessageHandler("SHOULD_ADD_RAYTRACER", (acc, ...args) =>
 });
 
 cram.state.messenger.addMessageHandler("SHOULD_ADD_IMAGE_SOURCE", () => {
-  const imagesource = new ImageSource({
+  const imagesource = new ImageSourceSolver({
     renderer: cram.state.renderer, 
     messenger: cram.state.messenger,
     containers: cram.state.containers
