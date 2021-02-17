@@ -33,54 +33,100 @@ import { EqualStencilFunc, Vector3 } from "three";
 import Surface from "../../../objects/surface";
 import { LensTwoTone, ThreeSixtyOutlined } from "@material-ui/icons";
 import { cloneElement } from "react";
+import { SSL_OP_SSLEAY_080_CLIENT_DH_BUG } from "constants";
 
-export interface ImageSourceParams {
-    renderer;
-    messenger: Messenger;
-    name?: string;
-    roomID?: string;
-    sourceIDs?: string[];
-    surfaceIDs?: string[];
-    containers?: KVP<Container>;
-    receiverIDs?: string[];
-    updateInterval?: number;
-    passes?: number;
-    pointSize?: number;
-    reflectionOrder?: number;
-    isRunning?: boolean;
-    runningWithoutReceivers?: boolean;
-    raysVisible?: boolean;
-    pointsVisible?: boolean;
-    invertedDrawStyle?: boolean;
-    uuid?: string;
-  }
+interface ImageSourceParams {
+  baseSource: Source,
+  position: Vector3,
+  room: Room,  
+  reflector: Surface | null,
+  parent: ImageSource | null,  
+  order: number,
+}
 
 class ImageSource{
 
-  public parentSource: Source; 
+  public baseSource: Source; 
   
   public children: ImageSource[]; 
-  public parentUUID: string | null;  
+  public parent: ImageSource | null;  
 
   public reflector: Surface | null; 
   public order: number; 
   public position: Vector3; 
 
+  public room: Room;
+
   public uuid: string; 
 
-  constructor(parentSource: Source, position: Vector3, reflector: Surface | null, order: number){
-    this.parentSource = parentSource; 
-    this.reflector = reflector; 
-    this.order = order; 
+  constructor(params: ImageSourceParams){
+    this.baseSource = params.baseSource; 
+    this.reflector = params.reflector; 
+    this.order = params.order; 
 
-    this.position = position; 
+    this.position = params.position; 
 
     this.children = []; 
-    this.parentUUID = null;
+    this.parent = params.parent; 
 
+    this.room = params.room; 
     this.uuid = uuid(); 
   }
 
+  markup(){
+    for(let i = 0; i<this.children.length; i++){
+      let pos: Vector3 = this.children[i].position.clone();
+      cram.state.renderer.markup.addPoint([pos.x,pos.y,pos.z], [0,0,0]);
+
+      if (this.children[i].hasChildren){
+        this.children[i].markup(); 
+      }else{
+        
+      }
+    }
+  }
+
+  public getTotalDescendents(): number{
+    let sum = 0; 
+
+    for(let i = 0; i<this.children.length; i++){
+      sum++;
+      if(this.children[i].hasChildren){
+        sum = sum + this.children[i].getTotalDescendents(); 
+      } 
+    }
+    return sum; 
+  }
+
+  get hasChildren() {
+    if (this.children.length > 0){
+      return true; 
+    }else{
+      return false; 
+    }
+  }
+
+}
+
+export interface ImageSourceSolverParams {
+  renderer;
+  messenger: Messenger;
+  name?: string;
+  roomID?: string;
+  sourceIDs?: string[];
+  surfaceIDs?: string[];
+  containers?: KVP<Container>;
+  receiverIDs?: string[];
+  updateInterval?: number;
+  passes?: number;
+  pointSize?: number;
+  reflectionOrder?: number;
+  isRunning?: boolean;
+  runningWithoutReceivers?: boolean;
+  raysVisible?: boolean;
+  pointsVisible?: boolean;
+  invertedDrawStyle?: boolean;
+  uuid?: string;
 }
 
 export class ImageSourceSolver extends Solver {
@@ -95,7 +141,7 @@ export class ImageSourceSolver extends Solver {
 
     imagesources: ImageSource[]; 
 
-    constructor(params: ImageSourceParams){
+    constructor(params: ImageSourceSolverParams){
         super(params);
         this.kind = "image-source";
         this.name = "image source";
@@ -131,96 +177,34 @@ export class ImageSourceSolver extends Solver {
         // get source
         let source: Source = this.messenger.postMessage("FETCH_SOURCE",this.sourceIDs[0])[0];
 
-        // assign image source
-        let is: ImageSource = new ImageSource(source.clone(), source.position.clone(), null, 0);
+        // assign base image source
+        let is_params: ImageSourceParams = {
+          baseSource: source.clone(),
+          position: source.position.clone(), 
+          room: room, 
+          reflector: null,
+          parent: null, 
+          order: 0, 
+        };
 
-        let surfaces: any[] = this.room.surfaces.children;
+        let is: ImageSource = new ImageSource(is_params);
         
-        let maxOrder = 2; 
-        console.log(this.computeImageSources(is,maxOrder));
-        console.log(this.imagesources);
-        this.markupImageSources();
+        let maxOrder = 5; 
+        let n; 
+        let is_2 = computeImageSources(is,maxOrder); 
+        console.log(is_2); 
+        is_2 != undefined && is_2.markup();
+        is_2 != undefined && (n = is_2.getTotalDescendents()); 
 
-    }
+        console.log(n);
 
-    computeImageSources(is: ImageSource, maxOrder: number){
-
-      let surfaces: any[] = this.room.surfaces.children; 
-        
-      // end recursion
-      if(maxOrder==0){
-        return;
-      }
-
-      for(let i=0; i<surfaces.length; i++){
-      
-        // returns true if current image source's previous reflector is either null (direct sound) or not the current reflector. 
-        let reflectorCondition: boolean = (is.reflector == null || is.reflector != surfaces[i]);
-
-        // returns true if reflecting surface is in front of previous surface
-        let inFrontOf: boolean = true; 
-
-        // check if facing each other
-        let facingEachOther: boolean; 
-        if(is.reflector!=null){
-          facingEachOther = surfacesFacingEachother(surfaces[i], is.reflector); 
-        }else{
-          facingEachOther = true;
-        }
-
-        if(reflectorCondition && (inFrontOf && facingEachOther)){
-          
-          let reflectedSource: ImageSource = Object.assign({}, is); 
-          let reflectedPosition: Vector3 = reflectPointAcrossSurface(reflectedSource.position,surfaces[i]);
-
-          reflectedSource.position = reflectedPosition.clone(); 
-          reflectedSource.order = is.order+1; 
-          reflectedSource.reflector = surfaces[i]; 
-
-          this.imagesources.push(reflectedSource);
-
-          if(maxOrder > 0){
-            this.computeImageSources(reflectedSource,maxOrder-1);
-          }
-        }
-      }
-      
-    }
-
-    createImageSourceTree(parentIs: ImageSource, imageSourceList: ImageSource[]){
     }
 
     markupImageSources(){
-      // markup 
       for(let i = 0; i<this.imagesources.length; i++){
         let pos = this.imagesources[i].position.clone(); 
         let color: number[]; 
-        switch(this.imagesources[i].order){
-          case 1:
-            color = [1,0,0];
-            break;
-          case 2:
-            color = [235/255,116/255,52/255];
-            break;
-          case 3: 
-            color = [235/255,204/255,52/255];
-            break;
-          case 4: 
-            color = [112/255,235/255,52/255];
-            break;
-          case 5: 
-            color = [52/255,180/255,235/255];
-            break;
-          case 6: 
-            color = [70/255,52/255,235/255];
-            break;
-          case 7: 
-            color = [195/255,52/255,235/255];
-            break;
-          default:
-            color = [0,0,0];   
-        }
-        cram.state.renderer.markup.addPoint([pos.x,pos.y,pos.z], [color[0],color[1],color[2]]);
+        cram.state.renderer.markup.addPoint([pos.x,pos.y,pos.z], [1,1,1]);
       }
     }
 
@@ -243,6 +227,57 @@ export class ImageSourceSolver extends Solver {
 
 }
 
+function computeImageSources(is: ImageSource, maxOrder: number): ImageSource | undefined {
+
+  let surfaces: any[] = is.room.surfaces.children; 
+    
+  // end recursion
+  if(maxOrder==0){
+    return;
+  }
+
+  for(let i=0; i<surfaces.length; i++){
+  
+    // returns true if current image source's previous reflector is either null (direct sound) or not the current reflector. 
+    let reflectorCondition: boolean = (is.reflector == null || is.reflector != surfaces[i]);
+
+    // returns true if reflecting surface is in front of previous surface
+    let inFrontOf: boolean = true; 
+
+    // check if facing each other
+    let facingEachOther: boolean; 
+    if(is.reflector!=null){
+      facingEachOther = surfacesFacingEachother(surfaces[i], is.reflector); 
+    }else{
+      facingEachOther = true;
+    }
+
+    if(reflectorCondition && (inFrontOf && facingEachOther)){
+
+      let is_reflect_params: ImageSourceParams = {
+        baseSource: is.baseSource,
+        position: reflectPointAcrossSurface(is.position.clone(),surfaces[i]).clone(), 
+        room: is.room, 
+        reflector: surfaces[i],
+        parent: is, 
+        order: is.order+1, 
+      };
+      
+      let reflectedSource: ImageSource = new ImageSource(is_reflect_params); 
+
+      is.children.push(reflectedSource);
+
+      if(maxOrder > 0){
+        computeImageSources(reflectedSource,maxOrder-1);
+      }
+    }
+  }
+
+  return is; 
+  
+}
+
+// verification function
 function isInFrontOf(surface1: Surface, surface2: Surface): boolean{
   // need to write this
   return true; 
@@ -314,21 +349,4 @@ function reflectPointAcrossSurface(point: Vector3, surface: Surface): Vector3{
   mirror.add(v);
 
   return mirror; 
-}
-
-function addChildToImageSource(baseIS: ImageSource, child: ImageSource){
-
-  function addChild(c: ImageSource){
-    if(c.uuid == child.uuid){
-      c.children.push(child);
-      return; 
-    }else if(c.children != null){
-      for(let i = 0; i<c.children.length; i++){
-        addChild(c.children[i]);
-      }
-    }
-  }
-
-  addChild(baseIS);
-
 }
