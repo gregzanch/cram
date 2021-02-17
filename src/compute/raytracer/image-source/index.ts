@@ -73,7 +73,26 @@ class ImageSource{
     this.uuid = uuid(); 
   }
 
-  markup(){
+  public constructPathsForAllDescendents(r: Receiver): ImageSourcePath[]{
+    let paths: ImageSourcePath[] = [];
+
+    for(let i = 0; i<this.children.length; i++){
+      
+      let p = constructImageSourcePath(this.children[i],r); 
+      p?.markup();
+
+      if (p!= null){
+        paths.push(p);
+      }
+
+      if(this.children[i].hasChildren){
+        paths.concat(this.children[i].constructPathsForAllDescendents(r)); 
+      } 
+    }
+    return paths; 
+  }
+
+  public markup(){
     for(let i = 0; i<this.children.length; i++){
       let pos: Vector3 = this.children[i].position.clone();
       cram.state.renderer.markup.addPoint([pos.x,pos.y,pos.z], [0,0,0]);
@@ -81,7 +100,6 @@ class ImageSource{
       if (this.children[i].hasChildren){
         this.children[i].markup(); 
       }else{
-        
       }
     }
   }
@@ -106,6 +124,22 @@ class ImageSource{
     }
   }
 
+}
+
+class ImageSourcePath{
+  public intersections: Vector3[]; 
+  
+  constructor(intersections: Vector3[]){
+    this.intersections = intersections; 
+  }
+
+  markup(){
+    for(let i = 0; i<this.intersections.length-1; i++){
+      let p1: Vector3 = this.intersections[i].clone();
+      let p2: Vector3 =  this.intersections[i+1].clone();
+      cram.state.renderer.markup.addLine([p1.x,p1.y,p1.z],[p2.x,p2.y,p2.z]);
+    }
+  }
 }
 
 export interface ImageSourceSolverParams {
@@ -189,15 +223,20 @@ export class ImageSourceSolver extends Solver {
 
         let is: ImageSource = new ImageSource(is_params);
         
-        let maxOrder = 5; 
+        let maxOrder = 2; 
         let n; 
         let is_2 = computeImageSources(is,maxOrder); 
+        is_2?.markup(); 
         console.log(is_2); 
-        is_2 != undefined && is_2.markup();
-        is_2 != undefined && (n = is_2.getTotalDescendents()); 
 
-        console.log(n);
+        let receiver: Receiver = this.receivers[0];
+        console.log(receiver);
 
+        console.log(is_2?.constructPathsForAllDescendents(receiver)); 
+
+        //let path = constructImageSourcePath((is.children[4]).children[2], receiver);
+        //console.log(path);
+        //(path != null) && path.markup(); 
     }
 
     markupImageSources(){
@@ -217,7 +256,7 @@ export class ImageSourceSolver extends Solver {
     }
     get receivers() {
       if (this.receiverIDs.length > 0 && Object.keys(this.containers).length > 0) {
-        return this.receiverIDs.map((x) => (this.containers[x] as Receiver).mesh) as THREE.Mesh[];
+        return this.receiverIDs.map((x) => (this.containers[x] as Receiver));
       } else return [];
     }
 
@@ -227,13 +266,13 @@ export class ImageSourceSolver extends Solver {
 
 }
 
-function computeImageSources(is: ImageSource, maxOrder: number): ImageSource | undefined {
+function computeImageSources(is: ImageSource, maxOrder: number): ImageSource | null {
 
   let surfaces: any[] = is.room.surfaces.children; 
     
   // end recursion
   if(maxOrder==0){
-    return;
+    return null;
   }
 
   for(let i=0; i<surfaces.length; i++){
@@ -272,14 +311,53 @@ function computeImageSources(is: ImageSource, maxOrder: number): ImageSource | u
       }
     }
   }
-
   return is; 
-  
 }
 
-// verification function
+function constructImageSourcePath(is: ImageSource, listener: Receiver): ImageSourcePath | null{
+  // note: will return null
+  // otherwise, will return array of Vector3's representing path 
+
+  let path: Vector3[] = []; 
+  
+  let maxOrder = is.order; 
+  path[maxOrder+1] = listener.position.clone(); 
+
+  let raycaster = new THREE.Raycaster(); 
+
+  for(let order = maxOrder; order>=1; order--){
+    let origin: Vector3 = is.position.clone(); 
+    let lastPosition: Vector3 = (path[order+1]).clone(); 
+
+    let direction: Vector3 = new Vector3(0,0,0); // from current image source to last image source / receiver
+    direction.subVectors(lastPosition, origin);
+    direction.normalize(); 
+
+    raycaster.set(origin,direction);
+    let intersections; 
+    if(is.reflector != null){
+      intersections = raycaster.intersectObject(is.reflector,true);
+    }
+    
+    if(intersections.length>0){
+      path[order] = intersections[0].point; 
+    }else{
+      return null; // no valid path
+    }
+
+    if(is.parent != null){
+      is = is.parent; 
+    }
+
+  }
+
+  path[0] = is.position;
+  let pathObject = new ImageSourcePath(path); 
+  return pathObject;
+}
+
 function isInFrontOf(surface1: Surface, surface2: Surface): boolean{
-  // need to write this
+  // how to check this? 
   return true; 
 }
 
@@ -292,26 +370,6 @@ function surfacesFacingEachother(surface1: Surface, surface2: Surface): boolean{
   }else{
     return false; 
   }
-}
-
-const deepCopyFunction = (inObject) => {
-  let outObject, value, key
-
-  if (typeof inObject !== "object" || inObject === null) {
-    return inObject // Return the value if inObject is not an object
-  }
-
-  // Create an array or object to hold the values
-  outObject = Array.isArray(inObject) ? [] : {}
-
-  for (key in inObject) {
-    value = inObject[key]
-
-    // Recursively (deep) copy for nested objects, including arrays
-    outObject[key] = deepCopyFunction(value)
-  }
-
-  return outObject
 }
 
 function reflectPointAcrossSurface(point: Vector3, surface: Surface): Vector3{
