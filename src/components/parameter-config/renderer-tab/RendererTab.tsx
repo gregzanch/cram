@@ -5,10 +5,10 @@ import Renderer from "../../../render/renderer";
 import { clamp } from '../../../common/clamp';
 import PropertyRow from "../property-row/PropertyRow";
 import Label from "../../label/Label";
-import PropertyRowLabel from "../property-row/property-row-label/PropertyRowLabel";
-import PropertyRowButton from "../property-row/property-row-button/PropertyRowButton";
-import PropertyRowCheckbox from "../property-row/property-row-checkbox/PropertyRowCheckbox";
-import PropertyRowFolder from "../property-row/property-row-folder/PropertyRowFolder";
+import PropertyRowLabel from "../property-row/PropertyRowLabel";
+import PropertyRowButton from "../property-row/PropertyRowButton";
+import PropertyRowCheckbox from "../property-row/PropertyRowCheckbox";
+import PropertyRowFolder from "../property-row/PropertyRowFolder";
 import { postMessage } from "../../../messenger";
 
 export interface RendererTabProps {}
@@ -141,10 +141,10 @@ export default function RendererTab(props: RendererTabProps) {
           <PropertyRowLabel hasToolTip={environmentPropertiesFolderOpen} label="Grid" tooltip="Toggles the grid" />
           <PropertyRowCheckbox
             onChange={(e) => {
-              renderer.gridVisible = e.currentTarget.checked;
+              renderer.gridVisible = e.value;
               setGridVisible(renderer.gridVisible);
             }}
-            checked={gridVisible}
+            value={gridVisible}
           />
         </PropertyRow>
 
@@ -152,10 +152,10 @@ export default function RendererTab(props: RendererTabProps) {
           <PropertyRowLabel hasToolTip={environmentPropertiesFolderOpen} label="Axis" tooltip="Toggles the axis" />
           <PropertyRowCheckbox
             onChange={(e) => {
-              renderer.axisVisible = e.currentTarget.checked;
+              renderer.axisVisible = e.value;
               setAxisVisible(renderer.axisVisible);
             }}
-            checked={axisVisible}
+            value={axisVisible}
           />
         </PropertyRow>
       </PropertyRowFolder>
@@ -170,10 +170,10 @@ export default function RendererTab(props: RendererTabProps) {
           <PropertyRowLabel hasToolTip={editorPropertiesFolderOpen} label="Cursor" tooltip="Toggles the cursor" />
           <PropertyRowCheckbox
             onChange={(e) => {
-              renderer.cursorVisible = e.currentTarget.checked;
+              renderer.cursorVisible = e.value;
               setCursorVisible(renderer.cursorVisible);
             }}
-            checked={cursorVisible}
+            value={cursorVisible}
           />
         </PropertyRow>
 
@@ -181,10 +181,10 @@ export default function RendererTab(props: RendererTabProps) {
           {/* <PropertyRowLabel hasToolTip={environmentPropertiesFolderOpen} label="Grid" tooltip="Toggles the grid" />
           <PropertyRowCheckbox
             onChange={(e) => {
-              renderer.gridVisible = e.currentTarget.checked;
+              renderer.gridVisible = e.value;
               setGridVisible(renderer.gridVisible);
             }}
-            checked={gridVisible}
+            value={gridVisible}
           /> */}
         </PropertyRow>
       </PropertyRowFolder>

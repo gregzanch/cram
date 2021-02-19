@@ -290,6 +290,17 @@ export function* map<T, U>(data: Iterable<T>, fn: (curr: T) => U): Iterable<U> {
   }
 }
 
+export function mapObject<T, U>(obj: T, fn: (val: T[keyof T], key: keyof T, obj: T) => U): U[] {
+  return (Object.keys(obj) as (keyof T)[]).map(key => fn(obj[key], key, obj)) as U[];
+}
+
+export function filteredMapObject<T, U>(obj: T, fn: (val: T[keyof T], key: keyof T, obj: T) => U): U[] {
+  return (Object.keys(obj) as (keyof T)[]).reduce((acc, key) => {
+    const result = fn(obj[key], key, obj);
+    return typeof result !== "undefined" && result !== null ? acc.concat(result) : acc;
+  }, [] as U[]) as U[];
+}
+
 export async function* mapAsync<T, U>(data: AsyncIterable<T>, fn: (curr: T) => Promise<U>): AsyncIterableIterator<U> {
   for await (const x of data) {
     yield await fn(x);

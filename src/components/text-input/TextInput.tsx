@@ -30,10 +30,10 @@ export function TextInput(props: TextInputProps) {
     type: "text",
     onChange: (e: React.ChangeEvent) => {
       props.onChange({
-        name: props.name,
+        name: props.name || props.id!,
         type: "text",
         value: (e.currentTarget as HTMLInputElement).value,
-        id: props.id
+        id: props.id || props.name!
       })
     },
     name: props.name, 

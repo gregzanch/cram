@@ -5,10 +5,10 @@ import { clamp } from "../../../common/clamp";
 import Slider, { SliderChangeEvent } from '../../slider/Slider';
 import PropertyRow from "../property-row/PropertyRow";
 import Label from "../../label/Label";
-import PropertyRowLabel from "../property-row/property-row-label/PropertyRowLabel";
-import PropertyRowButton from "../property-row/property-row-button/PropertyRowButton";
-import PropertyRowCheckbox from "../property-row/property-row-checkbox/PropertyRowCheckbox";
-import PropertyRowFolder from "../property-row/property-row-folder/PropertyRowFolder";
+import PropertyRowLabel from "../property-row/PropertyRowLabel";
+import PropertyRowButton from "../property-row/PropertyRowButton";
+import PropertyRowCheckbox from "../property-row/PropertyRowCheckbox";
+import PropertyRowFolder from "../property-row/PropertyRowFolder";
 import Source from "../../../objects/source";
 import Receiver from "../../../objects/receiver";
 
@@ -80,10 +80,10 @@ export default function FDTD_2DTab(props: FDTD_2DTabProps) {
           <PropertyRowLabel hasToolTip={viewFolderOpen} label="Wireframe" tooltip="Display mesh as wirefame" />
           <PropertyRowCheckbox
             onChange={(e) => {
-              props.solver.setWireframeVisible(e.currentTarget.checked);
-              setWireframeVisible(e.currentTarget.checked);
+              props.solver.setWireframeVisible(e.value);
+              setWireframeVisible(e.value);
             }}
-            checked={wireframeVisible}
+            value={wireframeVisible}
           />
         </PropertyRow>
       </PropertyRowFolder>

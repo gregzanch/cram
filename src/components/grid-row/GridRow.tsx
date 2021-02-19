@@ -1,46 +1,31 @@
-import React from 'react';
+import React, { Fragment } from "react";
+import styled from "styled-components";
 
 export interface GridRowProps {
-  label?: React.ReactNode|React.ReactNode[];
-	children?: React.ReactNode | React.ReactNode[];
+  label?: React.ReactNode | React.ReactNode[];
+  children?: React.ReactNode | React.ReactNode[];
   span?: number;
-  style?: React.CSSProperties
+  style?: React.CSSProperties;
 }
 
+const Label = styled.div`
+  display: grid;
+  grid-column-start: 1;
+  grid-column-end: 2;
+  text-align: end;
+`;
+
+const InputContainer = styled.div`
+  display: grid;
+  grid-column-start: 2;
+  grid-column-end: 3;
+`;
+
 export default function GridRow(props: GridRowProps) {
-	return (
-    <>
-      {props.span && props.span == 2 ? (
-        <div
-          style={{ display: "grid", gridColumnStart: "1", gridColumnEnd: "3" }}>
-          {props.children}
-        </div>
-      ) : (
-        <>
-          <div
-            style={{
-              display: "grid",
-              gridColumnStart: "1",
-              gridColumnEnd: "2"
-            }}>
-            {props.label}
-          </div>
-          <div
-            style={{
-              display: "grid",
-              gridColumnStart: "2",
-              gridColumnEnd: "3"
-            }}>
-            <div
-              style={Object.assign({
-                display: "flex",
-                justifyContent: "space-evenly"
-              }, props.style || {})}>
-              {props.children}
-            </div>
-          </div>
-        </>
-      )}
-    </>
+  return (
+    <Fragment>
+      <Label>{props.label}</Label>
+      <InputContainer>{props.children}</InputContainer>
+    </Fragment>
   );
 }

@@ -15,10 +15,26 @@ import produce from "immer";
 import GridRow from "../../grid-row/GridRow";
 import TextInput from "../../text-input/TextInput";
 import NumberInput from "../../number-input/NumberInput";
-import { pickProps } from "../../../common/helpers";
+import { filteredMapObject, mapObject, pickProps } from "../../../common/helpers";
 import GridRowSeperator from "../../grid-row/GridRowSeperator";
-import Select from 'react-select';
+import Select from "react-select";
 import { StringNullableChain } from "lodash";
+
+import Slider, { SliderChangeEvent } from '../../slider/Slider';
+
+
+import { clamp } from '../../../common/clamp';
+import PropertyRow from "../property-row/PropertyRow";
+import Label from "../../label/Label";
+import PropertyRowLabel from "../property-row/PropertyRowLabel";
+import PropertyRowButton from "../property-row/PropertyRowButton";
+import {PropertyRowCheckbox} from "../property-row/PropertyRowCheckbox";
+import PropertyRowFolder from "../property-row/PropertyRowFolder";
+import { postMessage } from "../../../messenger";
+import {PropertyRowTextInput} from "../property-row/PropertyRowTextInput";
+import { PropertyRowNumberInput, StyledInput } from "../property-row/PropertyRowNumberInput";
+
+
 
 export interface RayTracerTabProps {
   uuid: string;
@@ -34,8 +50,8 @@ function useRayTracerProperties(properties: (keyof RayTracer)[], raytracer: RayT
 }
 
 type DropdownOption = {
-  uuid: string, 
-  name: string
+  uuid: string;
+  name: string;
 };
 
 function getSourcesAndReceivers(state) {
@@ -44,13 +60,13 @@ function getSourcesAndReceivers(state) {
   Object.keys(state.containers).forEach((uuid) => {
     switch (state.containers[uuid].kind) {
       case "source":
-        sources.push({uuid, name: state.containers[uuid].name});
+        sources.push({ uuid, name: state.containers[uuid].name });
         break;
       case "receiver":
-        receivers.push({uuid, name: state.containers[uuid].name});
+        receivers.push({ uuid, name: state.containers[uuid].name });
         break;
       default:
-        console.log(state.containers)
+        console.log(state.containers);
         break;
     }
   });
@@ -60,111 +76,204 @@ function getSourcesAndReceivers(state) {
 type LabeledInputRowProps<T extends string | number> = {
   label: string;
   name: keyof RayTracer;
-  value: T,
-  onChange: (e: ObjectPropertyInputEvent) => void
-}
+  value: T;
+  onChange: (e: ObjectPropertyInputEvent) => void;
+};
 
-const LabeledTextInputRow = ({label, name, value, onChange}: LabeledInputRowProps<string>) => (
+const LabeledTextInputRow = ({ label, name, value, onChange }: LabeledInputRowProps<string>) => (
   <GridRow label={label}>
     <TextInput name={name} value={value} onChange={onChange} />
   </GridRow>
-)
+);
 
-const LabeledNumberInputRow = ({label, name, value, onChange}: LabeledInputRowProps<number>) => (
+const LabeledNumberInputRow = ({ label, name, value, onChange }: LabeledInputRowProps<number>) => (
   <GridRow label={label}>
     <NumberInput name={name} value={value} onChange={onChange} />
   </GridRow>
-)
+);
 
-export const RayTracerTab = ({ uuid }: RayTracerTabProps) => {
-  const [raytracer, set] = useSolver<[RayTracer, any]>((state) => [state.solvers[uuid] as RayTracer, state.set]);
-  const [sources, receivers] = useContainer(getSourcesAndReceivers);
-  const [state, setState] = useRayTracerProperties(["name", "updateInterval"], raytracer, set);
+function useSolverProperty(uuid, property, event){
+  const defaultValue = useSolver(state => state.solvers[uuid][property]);
+  const [state, setState] = useState(defaultValue);
+  
+  useEffect(() => on(event, (props) => {
+    if(props.uuid === uuid && props.property === property){
+      setState(props.value)
+    }
+  }), [uuid])
+  
+  const changeHandler = e => emit(event, { uuid, property, value: e.value });
 
-  useEffect(() => {
-    return on("RAYTRACER_SET_PROPERTY", (props) => {
-      if (props.uuid === uuid) setState(props.property, props.value);
-    });
-  }, []);
+  return [state, changeHandler]
+}
 
 
-  const onChangeHandler =  useCallback((e: ObjectPropertyInputEvent) => {
-    emit("RAYTRACER_SET_PROPERTY", { uuid, property: e.name as keyof RayTracer, value: e.value });
-  }, [uuid]);
+const PropertyTextInput = ({ uuid, property, label, tooltip }) => {
+  const [state, changeHandler] = useSolverProperty(uuid, property, "RAYTRACER_SET_PROPERTY");
+  return (
+    <PropertyRow>
+      <PropertyRowLabel label={label} hasToolTip tooltip={tooltip} />
+      <PropertyRowTextInput value={state} onChange={changeHandler} />
+    </PropertyRow>
+  )
+}
+
+const PropertyNumberInput = ({ uuid, property, label, tooltip }) => {
+  const [state, changeHandler] = useSolverProperty(uuid, property, "RAYTRACER_SET_PROPERTY");
+  return (
+    <PropertyRow>
+      <PropertyRowLabel label={label} hasToolTip tooltip={tooltip} />
+      <PropertyRowNumberInput value={state} onChange={changeHandler} />
+    </PropertyRow>
+  )
+}
+
+const PropertyCheckboxInput = ({ uuid, property, label, tooltip }) => {
+  const [state, changeHandler] = useSolverProperty(uuid, property, "RAYTRACER_SET_PROPERTY");
+  return (
+    <PropertyRow>
+      <PropertyRowLabel label={label} hasToolTip tooltip={tooltip} />
+      <PropertyRowCheckbox value={state} onChange={changeHandler} />
+    </PropertyRow>
+  )
+}
+
+const PropertyButton = <T extends keyof EventTypes>({ args, event, label, tooltip }: {args: EventTypes[T], event: T, label: string, tooltip: string}) => {
+  return (
+    <PropertyRow>
+      <PropertyRowLabel label={label} hasToolTip tooltip={tooltip} />
+      <PropertyRowButton onClick={e=>emit(event, args)} label={label}/>
+    </PropertyRow>
+  )
+}
+
+
+const useToggle = (initialState: boolean) => {
+  const [state, setState] = useState(initialState);
+  return [state, () => void setState(!state)] as [boolean, () => void];
+}
+
+
+export const ReceiverSelect = ({uuid}) => {
+  const receivers = useContainer(state => {
+    return filteredMapObject(
+      state.containers, 
+      container => container.kind === "receiver" ? pickProps(["uuid", "name"], container) : undefined
+    ) as {uuid: string, name: string}[]
+  });
+
+  const [receiverIDs, setReceiverIDs] = useSolverProperty(uuid, "receiverIDs", "RAYTRACER_SET_PROPERTY");
 
 
   return (
-    <div style={{display: 'grid'}}>
-      <LabeledTextInputRow label="Name" name="name" value={state.name} onChange={onChangeHandler} />
-      <LabeledNumberInputRow label="Rate (ms)" name="updateInterval" value={state.updateInterval} onChange={onChangeHandler} />
+    <Select
+    styles={{
+      container: (provided) => ({
+        ...provided,
+        // height: 20
+      }),
+      control: (provided) => ({
+        ...provided,
+        minHeight: "unset"
+      }),
+      indicatorsContainer: (provided) => ({
+        ...provided,
+        padding: 0
+      }),
+      indicatorSeparator: (provided) => ({
+        ...provided,
+        padding: 0
+      })
+    }}
+    isMulti
+    isClearable
+    getOptionLabel={(item) => item.name}
+    getOptionValue={(item) => item.uuid}
+    value={receivers.filter((x) => receiverIDs.includes(x.uuid))}
+    onChange={(e) => setReceiverIDs({value: e ? e.map((x) => x.uuid) : []})}
+    options={receivers.filter((x) => !receiverIDs.includes(x.uuid))}
+  />)
+}
+
+export const SourceSelect = ({uuid}) => {
+  const sources = useContainer(state => {
+    return filteredMapObject(
+      state.containers, 
+      container => container.kind === "source" ? pickProps(["uuid", "name"], container) : undefined
+    ) as {uuid: string, name: string}[]
+  });
+
+  const [sourceIDs, setSourceIDs] = useSolverProperty(uuid, "sourceIDs", "RAYTRACER_SET_PROPERTY");
+
+
+  return (
+    <Select
+    isMulti
+    isClearable
+    getOptionLabel={(item) => item.name}
+    getOptionValue={(item) => item.uuid}
+    value={sources.filter((x) => sourceIDs.includes(x.uuid))}
+    onChange={(e) => setSourceIDs({value: e ? e.map((x) => x.uuid) : []})}
+    options={sources.filter((x) => !sourceIDs.includes(x.uuid))}
+  />)
+}
+
+export const RayTracerTab = ({ uuid }: RayTracerTabProps) => {
+
+
+  const [generalFolderOpen, toggleGeneralFolder] = useToggle(true);
+  const [paramsFolderOpen, toggleParamsFolder] = useToggle(true);
+  const [styleFolderOpen, toggleStyleFolder] = useToggle(true);
+  const [receiverFolderOpen, toggleReceiverFolder] = useToggle(true);
+  const [controlsFolderOpen, toggleControlsFolder] = useToggle(true);
+  
+
+  return (
+    <div>
+    <PropertyRowFolder label="General" open={generalFolderOpen} onOpenClose={toggleGeneralFolder}>
+      <PropertyTextInput uuid={uuid} label="Name" property="name" tooltip="Sets the name of this solver"/>
+    </PropertyRowFolder>
+
+    <PropertyRowFolder label="Parameters" open={paramsFolderOpen} onOpenClose={toggleParamsFolder}>
+      <PropertyNumberInput uuid={uuid} label="Rate (ms)" property="updateInterval" tooltip="Sets the callback rate"/>
+      <PropertyNumberInput uuid={uuid} label="Order" property="reflectionOrder" tooltip="Sets the maximum reflection order"/>
+      <PropertyNumberInput uuid={uuid} label="Passes" property="passes" tooltip="Number of rays shot on each callback"/>
+    </PropertyRowFolder>
+
+    <PropertyRowFolder label="Reciever Configuration" open={receiverFolderOpen} onOpenClose={toggleReceiverFolder}>
+      {/* <ReceiverSelect uuid={uuid} /> */}
+      <PropertyCheckboxInput uuid={uuid} label="Ignore Receivers" property="runningWithoutReceivers" tooltip="Ignores receiver intersections"/>
+    </PropertyRowFolder>
+
+    <PropertyRowFolder label="Style Properties" open={styleFolderOpen} onOpenClose={toggleStyleFolder}>
+      <PropertyNumberInput uuid={uuid} label="Point Size" property="pointSize" tooltip="Sets the size of each interection point"/>
+      <PropertyCheckboxInput uuid={uuid} label="Rays Visible" property="raysVisible" tooltip="Toggles the visibility of the rays"/>
+      <PropertyCheckboxInput uuid={uuid} label="Points Visible" property="pointsVisible" tooltip="Toggles the visibility of the intersection points"/>
+    </PropertyRowFolder>
+
     
+    <PropertyRowFolder label="Solver Controls" open={controlsFolderOpen} onOpenClose={toggleControlsFolder}>
+      <PropertyCheckboxInput uuid={uuid} label="Running" property="isRunning" tooltip="Starts/stops the raytracer"/>
+      <PropertyButton event="RAYTRACER_CLEAR_RAYS" args={uuid} label="Clear Rays" tooltip="Clears all of the rays"/>
+    </PropertyRowFolder>
 
-      <GridRow label={"order"}>
-        <NumberInput
-          name="reflectionOrder"
-          value={raytracer.reflectionOrder}
-          onChange={(e) => {
-            emit("RAYTRACER_SET_PROPERTY", { uuid, property: "reflectionOrder", value: e.value });
-          }}
-        />
-      </GridRow>
+    
+      {/* <SourceSelect uuid={uuid} /> */}
 
-      <GridRow label={"passes"}>
-        <NumberInput
-          name="passes"
-          value={raytracer.passes}
-          onChange={(e) => {
-            emit("RAYTRACER_SET_PROPERTY", { uuid, property: "passes", value: e.value });
-          }}
-        />
-      </GridRow>
 
-      <GridRow label={"point size"}>
-        <NumberInput
-          name="pointSize"
-          value={raytracer.pointSize}
-          onChange={(e) => {
-            emit("RAYTRACER_SET_PROPERTY", { uuid, property: "pointSize", value: e.value });
-          }}
-        />
-      </GridRow>
 
-      <GridRow label={"rays visible"}>
-        <input
-          type="checkbox"
-          name="raysVisible"
-          checked={raytracer.raysVisible}
-          onChange={(e) => {
-            emit("RAYTRACER_SET_PROPERTY", { uuid, property: "raysVisible", value: !raytracer.raysVisible });
-          }}
-        />
-      </GridRow>
 
-      <GridRow label={"points visible"}>
-        <input
-          type="checkbox"
-          name="pointsVisible"
-          checked={raytracer.pointsVisible}
-          onChange={(e) => {
-            emit("RAYTRACER_SET_PROPERTY", { uuid, property: "pointsVisible", value: !raytracer.pointsVisible });
-          }}
-        />
-      </GridRow>
 
-      <GridRow label={"ignore receivers"}>
-        <input
-          type="checkbox"
-          name="runningWithoutReceivers"
-          checked={raytracer.runningWithoutReceivers}
-          onChange={(e) => {
-            emit("RAYTRACER_SET_PROPERTY", {
-              uuid,
-              property: "runningWithoutReceivers",
-              value: !raytracer.runningWithoutReceivers
-            });
-          }}
-        />
-      </GridRow>
+
+
+
+
+
+
+
+
+{/*
+
 
       <GridRowSeperator />
 
@@ -192,32 +301,21 @@ export const RayTracerTab = ({ uuid }: RayTracerTabProps) => {
 
       <GridRowSeperator />
       <GridRow label="sources">
-      <Select
-        isMulti
-        isClearable
-        getOptionLabel={item=>item.name}
-        getOptionValue={item=>item.uuid}
-        value={sources.filter(x=>raytracer.sourceIDs.includes(x.uuid))}
-        onChange={e=>{
-          emit("RAYTRACER_SET_PROPERTY", {uuid, property: "sourceIDs", value: e ? e.map(x=>x.uuid) : []})
-        }}
-        options={sources.filter(x=>!raytracer.sourceIDs.includes(x.uuid))}
-      />    
+        <Select
+          isMulti
+          isClearable
+          getOptionLabel={(item) => item.name}
+          getOptionValue={(item) => item.uuid}
+          value={sources.filter((x) => raytracer.sourceIDs.includes(x.uuid))}
+          onChange={(e) => {
+            emit("RAYTRACER_SET_PROPERTY", { uuid, property: "sourceIDs", value: e ? e.map((x) => x.uuid) : [] });
+          }}
+          options={sources.filter((x) => !raytracer.sourceIDs.includes(x.uuid))}
+        />
       </GridRow>
       <GridRow label="receivers">
-      <Select
-        isMulti
-        isClearable
-        getOptionLabel={item=>item.name}
-        getOptionValue={item=>item.uuid}
-        value={receivers.filter(x=>raytracer.receiverIDs.includes(x.uuid))}
-        onChange={e=>{
-          emit("RAYTRACER_SET_PROPERTY", {uuid, property: "receiverIDs", value: e ? e.map(x=>x.uuid) : []})
-        }}
-        options={receivers.filter(x=>!raytracer.receiverIDs.includes(x.uuid))}
-      />    
-
-      </GridRow>
+        
+      </GridRow> */}
       {/* <Select
       name="Sources"
       onChange={(e) => {
@@ -234,7 +332,6 @@ export const RayTracerTab = ({ uuid }: RayTracerTabProps) => {
         );
       })}
     </Select> */}
-
 
       <GridRow span={2}></GridRow>
 

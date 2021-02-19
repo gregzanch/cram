@@ -31,6 +31,7 @@
     "@material-ui/icons": "^4.5.1",
     "@material-ui/lab": "^4.0.0-alpha.39",
     "@types/plotly.js": "^1.50.12",
+    "@types/styled-components": "^5.1.7",
     "chroma-js": "^2.1.0",
     "complex": "^3.0.1",
     "fast-fuzzy": "^1.9.1",

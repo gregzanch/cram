@@ -10,7 +10,7 @@ import Renderer from "../../render/renderer";
 import Surface from "../../objects/surface";
 import Receiver from "../../objects/receiver";
 import { Stat } from "../../components/parameter-config/Stats";
-import Messenger, { messenger, on } from "../../messenger";
+import Messenger, { emit, messenger, on } from "../../messenger";
 import sort from "fast-sort";
 import FileSaver from "file-saver";
 import Plotly, { PlotData } from "plotly.js";
@@ -1848,7 +1848,7 @@ declare global {
       uuid: string;
       property: keyof RayTracer;
       value: RayTracer[EventTypes["RAYTRACER_SET_PROPERTY"]["property"]]
-    }
+    };
   }
 }
 
@@ -1858,3 +1858,4 @@ on("RAYTRACER_SET_PROPERTY", setSolverProperty);
 on("REMOVE_RAYTRACER", removeSolver);
 on("ADD_RAYTRACER", addSolver(RayTracer))
 on("RAYTRACER_CLEAR_RAYS", (uuid: string) => void (useSolver.getState().solvers[uuid] as RayTracer).clearRays());
+

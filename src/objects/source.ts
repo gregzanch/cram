@@ -68,9 +68,9 @@ export default class Source extends Container {
   previousZ: number;
   shouldClearPreviousPosition: boolean;
   pinkNoiseSamples: Float32Array;
-  signalSource: SignalSource;
-  _initialSPL: number;
-  _initialIntensity: number;
+  public signalSource: SignalSource;
+  private _initialSPL: number;
+  private _initialIntensity: number;
   fdtdSamples: number[];
 
   constructor(name?: string, props?: SourceProps) {
