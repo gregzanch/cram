@@ -7,6 +7,8 @@ import { RT_CONSTANTS } from "../constants/rt-constants";
 import { third_octave } from "../compute/acoustics";
 import { KVP } from "../common/key-value-pair";
 import RT60 from "../compute/rt";
+import { on } from "../messenger";
+import { addContainer } from "../store";
 
 export interface RoomProps extends ContainerProps {
   surfaces: Surface[];
@@ -181,3 +183,14 @@ export default class Room extends Container {
     };
   }
 }
+
+
+// this allows for nice type checking with 'on' and 'emit' from messenger
+declare global {
+  interface EventTypes {
+    ADD_ROOM: Room;
+  }
+}
+
+// on("ADD_ROOM", addContainer)
+

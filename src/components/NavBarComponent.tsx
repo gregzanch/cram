@@ -1,6 +1,5 @@
 import React, { useState, useContext } from "react";
-import { GlobalContext } from "../";
-import Messenger from "../messenger";
+import Messenger, { emit, postMessage } from "../messenger";
 import { Position, Button, Menu, MenuItem, MenuDivider, Colors, Navbar, ButtonGroup } from "@blueprintjs/core";
 import { Popover2 , Classes} from "@blueprintjs/popover2";
 import NavbarMenuItemLabel from "./NavbarMenuItemLabel";
@@ -17,12 +16,11 @@ interface MenuItemWithMessengerProps {
 }
 
 function MenuItemWithMessenger(props: MenuItemWithMessengerProps) {
-  const { messenger } = useContext(GlobalContext);
   return (
     <MenuItem
-    className={Classes.POPOVER2_DISMISS}
+      className={Classes.POPOVER2_DISMISS}
       text={<MenuItemText text={props.label} hotkey={props.hotkey || [""]} />}
-      onClick={(e) => messenger.postMessage(props.message)}
+      onClick={(e) => postMessage(props.message)}
       disabled={props.disabled}
     />
   );
@@ -63,11 +61,10 @@ export function FileMenu(props: MenuProps) {
 }
 
 export function EditMenu(props: MenuProps) {
-  const { messenger } = useContext(GlobalContext);
+  const canUndo = postMessage("CAN_UNDO")[0];
+  const canRedo = postMessage("CAN_REDO")[0];
+  const canDuplicate = postMessage("CAN_DUPLICATE")[0];
 
-  const canUndo = messenger.postMessage("CAN_UNDO")[0];
-  const canRedo = messenger.postMessage("CAN_REDO")[0];
-  const canDuplicate = messenger.postMessage("CAN_DUPLICATE")[0];
 
   return (
 
@@ -173,6 +170,7 @@ export function ToolMenu(props: MenuProps) {
     }
     placement="bottom-start"
     />
+
   );
 }
 
@@ -205,7 +203,6 @@ export interface NavBarComponentProps {
 }
 
 export function NavBarComponent(props: NavBarComponentProps) {
-  const { messenger } = useContext(GlobalContext);
   const [openMenu, setOpenMenu] = useState<number|null>(null);
   return (
     <Navbar className="main-nav_bar">
@@ -229,7 +226,7 @@ export function NavBarComponent(props: NavBarComponentProps) {
           icon="cog"
           minimal={true}
           className={"main-nav_bar-right_menu-button"}
-          onClick={(e) => messenger.postMessage("SHOW_SETTINGS_DRAWER")}
+          onClick={(e) => postMessage("SHOW_SETTINGS_DRAWER")}
         ></Button>
       </Navbar.Group>
     </Navbar>

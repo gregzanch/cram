@@ -11,7 +11,7 @@ import Renderer from "../../render/renderer";
 import Surface from "../../objects/surface";
 import Receiver from "../../objects/receiver";
 import { Stat } from "../../components/parameter-config/Stats";
-import Messenger from "../../messenger";
+import Messenger, { messenger, on } from "../../messenger";
 import sort from "fast-sort";
 import FileSaver from "file-saver";
 import Plotly, { PlotData } from "plotly.js";
@@ -24,9 +24,12 @@ import { movingAverage } from "../../common/moving-average";
 import linearRegression, { LinearRegressionResult } from "../../common/linear-regression";
 import { BVHBuilderAsync, BVHVector3, BVHNode } from "./bvh";
 import { BVH } from "./bvh/BVH";
+import { renderer } from "../../render/renderer";
 
 import expose from "../../common/expose";
 import { reverseTraverse } from "../../common/reverse-traverse";
+import { addSolver, removeSolver, setSolverProperty, useSolver } from "../../store";
+import { omit } from "lodash";
 
 import {cramangle2threejsangle} from "../../common/dir-angle-conversions";
 
@@ -115,8 +118,6 @@ export class ReceiverData {
 }
 
 export interface RayTracerParams {
-  renderer;
-  messenger: Messenger;
   name?: string;
   roomID?: string;
   sourceIDs?: string[];
@@ -187,11 +188,9 @@ class RayTracer extends Solver {
   rays: THREE.LineSegments;
   rayPositionIndex: number;
   maxrays: number;
-  renderer: Renderer;
   intersectableObjects: Array<THREE.Mesh | THREE.Object3D | Container>;
   paths: KVP<RayPath[]>;
   stats: KVP<Stat>;
-  messenger: Messenger;
   messageHandlerIDs: string[][];
   statsUpdatePeriod: number;
   lastTime: number;
@@ -217,9 +216,10 @@ class RayTracer extends Solver {
   validRayCount: number;
   plotStyle: Partial<PlotData>;
   bvh!: BVH;
-  constructor(params: RayTracerParams) {
+  constructor(params?: RayTracerParams) {
     super(params);
     this.kind = "ray-tracer";
+    params = {    ...defaults, ...params    };
     this.uuid = params.uuid || this.uuid;
     this.name = params.name || defaults.name;
     this.responseOverlayElement = document.querySelector("#response-overlay") || document.createElement("div");
@@ -233,7 +233,6 @@ class RayTracer extends Solver {
     this.reflectionOrder = params.reflectionOrder || defaults.reflectionOrder;
     this._isRunning = params.isRunning || defaults.isRunning;
     this._runningWithoutReceivers = params.runningWithoutReceivers || defaults.runningWithoutReceivers;
-    this.renderer = params.renderer;
     this.reflectionLossFrequencies = [4000];
     this.intervals = [] as number[];
     this.plotData = [] as Plotly.Data[];
@@ -284,7 +283,8 @@ class RayTracer extends Solver {
     );
     this.rays.renderOrder = -0.5;
     this.rays.frustumCulled = false;
-    this.renderer.scene.add(this.rays);
+    renderer.scene.add(this.rays);
+
 
     var shaderMaterial = new THREE.ShaderMaterial({
       fog: false,
@@ -309,7 +309,7 @@ class RayTracer extends Solver {
     // });
     this.hits = new THREE.Points(this.rayBufferGeometry, shaderMaterial);
     this.hits.frustumCulled = false;
-    this.renderer.scene.add(this.hits);
+    renderer.scene.add(this.hits);
     this.rayPositionIndex = 0;
     Object.defineProperty(this.raycaster, "firstHitOnly", {
       value: true,
@@ -331,16 +331,15 @@ class RayTracer extends Solver {
         value: 0
       }
     };
-    this.renderer.overlays.global.addCell("Valid Rays", this.validRayCount, {
+    renderer.overlays.global.addCell("Valid Rays", this.validRayCount, {
       id: this.uuid + "-valid-ray-count",
       hidden: true,
       formatter: (value: number) => String(value)
     });
-    this.messenger = params.messenger;
     this.messageHandlerIDs = [] as string[][];
-    this.messenger.postMessage("STATS_SETUP", this.stats);
+    messenger.postMessage("STATS_SETUP", this.stats);
     this.messageHandlerIDs.push(
-      this.messenger.addMessageHandler("RAYTRACER_SOURCE_CHANGE", (acc, ...args) => {
+      messenger.addMessageHandler("RAYTRACER_SOURCE_CHANGE", (acc, ...args) => {
         console.log(args && args[0] && args[0] instanceof Array && args[1] && args[1] === this.uuid);
         if (args && args[0] && args[0] instanceof Array && args[1] && args[1] === this.uuid) {
           this.sourceIDs = args[0].map((x) => x.id);
@@ -348,14 +347,14 @@ class RayTracer extends Solver {
       })
     );
     this.messageHandlerIDs.push(
-      this.messenger.addMessageHandler("RAYTRACER_RECEIVER_CHANGE", (acc, ...args) => {
+      messenger.addMessageHandler("RAYTRACER_RECEIVER_CHANGE", (acc, ...args) => {
         if (args && args[0] && args[0] instanceof Array && args[1] && args[1] === this.uuid) {
           this.receiverIDs = args[0].map((x) => x.id);
         }
       })
     );
     this.messageHandlerIDs.push(
-      this.messenger.addMessageHandler("SHOULD_REMOVE_CONTAINER", (acc, ...args) => {
+      messenger.addMessageHandler("SHOULD_REMOVE_CONTAINER", (acc, ...args) => {
         const id = args[0];
         if (id) {
           console.log(id);
@@ -455,13 +454,18 @@ class RayTracer extends Solver {
 
   removeMessageHandlers() {
     this.messageHandlerIDs.forEach((x) => {
-      this.messenger.removeMessageHandler(x[0], x[1]);
+      messenger.removeMessageHandler(x[0], x[1]);
     });
   }
   dispose() {
     this.removeMessageHandlers();
-    this.renderer.scene.remove(this.rays);
-    this.renderer.scene.remove(this.hits);
+    Object.keys(window.vars).forEach(key=>{
+      if(window.vars[key]['uuid']===this.uuid){
+        delete window.vars[key];
+      }
+    })
+    renderer.scene.remove(this.rays);
+    renderer.scene.remove(this.hits);
   }
   addSource(source: Source) {
     this.containers[source.uuid] = source;
@@ -514,14 +518,14 @@ class RayTracer extends Solver {
   setDrawStyle(drawStyle: number) {
     (this.hits.material as THREE.ShaderMaterial).uniforms["drawStyle"].value = drawStyle;
     (this.hits.material as THREE.ShaderMaterial).needsUpdate = true;
-    this.renderer.needsToRender = true;
+    renderer.needsToRender = true;
   }
 
   setPointScale(scale: number) {
     this._pointSize = scale;
     (this.hits.material as THREE.ShaderMaterial).uniforms["pointScale"].value = this._pointSize;
     (this.hits.material as THREE.ShaderMaterial).needsUpdate = true;
-    this.renderer.needsToRender = true;
+    renderer.needsToRender = true;
   }
 
   incrementRayPositionIndex() {
@@ -812,7 +816,7 @@ class RayTracer extends Solver {
         for (let i = 0; i < this.passes; i++) {
           this.step();
         }
-        this.renderer.needsToRender = true;
+        renderer.needsToRender = true;
       }, this.updateInterval) as unknown) as number
     );
   }
@@ -911,7 +915,7 @@ class RayTracer extends Solver {
           }
           (this.stats.numValidRayPaths.value as number)++;
           this.validRayCount += 1;
-          this.renderer.overlays.global.setCellValue(this.uuid + "-valid-ray-count", this.validRayCount);
+          renderer.overlays.global.setCellValue(this.uuid + "-valid-ray-count", this.validRayCount);
           const index = path.chain[path.chain.length - 1].object;
           this.paths[index] ? this.paths[index].push(path) : (this.paths[index] = [path]);
 
@@ -923,7 +927,7 @@ class RayTracer extends Solver {
       (this.stats.numRaysShot.value as number)++;
     }
 
-    this.messenger.postMessage("RAYTRACER_RESULTS_SHOULD_UPDATE");
+    messenger.postMessage("RAYTRACER_RESULTS_SHOULD_UPDATE");
   }
 
   start() {
@@ -965,19 +969,19 @@ class RayTracer extends Solver {
       }
     }
     this.validRayCount = 0;
-    this.renderer.overlays.global.setCellValue(this.uuid + "-valid-ray-count", this.validRayCount);
+    renderer.overlays.global.setCellValue(this.uuid + "-valid-ray-count", this.validRayCount);
     this.rayBufferGeometry.setDrawRange(0, 1);
     this.rayPositionIndex = 0;
-    this.rayPositionIndexDidOverflow  =  false;
+    this.rayPositionIndexDidOverflow = false;
     this.stats.numRaysShot.value = 0;
     this.stats.numValidRayPaths.value = 0;
-    this.messenger.postMessage("STATS_UPDATE", this.stats);
+    messenger.postMessage("STATS_UPDATE", this.stats);
     this.sourceIDs.forEach((x) => {
       (this.containers[x] as Source).numRays = 0;
     });
     this.paths = {} as KVP<RayPath[]>;
     this.mapIntersectableObjects();
-    this.renderer.needsToRender = true;
+    renderer.needsToRender = true;
   }
 
   calculateResponse(frequencies: number[] = this.reflectionLossFrequencies) {
@@ -1070,7 +1074,7 @@ class RayTracer extends Solver {
         };
       });
     });
-    this.messenger.postMessage("UPDATE_CHART_DATA", chartdata && chartdata[0]);
+    messenger.postMessage("UPDATE_CHART_DATA", chartdata && chartdata[0]);
     return this.allReceiverData;
   }
 
@@ -1409,15 +1413,15 @@ class RayTracer extends Solver {
     if (!this.responseOverlayElement.classList.contains("response_overlay-hidden")) {
       this.responseOverlayElement.classList.add("response_overlay-hidden");
     }
-    this.renderer.stats.unhide();
-    this.renderer.orientationControl.show();
+    renderer.stats.unhide();
+    renderer.orientationControl.show();
   }
   showPlot() {
     if (this.responseOverlayElement.classList.contains("response_overlay-hidden")) {
       this.responseOverlayElement.classList.remove("response_overlay-hidden");
     }
-    this.renderer.stats.hide();
-    this.renderer.orientationControl.hide();
+    renderer.stats.hide();
+    renderer.orientationControl.hide();
   }
 
   plotResponseByIntensity(receiverId?: string, sourceId?: string) {
@@ -1598,7 +1602,7 @@ class RayTracer extends Solver {
     return this.responseByIntensity;
   }
 
-  computeImageSources(source, previousReflector, maxOrder) {
+  computeImageSources(source: THREE.Vector3, previousReflector: Surface, maxOrder: number) {
     //     for each surface in geometry do
     //         if (not previousReflector) or
     //         ((inFrontOf(surface, previousReflector)) and (surface.normal dot previousReflector.normal < 0))
@@ -1606,17 +1610,20 @@ class RayTracer extends Solver {
     //             sources[nofSources++] = newSource
     //             if (maxOrder > 0)
     //                 computeImageSources(newSource, surface, maxOrder - 1)
-
-    const surfaces = this.room.surfaces.children;
+    for(const surface of this.room.surfaces.children){
+      if(surface.uuid !== previousReflector.uuid){
+        
+      }
+    }
   }
   onParameterConfigFocus() {
     console.log("focus");
-    console.log(this.renderer.overlays.global.cells);
-    this.renderer.overlays.global.showCell(this.uuid + "-valid-ray-count");
+    console.log(renderer.overlays.global.cells);
+    renderer.overlays.global.showCell(this.uuid + "-valid-ray-count");
   }
   onParameterConfigBlur() {
     console.log("blur");
-    this.renderer.overlays.global.hideCell(this.uuid + "-valid-ray-count");
+    renderer.overlays.global.hideCell(this.uuid + "-valid-ray-count");
   }
 
   pathsToLinearBuffer() {
@@ -1783,7 +1790,7 @@ class RayTracer extends Solver {
       this._raysVisible = visible;
       this.rays.visible = visible;
     }
-    this.renderer.needsToRender = true;
+    renderer.needsToRender = true;
   }
 
   get pointsVisible() {
@@ -1794,7 +1801,7 @@ class RayTracer extends Solver {
       this._pointsVisible = visible;
       this.hits.visible = visible;
     }
-    this.renderer.needsToRender = true;
+    renderer.needsToRender = true;
   }
 
   get invertedDrawStyle() {
@@ -1806,8 +1813,11 @@ class RayTracer extends Solver {
       (this.hits.material as THREE.ShaderMaterial).uniforms["inverted"].value = Number(inverted);
       (this.hits.material as THREE.ShaderMaterial).needsUpdate = true;
     }
-    this.renderer.needsToRender = true;
+    renderer.needsToRender = true;
   }
+
+
+  
 
   get pointSize() {
     return this._pointSize;
@@ -1819,7 +1829,7 @@ class RayTracer extends Solver {
       (this.hits.material as THREE.ShaderMaterial).uniforms["pointScale"].value = this._pointSize;
       (this.hits.material as THREE.ShaderMaterial).needsUpdate = true;
     }
-    this.renderer.needsToRender = true;
+    renderer.needsToRender = true;
   }
 
   get runningWithoutReceivers() {
@@ -1831,23 +1841,29 @@ class RayTracer extends Solver {
     this._runningWithoutReceivers = runningWithoutReceivers;
   }
 
-  // testWasm(value: number) {
-  //   async function loadWasm() {
-  //     return await loader.instantiate(fetch("wasm/index.wasm"), {
-  //       index: {
-  //         consoleLog: (value) => console.log(value)
-  //       }
-  //     });
-  //   }
-
-  //   loadWasm()
-  //     .then((wasm) => {
-  //       console.log(wasm);
-  //       const result = wasm["testFunction"](value);
-  //       console.log(result);
-  //     })
-  //     .catch(console.error);
-  // }
 }
 
 export default RayTracer;
+
+
+
+// this allows for nice type checking with 'on' and 'emit' from messenger
+declare global {
+  interface EventTypes {
+    ADD_RAYTRACER: RayTracer | undefined,
+    REMOVE_RAYTRACER: string;
+    RAYTRACER_CLEAR_RAYS: string;
+    RAYTRACER_SET_PROPERTY: {
+      uuid: string;
+      property: keyof RayTracer;
+      value: RayTracer[EventTypes["RAYTRACER_SET_PROPERTY"]["property"]]
+    }
+  }
+}
+
+
+
+on("RAYTRACER_SET_PROPERTY", setSolverProperty);
+on("REMOVE_RAYTRACER", removeSolver);
+on("ADD_RAYTRACER", addSolver(RayTracer))
+on("RAYTRACER_CLEAR_RAYS", (uuid: string) => void (useSolver.getState().solvers[uuid] as RayTracer).clearRays());

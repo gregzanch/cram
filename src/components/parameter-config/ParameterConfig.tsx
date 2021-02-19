@@ -9,9 +9,9 @@ import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import ContextMenu from "../context-menu/ContextMenu";
 import { SvgIcon } from '@material-ui/core';
 import MoreVert from '@material-ui/icons/MoreVert';
-import CloseIcon from '@material-ui/icons/Close';
+import CloseIcon from "@material-ui/icons/Close";
 import './ParameterConfig.css';
-import { KeyValuePair } from '../../common/key-value-pair';
+import { KeyValuePair } from "../../common/key-value-pair";
 import Solver from '../../compute/solver';
 import RT60Tab from './rt60-tab/RT60Tab';
 import { RT60 } from '../../compute/rt';
@@ -83,7 +83,8 @@ export default class ParameterConfig extends React.Component<ParameterConfigProp
         style={{
           height: "100%",
           margin: "0"
-        }}>
+        }}
+      >
         <Tabs selectedIndex={this.state.selectedTabIndex} onSelect={this.handleTabChange}>
           <TabList>
             <Tab disabled />
@@ -94,21 +95,28 @@ export default class ParameterConfig extends React.Component<ParameterConfigProp
                   handleMenuItemClick={(e) => {
                     if (e.target.textContent) {
                       switch (e.target.textContent) {
-                        case "Delete": {
+                        case "Delete":
+                          {
                             this.props.messenger.postMessage("SHOULD_REMOVE_SOLVER", x);
-                        } break;
-                        case "Log to Console": {
-                          console.log(this.props.solvers[x]);
-                        } break;
-                        case "Add To Global Variables": {
-                          addToGlobalVars(this.props.solvers[x], this.props.solvers[x].name);
-                        } break;
+                          }
+                          break;
+                        case "Log to Console":
+                          {
+                            console.log(this.props.solvers[x]);
+                          }
+                          break;
+                        case "Add To Global Variables":
+                          {
+                            addToGlobalVars(this.props.solvers[x], this.props.solvers[x].name);
+                          }
+                          break;
                         default:
                           break;
                       }
                     }
                   }}
-                  key={x + "-context-menu"}>
+                  key={x + "-context-menu"}
+                >
                   <div className="tab-text-container">{this.props.solvers[x].name}</div>
                 </ContextMenu>
               </Tab>
@@ -116,14 +124,14 @@ export default class ParameterConfig extends React.Component<ParameterConfigProp
           </TabList>
           <TabPanel />
           <TabPanel key={"parameter-config-tabpanel-" + keys.length}>
-            <RendererTab messenger={this.props.messenger} />
+            <RendererTab />
           </TabPanel>
           {keys.map((x, i) => {
             switch (this.props.solvers[x].kind) {
               case "ray-tracer":
                 return (
                   <TabPanel key={"parameter-config-tabpanel-" + i}>
-                    <RayTracerTab solver={this.props.solvers[x] as RayTracer} messenger={this.props.messenger} />
+                    <RayTracerTab uuid={this.props.solvers[x].uuid} />
                   </TabPanel>
                 );
               case "rt60":
@@ -147,4 +155,4 @@ export default class ParameterConfig extends React.Component<ParameterConfigProp
     );
   }
   
-}
+}                           
