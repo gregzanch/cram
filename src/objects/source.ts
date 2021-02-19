@@ -47,10 +47,8 @@ export enum SignalSource {
 export default class Source extends Container {
   f: (t: number) => number;
   
-  theta: number;
-  phi: number;
-
-  //clfdata: CLFResult; 
+  public theta: number;
+  public phi: number;
   
   numRays: number;
   mesh: THREE.Mesh;
@@ -72,6 +70,7 @@ export default class Source extends Container {
   private _initialSPL: number;
   private _initialIntensity: number;
   fdtdSamples: number[];
+  public directivityHandler: DirectivityHandler; 
 
   constructor(name?: string, props?: SourceProps) {
     super(name||"new source");
@@ -91,6 +90,7 @@ export default class Source extends Container {
     this.velocity = 0;
     this.rgba = [0, 0, 0, 1];
     this.fdtdSamples = [] as number[];
+    this.directivityHandler = new DirectivityHandler(0); // omni source 
 
     this.selectedMaterial = new THREE.MeshMatcapMaterial({
       fog: false,
@@ -115,8 +115,8 @@ export default class Source extends Container {
     this.add(this.mesh);
 
     this.f = (props && props.f) || ((t) => Math.sin(t));
-    this.theta = (props && props.theta) || Math.PI / 4;
-    this.phi = (props && props.phi) || Math.PI / 2;
+    this.theta = (props && props.theta) || 180;
+    this.phi = (props && props.phi) || 360;
     this.numRays = 0;
     this.select = () => {
       if (!this.selected) {
@@ -381,7 +381,7 @@ class DirectivityHandler {
           this.phi = importData.phi;
           this.theta = importData.theta; 
         }else{
-          console.error("CLF Import Type Specified but no CLFResult data was provided")
+          console.error("DH CLF Import Type specified but no CLFResult data was provided")
           this.frequencies = [0]; // any frequency 
           this.dirDataList = []; 
           this.phi = []; 
@@ -408,13 +408,13 @@ class DirectivityHandler {
     switch(this.sourceDirType){
 
       case 0: // omni
-        return 0; 
+        return 1; 
 
       case 1: // CLF defined
 
 
       default: // behave as omni
-        return 0;
+        return 1;
     
     }
 

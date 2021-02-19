@@ -6,6 +6,7 @@ import Container from "../../objects/container";
 import enumerable from "../../common/enumerable";
 import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast } from "three-mesh-bvh";
 import Source from "../../objects/source";
+import DirectivityHandler from "../../objects/source";
 import Renderer from "../../render/renderer";
 import Surface from "../../objects/surface";
 import Receiver from "../../objects/receiver";
@@ -29,6 +30,8 @@ import expose from "../../common/expose";
 import { reverseTraverse } from "../../common/reverse-traverse";
 import { addSolver, removeSolver, setSolverProperty, useSolver } from "../../store";
 import { omit } from "lodash";
+
+import {cramangle2threejsangle} from "../../common/dir-angle-conversions";
 
 expose({ Plotly });
 
@@ -822,11 +825,11 @@ class RayTracer extends Solver {
     for (let i = 0; i < this.sourceIDs.length; i++) {
       this.__num_checked_paths += 1;
 
-      // random theta within the sources theta limits (-pi/2 to +pi/2)
-      const theta = 4 * (Math.random() - 0.5) * (this.containers[this.sourceIDs[i]] as Source).theta;
+      // random theta within the sources theta limits (0 to 180)
+      const theta = (Math.random()) * (this.containers[this.sourceIDs[i]] as Source).theta;
 
-      // random phi within the sources phi limits (-pi to +pi)
-      const phi = 4 * (Math.random()-0.5) * (this.containers[this.sourceIDs[i]] as Source).phi;
+      // random phi within the sources phi limits (0 to 360)
+      const phi = (Math.random()) * (this.containers[this.sourceIDs[i]] as Source).phi;
 
       // source position
       const position = (this.containers[this.sourceIDs[i]] as Source).position;
@@ -836,11 +839,17 @@ class RayTracer extends Solver {
 
       // random direction
       // const direction = new THREE.Vector3(0.75, Math.random() - 0.5, Math.random() - 0.5);
-      const direction = new THREE.Vector3().setFromSphericalCoords(1, phi, theta);
+      let threeJSAngles: number[] = cramangle2threejsangle(phi, theta); // [phi, theta]
+      const direction = new THREE.Vector3().setFromSphericalCoords(1, threeJSAngles[0], threeJSAngles[1]);
       direction.applyEuler(rotation);
 
+      // this is a placeholder until we decide how to handle source energies 
+      let sourceDH = (this.containers[this.sourceIDs[i]] as Source).directivityHandler; 
+      let directivity = sourceDH.getDirectivityAtPosition(0,phi,theta);
+      let initialEnergy = 1*directivity; 
+
       // get the path traced by the ray
-      const path = this.traceRay(position, direction, this.reflectionOrder, 1.0, this.sourceIDs[i]);
+      const path = this.traceRay(position, direction, this.reflectionOrder, initialEnergy, this.sourceIDs[i]);
 
       // if path exists
       if (path) {

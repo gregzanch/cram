@@ -80,16 +80,18 @@ export default function SourceProperties(props: SourcePropertiesProps) {
           </GridRow>
         )}
 
-        {/* {props.object.hasOwnProperty("theta") && (
+        {props.object.hasOwnProperty("theta") && (
           <GridRow label={"theta"}>
             <NumberInput name="theta" value={props.object.theta} {...XYZProps} />
           </GridRow>
         )}
+
         {props.object.hasOwnProperty("phi") && (
           <GridRow label={"phi"}>
             <NumberInput name="phi" value={props.object.phi} {...XYZProps} />
           </GridRow>
-        )} */}
+        )}
+
         {props.object.hasOwnProperty("mesh") && (
           <GridRow label={"color"}>
             <ColorInput
@@ -145,6 +147,41 @@ export default function SourceProperties(props: SourcePropertiesProps) {
           });
         }}
       />
+
+      <Slider
+        id="phi"
+        label="Phi MAX"
+        labelPosition="left"
+        tooltipText="Changes the source's phi"
+        min={0}
+        max={360}
+        step={0.05}
+        value={props.object.phi}
+        onChange={(e: SliderChangeEvent) => {
+          props.onPropertyChange({
+            name: "phi",
+            type: "number",
+            value: e.value
+          });
+        }}
+      />
+      <Slider
+        id="theta"
+        label="Theta MAX"
+        labelPosition="left"
+        tooltipText="Changes the source's theta"
+        min={0}
+        max={180}
+        step={0.05}
+        value={props.object.theta}
+        onChange={(e: SliderChangeEvent) => {
+          props.onPropertyChange({
+            name: "theta",
+            type: "number",
+            value: e.value
+          });
+        }}
+      /> 
       <Slider
         id="amplitude"
         label="Amplitude"

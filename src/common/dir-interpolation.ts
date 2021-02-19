@@ -1,6 +1,4 @@
 export function dirinterp(desiredPhi: number, desiredTheta: number, dirPoint1: dirDataPoint, dirPoint2: dirDataPoint, dirPoint3: dirDataPoint, dirPoint4: dirDataPoint): number{
-
-    // WARNING: this is untested
     
     //      P4      P3      ^ phi
     //          d           |
