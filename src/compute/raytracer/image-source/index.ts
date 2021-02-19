@@ -86,9 +86,11 @@ class ImageSource{
       }
 
       if(this.children[i].hasChildren){
-        paths.concat(this.children[i].constructPathsForAllDescendents(r)); 
+        paths = paths.concat(this.children[i].constructPathsForAllDescendents(r)); 
       } 
+
     }
+
     return paths; 
   }
 
@@ -126,19 +128,70 @@ class ImageSource{
 
 }
 
+interface intersection{
+  point: Vector3; 
+  reflectingSurface: Surface | null;
+}
+
 class ImageSourcePath{
-  public intersections: Vector3[]; 
+
+  public path: intersection[]; 
   
-  constructor(intersections: Vector3[]){
-    this.intersections = intersections; 
+  constructor(path: intersection[]){
+    this.path = path; 
   }
 
   markup(){
-    for(let i = 0; i<this.intersections.length-1; i++){
-      let p1: Vector3 = this.intersections[i].clone();
-      let p2: Vector3 =  this.intersections[i+1].clone();
+    for(let i = 0; i<this.path.length-1; i++){
+      let p1: Vector3 = (this.path[i]).point.clone();
+      let p2: Vector3 =  (this.path[i+1]).point.clone();
       cram.state.renderer.markup.addLine([p1.x,p1.y,p1.z],[p2.x,p2.y,p2.z]);
     }
+  }
+
+  isvalid(room_surfaces: Surface[]){
+    for(let order = 1; order <= this.order; order++){
+      let segmentStart: Vector3 = this.path[order-1].point;
+      let segmentEnd: Vector3 = this.path[order].point; 
+
+      let prevReflector: Surface | null; 
+      if(this.path[order-1].reflectingSurface != null){
+        prevReflector = this.path[order-1].reflectingSurface; 
+      }else{
+        break;
+      }
+
+      let reflector: Surface | null;
+      if(this.path[order].reflectingSurface != null){
+        reflector = this.path[order].reflectingSurface; 
+      }else{
+        break;
+      }
+
+      for(let j = 1; j<room_surfaces.length; j++){
+        if((room_surfaces[j] != prevReflector) && (room_surfaces[j] != reflector)){
+          
+          let direction: Vector3 = new Vector3(0,0,0); // from current image source to last image source / receiver
+          direction.subVectors(segmentEnd, segmentStart);
+          direction.normalize(); 
+
+          let raycaster = new THREE.Raycaster; 
+          raycaster.set(segmentStart,direction);
+          let intersections; 
+          intersections = raycaster.intersectObject(room_surfaces[j], true);
+
+          if (intersections.length > 0){
+            return false; 
+          }
+        }
+      }
+
+    }
+    return true; 
+  }
+
+  public get order(){
+    return this.path.length - 2; 
   }
 }
 
@@ -223,8 +276,7 @@ export class ImageSourceSolver extends Solver {
 
         let is: ImageSource = new ImageSource(is_params);
         
-        let maxOrder = 2; 
-        let n; 
+        let maxOrder = 1; 
         let is_2 = computeImageSources(is,maxOrder); 
         is_2?.markup(); 
         console.log(is_2); 
@@ -232,11 +284,11 @@ export class ImageSourceSolver extends Solver {
         let receiver: Receiver = this.receivers[0];
         console.log(receiver);
 
-        console.log(is_2?.constructPathsForAllDescendents(receiver)); 
-
-        //let path = constructImageSourcePath((is.children[4]).children[2], receiver);
-        //console.log(path);
-        //(path != null) && path.markup(); 
+        let paths: ImageSourcePath[];
+        if(is_2 != null){
+          paths = is_2.constructPathsForAllDescendents(receiver);
+          console.log(paths);
+        } 
     }
 
     markupImageSources(){
@@ -318,29 +370,44 @@ function constructImageSourcePath(is: ImageSource, listener: Receiver): ImageSou
   // note: will return null
   // otherwise, will return array of Vector3's representing path 
 
-  let path: Vector3[] = []; 
+  let path: intersection[] = []; 
   
   let maxOrder = is.order; 
-  path[maxOrder+1] = listener.position.clone(); 
+
+  let listenerStart: intersection = {
+    point: listener.position.clone(),
+    reflectingSurface: null, 
+  }
+  path[maxOrder+1] = listenerStart; 
 
   let raycaster = new THREE.Raycaster(); 
 
   for(let order = maxOrder; order>=1; order--){
-    let origin: Vector3 = is.position.clone(); 
-    let lastPosition: Vector3 = (path[order+1]).clone(); 
+    let nextPosition: Vector3 = is.position.clone(); 
+    let lastPosition: Vector3 = (path[order+1]).point.clone(); 
 
     let direction: Vector3 = new Vector3(0,0,0); // from current image source to last image source / receiver
-    direction.subVectors(lastPosition, origin);
+    direction.subVectors(nextPosition, lastPosition);
     direction.normalize(); 
 
-    raycaster.set(origin,direction);
+    raycaster.set(lastPosition,direction);
     let intersections; 
     if(is.reflector != null){
       intersections = raycaster.intersectObject(is.reflector,true);
     }
+
+    console.log(is);
+    console.log(order); 
+    console.log(intersections);
     
     if(intersections.length>0){
-      path[order] = intersections[0].point; 
+      
+      let intersect: intersection = {
+        point: intersections[0].point, 
+        reflectingSurface: is.reflector,
+      };
+
+      path[order] = intersect; 
     }else{
       return null; // no valid path
     }
@@ -351,7 +418,12 @@ function constructImageSourcePath(is: ImageSource, listener: Receiver): ImageSou
 
   }
 
-  path[0] = is.position;
+  let sourceEnd: intersection = {
+    point: is.position.clone(),  
+    reflectingSurface: null, 
+  };
+
+  path[0] = sourceEnd; 
   let pathObject = new ImageSourcePath(path); 
   return pathObject;
 }
