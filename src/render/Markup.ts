@@ -151,6 +151,13 @@ export class Markup extends Container{
     //update version
     this.colorBufferAttribute.version++;
   }
+  clearPoints(){
+    this.pointsBufferGeometry.dispose(); 
+    this.pointsBufferAttribute.needsUpdate = true; 
+    this.colorBufferAttribute.needsUpdate = true; 
+    this.pointsPositionIndex = 0;
+    this.pointsBufferGeometry.setDrawRange(0,this.pointsPositionIndex);
+  }
   addBox(min: [number, number, number], max: [number, number, number], color: [number, number, number]=[Math.random(), Math.random(), Math.random()]) {
     // const box = new THREE.Box3(new THREE.Vector3().fromArray(min), new THREE.Vector3().fromArray(max));
     const length = Math.abs(max[0] - min[0]);

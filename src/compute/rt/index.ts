@@ -9,7 +9,6 @@ import { transpose } from '../../common/helpers'
 import { Matrix4, Triangle, Vector3 } from "three";
 import { useSolver } from "../../store";
 
-
 export interface RT60Props extends SolverParams{
   uuid?: string;
 }
@@ -47,11 +46,13 @@ export class RT60 extends Solver{
     return transpose([frequencies, response]);
   }
   arauPuchades(room: Room, frequencies: number[] = third_octave) {
+
     
     // the goal of arau puchades is to break the surfaces into components (x, y, z)
     // well do this by projecting each surface onto the planes x=0, y=0, and z=0
     // https://en.wikipedia.org/wiki/Orthographic_projection
     
+
     const v = room.volumeOfMesh();
     const unitsConstant = RT_CONSTANTS[room.units] || RT_CONSTANTS[UNITS.METERS];
     // prettier-ignore
