@@ -34,6 +34,7 @@ import Surface from "../../../objects/surface";
 import { LensTwoTone, ThreeSixtyOutlined } from "@material-ui/icons";
 import { cloneElement } from "react";
 import { SSL_OP_SSLEAY_080_CLIENT_DH_BUG } from "constants";
+import { intersection } from "lodash";
 
 interface ImageSourceParams {
   baseSource: Source,
@@ -46,6 +47,7 @@ interface ImageSourceParams {
 
 class ImageSource{
 
+  // the source that all image sources are based off of
   public baseSource: Source; 
   
   public children: ImageSource[]; 
@@ -79,7 +81,6 @@ class ImageSource{
     for(let i = 0; i<this.children.length; i++){
       
       let p = constructImageSourcePath(this.children[i],r); 
-      p?.markup();
 
       if (p!= null){
         paths.push(p);
@@ -149,40 +150,46 @@ class ImageSourcePath{
     }
   }
 
-  isvalid(room_surfaces: Surface[]){
-    for(let order = 1; order <= this.order; order++){
+  isvalid(room_surfaces: Surface[]): boolean{
+
+    for(let order = 1; order <= this.order+1; order++){
+
       let segmentStart: Vector3 = this.path[order-1].point;
       let segmentEnd: Vector3 = this.path[order].point; 
 
-      let prevReflector: Surface | null; 
-      if(this.path[order-1].reflectingSurface != null){
-        prevReflector = this.path[order-1].reflectingSurface; 
-      }else{
-        break;
-      }
+      let prevReflector: Surface | null = this.path[order-1].reflectingSurface; 
+      let reflector: Surface | null = this.path[order].reflectingSurface; 
 
-      let reflector: Surface | null;
-      if(this.path[order].reflectingSurface != null){
-        reflector = this.path[order].reflectingSurface; 
-      }else{
-        break;
-      }
+      console.log(this);
 
       for(let j = 1; j<room_surfaces.length; j++){
-        if((room_surfaces[j] != prevReflector) && (room_surfaces[j] != reflector)){
-          
-          let direction: Vector3 = new Vector3(0,0,0); // from current image source to last image source / receiver
+        if((room_surfaces[j] !== prevReflector) && (room_surfaces[j] !== reflector)){
+
+          // from current image source to last image source / receiver
+          let direction: Vector3 = new Vector3(0,0,0); 
           direction.subVectors(segmentEnd, segmentStart);
           direction.normalize(); 
 
           let raycaster = new THREE.Raycaster; 
           raycaster.set(segmentStart,direction);
           let intersections; 
-          intersections = raycaster.intersectObject(room_surfaces[j], true);
+          intersections = raycaster.intersectObject(room_surfaces[j].mesh, true);
 
-          if (intersections.length > 0){
+          // remove any intersections of surfaces BEHIND the desired end point
+          // (verify this)
+          let trueIntersections = [];
+          for(let i = 0; i<intersections.length; i++){
+            if(segmentStart.distanceTo(intersections[i].point) < segmentStart.distanceTo(segmentEnd)){
+              //@ts-ignore
+              trueIntersections.push(intersections[i]);
+            }
+          }
+
+          if (trueIntersections.length > 0){
             return false; 
           }
+
+
         }
       }
 
@@ -276,7 +283,7 @@ export class ImageSourceSolver extends Solver {
 
         let is: ImageSource = new ImageSource(is_params);
         
-        let maxOrder = 1; 
+        let maxOrder = 3; 
         let is_2 = computeImageSources(is,maxOrder); 
         is_2?.markup(); 
         console.log(is_2); 
@@ -288,7 +295,20 @@ export class ImageSourceSolver extends Solver {
         if(is_2 != null){
           paths = is_2.constructPathsForAllDescendents(receiver);
           console.log(paths);
+
+          let validCount = 0; 
+          for(let i = 0; i<paths.length; i++){
+            if(paths[i].isvalid(this.room.surfaces.children as Surface[])){
+              console.log(paths[i].isvalid(this.room.surfaces.children as Surface[]));
+              paths[i].markup(); 
+              validCount++; 
+            }
+          }
+
+          console.log(validCount + " out of " + paths.length + " paths are valid"); 
         } 
+
+        
     }
 
     markupImageSources(){
@@ -367,8 +387,8 @@ function computeImageSources(is: ImageSource, maxOrder: number): ImageSource | n
 }
 
 function constructImageSourcePath(is: ImageSource, listener: Receiver): ImageSourcePath | null{
-  // note: will return null
-  // otherwise, will return array of Vector3's representing path 
+  // note: will return null if no valid path
+  // otherwise, will return ImageSourcePath object representing path 
 
   let path: intersection[] = []; 
   
@@ -390,15 +410,18 @@ function constructImageSourcePath(is: ImageSource, listener: Receiver): ImageSou
     direction.subVectors(nextPosition, lastPosition);
     direction.normalize(); 
 
+    //console.log(lastPosition);
+    //console.log(direction);
+
     raycaster.set(lastPosition,direction);
     let intersections; 
     if(is.reflector != null){
-      intersections = raycaster.intersectObject(is.reflector,true);
+      intersections = raycaster.intersectObject(is.reflector.mesh,true);
     }
 
-    console.log(is);
-    console.log(order); 
-    console.log(intersections);
+    //console.log(is);
+    //console.log(order); 
+    //console.log(intersections);
     
     if(intersections.length>0){
       
