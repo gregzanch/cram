@@ -493,4 +493,4 @@ declare global {
 
 // on("IMAGESOURCE_SET_PROPERTY", setSolverProperty);
 
-on("IMAGESOURCE_SET_PROPERTY", setSolverProperty);
+// on("IMAGESOURCE_SET_PROPERTY", setSolverProperty);
