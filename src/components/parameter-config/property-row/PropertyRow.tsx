@@ -6,9 +6,13 @@ const PropertyRowContainer = styled.div`
   grid-template-columns: 1fr 2fr 1fr;
   user-select: none;
   font-size: 9pt;
+  margin-bottom: .125em;
+  :last-child {
+    margin-bottom: 0;
+  }
 `;
 export interface PropertyRowProps{
-  children: React.ReactNode[];
+  children: React.ReactNode;
 }
 
 export default function PropertyRow(props: PropertyRowProps) {

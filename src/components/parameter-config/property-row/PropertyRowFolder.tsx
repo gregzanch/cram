@@ -19,6 +19,7 @@ const PropertyRowFolderContainer = styled.div`
     --folder-contents-shadow-bottom: inset 0px -15px 10px -15px rgba(221, 226, 230, 0.5);
     --transition-function: cubic-bezier(0.25, 0.1, 0.25, 1);
   }
+  padding-bottom: .25em;
 `;
 
 const PropertyRowFolderContents = styled.div`
@@ -28,9 +29,10 @@ const PropertyRowFolderContents = styled.div`
     padding-bottom: 0.5em;
     overflow: hidden;
 
-    -webkit-box-shadow: var(--folder-contents-shadow-top), var(--folder-contents-shadow-bottom);
-    -moz-box-shadow: var(--folder-contents-shadow-top), var(--folder-contents-shadow-bottom);
-    box-shadow: var(--folder-contents-shadow-top), var(--folder-contents-shadow-bottom);
+    /* -webkit-box-shadow: var(--folder-contents-shadow-top), var(--folder-contents-shadow-bottom); */
+    /* -moz-box-shadow: var(--folder-contents-shadow-top), var(--folder-contents-shadow-bottom); */
+    /* box-shadow: var(--folder-contents-shadow-top), var(--folder-contents-shadow-bottom); */
+    /* background-color: #000000; */
 
     -webkit-transition: all var(--transition-time) var(--transition-function);
     -moz-transition: all var(--transition-time) var(--transition-function);

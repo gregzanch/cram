@@ -5,8 +5,9 @@ import { Popover2 , Classes} from "@blueprintjs/popover2";
 import NavbarMenuItemLabel from "./NavbarMenuItemLabel";
 import MenuItemText from "./menu-item-text/MenuItemText";
 import { Characters } from "../constants";
-
+import create from "zustand";
 import "./NavBarComponent.css";
+import { useAppStore } from "../store";
 
 interface MenuItemWithMessengerProps {
   label: string;
@@ -194,16 +195,36 @@ export function ExamplesMenu(props: MenuProps) {
   );
 }
 
-export interface NavBarComponentProps {
-  canUndo: boolean;
-  canRedo: boolean;
-  canDuplicate: boolean;
-  rendererStatsVisible: boolean;
-  projectName: string;
+
+
+
+const ProjectName = () => {
+  const projectName = useAppStore(state=>state.projectName);
+  return (
+    <Navbar.Group className="main-nav_bar-left_group main-nav_bar-projectname_text">{projectName}</Navbar.Group>
+  )
 }
 
-export function NavBarComponent(props: NavBarComponentProps) {
-  const [openMenu, setOpenMenu] = useState<number|null>(null);
+
+
+
+
+type NavBarStore = {
+  openMenu: number|null;
+  setOpenMenu: (openMenu: number|null) => void;
+}
+
+export const useNavBarStore = create<NavBarStore>((set) => ({
+  openMenu: null,
+  setOpenMenu: (openMenu: number|null) => set({openMenu})
+}));
+
+export default useAppStore;
+
+
+export function NavBarComponent() {
+  const {openMenu, setOpenMenu} = useNavBarStore();
+
   return (
     <Navbar className="main-nav_bar">
       <Navbar.Group className="main-nav_bar-left_group">
@@ -211,16 +232,16 @@ export function NavBarComponent(props: NavBarComponentProps) {
         <Navbar.Divider />
         <Menu className="main-nav_bar-left_menu">
           <ButtonGroup minimal={true}>
-            <FileMenu onInteraction={(e)=>e ? setOpenMenu(1) : setOpenMenu(0)} isOpen={openMenu === 1}/>
-            <EditMenu onInteraction={(e)=>e ? setOpenMenu(2): setOpenMenu(0)} isOpen={openMenu === 2}/>
-            <AddMenu  onInteraction={(e)=>e ? setOpenMenu(3): setOpenMenu(0)} isOpen={openMenu === 3}/>
-            <ViewMenu onInteraction={(e)=>e ? setOpenMenu(4): setOpenMenu(0)} isOpen={openMenu === 4}/>
-            <ToolMenu onInteraction={(e)=>e ? setOpenMenu(5): setOpenMenu(0)} isOpen={openMenu === 5}/>
-            <ExamplesMenu onInteraction={(e)=>e ? setOpenMenu(6): setOpenMenu(0)} isOpen={openMenu === 6}/>
+            <FileMenu onInteraction={(e)=>e ? setOpenMenu(1) : setOpenMenu(null)} isOpen={openMenu === 1}/>
+            <EditMenu onInteraction={(e)=>e ? setOpenMenu(2): setOpenMenu(null)} isOpen={openMenu === 2}/>
+            <AddMenu  onInteraction={(e)=>e ? setOpenMenu(3): setOpenMenu(null)} isOpen={openMenu === 3}/>
+            <ViewMenu onInteraction={(e)=>e ? setOpenMenu(4): setOpenMenu(null)} isOpen={openMenu === 4}/>
+            <ToolMenu onInteraction={(e)=>e ? setOpenMenu(5): setOpenMenu(null)} isOpen={openMenu === 5}/>
+            <ExamplesMenu onInteraction={(e)=>e ? setOpenMenu(6): setOpenMenu(null)} isOpen={openMenu === 6}/>
           </ButtonGroup>
         </Menu>
       </Navbar.Group>
-      <Navbar.Group className="main-nav_bar-left_group main-nav_bar-projectname_text">{props.projectName}</Navbar.Group>
+      <ProjectName />
       <Navbar.Group className="main-nav_bar-right_group">
         <Button
           icon="cog"

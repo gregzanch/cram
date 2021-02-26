@@ -15,61 +15,25 @@ import { omit } from "../common/helpers";
 import Solver from "../compute/solver";
 
 
+export * from './container-store';
+export * from './material-store';
+export * from './solver-store';
+export * from './app-store';
+
+
 
 export type SetFunction<T> = (fn: (store: T, overwrite?: boolean) => void) => void;
 
 
-export * from './container-store';
-export * from './material-store';
-export * from './solver-store';
 
 
 
+declare global {
+  interface SetPropertyPayload<T> {
+    uuid: string;
+    property: keyof T;
+    value: T[SetPropertyPayload<T>["property"]];
+  }
+}
 
-// todo remove
-export type State = {
-  renderer: Renderer;
 
-  history: History;
-  settings: {
-    general: {
-      fog_color: Setting<string>;
-      default_save_name: Setting<string>;
-    };
-    editor: {
-      transform_snap_fine: Setting<number>;
-      transform_snap_normal: Setting<number>;
-      transform_snap_coarse: Setting<number>;
-    };
-    keybindings: {
-      SHOW_IMPORT_DIALOG: Setting<string>;
-    };
-  };
-  settingsManagers: KeyValuePair<SettingsManager>;
-  editorMode: EditorModes;
-  currentProcess: Processes;
-  browser: Report;
-  projectName: string;
-};
-
-// create<State>((set) => ({
-//   audiofiles: {} as KeyValuePair<AudioFile>,
-//   time: 0,
-//   selectedObjects: [] as Container[],
-//   materials,
-//   materialSearcher: new Searcher(materials, {
-//     keySelector: (obj) => obj.material
-//   }),
-//   constructions: {} as KeyValuePair<Container>,
-//   sketches: {} as KeyValuePair<Sketch>,
-//   solvers: {} as KeyValuePair<Solver>,
-//   simulation: "",
-//   renderer: {} as Renderer,
-//   history: new History(),
-//   settings: defaultSettings as ApplicationSettings,
-//   settingsManagers: {} as KeyValuePair<SettingsManager>,
-//   editorMode: EditorModes.OBJECT as EditorModes,
-//   currentProcess: Processes.NONE as Processes,
-//   browser: browserReport(navigator.userAgent),
-//   projectName: defaultSettings.general.default_save_name.value
-// }));

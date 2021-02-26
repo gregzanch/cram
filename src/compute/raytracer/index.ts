@@ -267,6 +267,9 @@ class RayTracer extends Solver {
     this.colorBufferAttribute.setUsage(THREE.DynamicDrawUsage);
     this.rayBufferGeometry.setAttribute("color", this.colorBufferAttribute);
     this.chartdata = [] as ChartData[];
+    
+
+
     this.rays = new THREE.LineSegments(
       this.rayBufferGeometry,
       new THREE.LineBasicMaterial({
@@ -672,7 +675,7 @@ class RayTracer extends Solver {
           energy * abs((intersections[0].object.parent as Surface).reflectionFunction(frequency, angle!));
 
         // end condition
-        if (rr && normal && reflectionloss > 1 / 2 ** 16 && iter < order) {
+        if (rr && normal && reflectionloss > 1 / 2 ** 16 && iter < order - 1) {
           // recurse
           return this.traceRay(
             intersections[0].point.clone().addScaledVector(normal.clone(), 0.01),
@@ -1309,11 +1312,15 @@ class RayTracer extends Solver {
               const freq = freqs[f];
               let coefficient = 1;
               if (surface && surface.kind === "surface") {
-                // coefficient = surface.reflectionFunction(freq, angle);
-                coefficient = 1 - (surface as Surface).absorptionFunction(freq);
+                coefficient = (surface as Surface).reflectionFunction(freq, angle);
+                // coefficient = 1 - (surface as Surface).absorptionFunction(freq);
               }
               IrayArray[f] = ac.P2I(
-                ac.Lp2P((ac.P2Lp(ac.I2P(IrayArray[f] * coefficient)) as number) - airAttenuationdB[f] * distance)
+                ac.Lp2P((
+                  ac.P2Lp(
+                    ac.I2P(IrayArray[f] * coefficient)) as number) 
+                      - airAttenuationdB[f] * distance
+                    )
               ) as number;
             }
           }
@@ -1853,11 +1860,8 @@ declare global {
     ADD_RAYTRACER: RayTracer | undefined,
     REMOVE_RAYTRACER: string;
     RAYTRACER_CLEAR_RAYS: string;
-    RAYTRACER_SET_PROPERTY: {
-      uuid: string;
-      property: keyof RayTracer;
-      value: RayTracer[EventTypes["RAYTRACER_SET_PROPERTY"]["property"]]
-    };
+    RAYTRACER_SET_PROPERTY: SetPropertyPayload<RayTracer>
+    
   }
 }
 

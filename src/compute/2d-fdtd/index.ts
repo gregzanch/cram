@@ -1,5 +1,5 @@
 import Renderer from "../../render/renderer";
-import Messenger from "../../messenger";
+import { on, postMessage, addMessageHandler, removeMessageHandler, messenger } from "../../messenger";
 import {
   PlaneBufferGeometry,
   ShaderMaterial,
@@ -38,6 +38,8 @@ import Surface from "../../objects/surface";
 import { KeyValuePair } from "../../common/key-value-pair";
 import { clamp } from "../../common/clamp";
 import { EditorModes } from "../../constants";
+import { addSolver, removeSolver, setSolverProperty } from "../../store";
+import { renderer } from "../../render/renderer";
 
 export const FDTD_2D_Defaults = {
   width: 10,
@@ -48,8 +50,6 @@ export const FDTD_2D_Defaults = {
 };
 
 export interface FDTD_2D_Props {
-  messenger: Messenger;
-  renderer: Renderer;
   width?: number;
   height?: number;
   cellSize?: number;
@@ -62,8 +62,6 @@ export interface Uniforms {
 }
 
 class FDTD_2D extends Solver {
-  renderer: Renderer;
-  messenger: Messenger;
   gpuCompute!: GPUComputationRenderer;
 
   /**
@@ -111,11 +109,10 @@ class FDTD_2D extends Solver {
   clearShader!: ShaderMaterial;
   frame: number;
   messageHandlers: string[][];
-  constructor(props: FDTD_2D_Props) {
+  eventListeners: (()=>void)[];
+  constructor(props?: FDTD_2D_Props) {
     super(props);
     this.kind = "fdtd-2d";
-    this.messenger = props.messenger;
-    this.renderer = props.renderer;
     this.running = false;
     this.time = 0;
     this.frame = 0;
@@ -123,13 +120,13 @@ class FDTD_2D extends Solver {
     this.waveSpeed = 340.29;
     this.recording = false;
 
-    const _width = props.width || FDTD_2D_Defaults.width;
-    const _height = props.height || FDTD_2D_Defaults.height;
+    const _width = (props && props.width) || FDTD_2D_Defaults.width;
+    const _height = (props && props.height) || FDTD_2D_Defaults.height;
     
-    this.offsetX = props.offsetX || FDTD_2D_Defaults.offsetX;
-    this.offsetY = props.offsetY || FDTD_2D_Defaults.offsetY;
+    this.offsetX = (props && props.offsetX) || FDTD_2D_Defaults.offsetX;
+    this.offsetY = (props && props.offsetY) || FDTD_2D_Defaults.offsetY;
     
-    this.cellSize = props.cellSize || Math.max(_width, _height) / 128;
+    this.cellSize = (props && props.cellSize) || Math.max(_width, _height) / 128;
 
     this.nx = Math.ceil(_width / this.cellSize);
     this.ny = Math.ceil(_height / this.cellSize);
@@ -145,7 +142,8 @@ class FDTD_2D extends Solver {
     this.receiverKeys = [] as string[];
     this.walls = [] as FDTDWall[];
     this.messageHandlers = [] as string[][];
-    
+    this.eventListeners = [] as (()=>void)[];
+
     const editGeometry = new PlaneBufferGeometry(this.width, this.height, 1, 1);
     editGeometry.translate(this.width/2, this.height/2, 0);
     editGeometry.translate(this.offsetX, this.offsetY, 0);
@@ -158,7 +156,7 @@ class FDTD_2D extends Solver {
     this.editMesh.name = "fdtd-2d-edit-mesh";
     this.editMesh.visible = false;
     
-    this.renderer.fdtdItems.add(this.editMesh);
+    renderer.fdtdItems.add(this.editMesh);
     
 
     this.fillTexture = this.fillTexture.bind(this);
@@ -175,7 +173,7 @@ class FDTD_2D extends Solver {
     
     this.init();
     
-    this.onModeChange(this.messenger.postMessage("GET_EDITOR_MODE")[0]);
+    this.onModeChange(postMessage("GET_EDITOR_MODE")[0]);
     
 
   }
@@ -261,9 +259,9 @@ class FDTD_2D extends Solver {
     (this.mesh.material as ShaderMaterial).wireframe = false;
     this.mesh.matrixAutoUpdate = true;
     this.mesh.scale.setZ(0.01);
-    this.renderer.fdtdItems.add(this.mesh);
+    renderer.fdtdItems.add(this.mesh);
 
-    this.gpuCompute = new GPUComputationRenderer(this.nx, this.ny, this.renderer.renderer as WebGLRenderer);
+    this.gpuCompute = new GPUComputationRenderer(this.nx, this.ny, renderer.renderer as WebGLRenderer);
 
     let heightmapInit = this.gpuCompute.createTexture();
     this.sourcemap = this.gpuCompute.createTexture();
@@ -315,13 +313,10 @@ class FDTD_2D extends Solver {
       depthBuffer: false
     });
     
-    this.messageHandlers.push(
-      this.messenger.addMessageHandler("RENDERER_UPDATED", () => {
-        if (this.running) {
-          this.render();
-        }
-      })
-    );
+
+    this.eventListeners.push(on("RENDERER_UPDATED", ()=>{
+      if (this.running) this.render();
+    }));
     this.render();
     this.clear();
   }
@@ -329,19 +324,21 @@ class FDTD_2D extends Solver {
     // this.mesh.visible = false;
   }
   dispose() {
+    this.eventListeners.forEach(dispose => dispose());
+
     for (let i = 0; i < this.messageHandlers.length; i++) {
-      this.messenger.removeMessageHandler(this.messageHandlers[i][0], this.messageHandlers[i][1]); 
+      removeMessageHandler(this.messageHandlers[i][0], this.messageHandlers[i][1]); 
     }
-    this.mesh && this.renderer.fdtdItems.remove(this.mesh);
+    this.mesh && renderer.fdtdItems.remove(this.mesh);
     this.messageHandlers = [] as string[][];
   }
   run() {
     this.running = true;
-    this.renderer.fdtd2drunning = true;
+    renderer.fdtd2drunning = true;
   }
   stop() {
     this.running = false;
-    this.renderer.fdtd2drunning = false;
+    renderer.fdtd2drunning = false;
   }
   setWireframeVisible(show: boolean) {
     (this.mesh.material as ShaderMaterial).wireframe = show;
@@ -492,7 +489,7 @@ class FDTD_2D extends Solver {
         const v = (this.receivers[key].position.y - this.offsetY) / this.height;
         this.readLevelShader.uniforms["point1"].value.set(u, v);
         this.gpuCompute.doRenderTarget(this.readLevelShader, this.readLevelRenderTarget);
-        (this.renderer.renderer as WebGLRenderer).readRenderTargetPixels(
+        (renderer.renderer as WebGLRenderer).readRenderTargetPixels(
           this.readLevelRenderTarget,
           0,
           0,
@@ -547,3 +544,21 @@ class FDTD_2D extends Solver {
 export { FDTD_2D };
 
 export default FDTD_2D;
+
+
+// this allows for nice type checking with 'on' and 'emit' from messenger
+declare global {
+  interface EventTypes {
+    ADD_FDTD_2D: FDTD_2D | undefined,
+    REMOVE_FDTD_2D: string;
+    FDTD_2D_SET_PROPERTY: SetPropertyPayload<FDTD_2D>
+  }
+
+
+}
+
+on("FDTD_2D_SET_PROPERTY", setSolverProperty);
+on("REMOVE_FDTD_2D", removeSolver);
+on("ADD_FDTD_2D", addSolver(FDTD_2D))
+
+

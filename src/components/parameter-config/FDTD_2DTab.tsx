@@ -1,16 +1,16 @@
 import React, { useState } from "react";
-import Messenger from "../../../messenger";
-import FDTD_2D from "../../../compute/2d-fdtd";
-import { clamp } from "../../../common/clamp";
-import Slider, { SliderChangeEvent } from '../../slider/Slider';
-import PropertyRow from "../property-row/PropertyRow";
-import Label from "../../label/Label";
-import PropertyRowLabel from "../property-row/PropertyRowLabel";
-import PropertyRowButton from "../property-row/PropertyRowButton";
-import PropertyRowCheckbox from "../property-row/PropertyRowCheckbox";
-import PropertyRowFolder from "../property-row/PropertyRowFolder";
-import Source from "../../../objects/source";
-import Receiver from "../../../objects/receiver";
+import Messenger from "../../messenger";
+import FDTD_2D from "../../compute/2d-fdtd";
+import { clamp } from "../../common/clamp";
+import Slider, { SliderChangeEvent } from '../slider/Slider';
+import PropertyRow from "./property-row/PropertyRow";
+import Label from "../label/Label";
+import PropertyRowLabel from "./property-row/PropertyRowLabel";
+import PropertyRowButton from "./property-row/PropertyRowButton";
+import PropertyRowCheckbox from "./property-row/PropertyRowCheckbox";
+import PropertyRowFolder from "./property-row/PropertyRowFolder";
+import Source from "../../objects/source";
+import Receiver from "../../objects/receiver";
 
 export interface FDTD_2DTabProps {
   messenger: Messenger;
