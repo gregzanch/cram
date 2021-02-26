@@ -22,6 +22,7 @@
 import Solver from "../../solver";
 import {uuid} from "uuidv4";
 import * as THREE from "three";
+import * as ac from "../../acoustics";
 import Room from "../../../objects/room";
 import Messenger from "../../../messenger";
 import { KVP } from "../../../common/key-value-pair";
@@ -34,6 +35,7 @@ import Surface from "../../../objects/surface";
 import { LensTwoTone, ThreeSixtyOutlined } from "@material-ui/icons";
 import { cloneElement } from "react";
 import { SSL_OP_SSLEAY_080_CLIENT_DH_BUG } from "constants";
+import { intersection } from "lodash";
 
 interface ImageSourceParams {
   baseSource: Source,
@@ -46,6 +48,8 @@ interface ImageSourceParams {
 
 class ImageSource{
 
+  // the source that all image sources are based off of
+  // note: this is not the parent image source! that is below 
   public baseSource: Source; 
   
   public children: ImageSource[]; 
@@ -73,24 +77,29 @@ class ImageSource{
     this.uuid = uuid(); 
   }
 
-  public constructPathsForAllDescendents(r: Receiver): ImageSourcePath[]{
+  public constructPathsForAllDescendents(r: Receiver,constructForThis=true): ImageSourcePath[]{
     let paths: ImageSourcePath[] = [];
 
+    // compute direct sound path
+    if(constructForThis){
+      let thisPath = constructImageSourcePath(this, r); 
+      if(thisPath != null){
+        paths.push(thisPath); 
+      }
+    }
+
     for(let i = 0; i<this.children.length; i++){
-      
       let p = constructImageSourcePath(this.children[i],r); 
-      p?.markup();
 
       if (p!= null){
         paths.push(p);
       }
 
       if(this.children[i].hasChildren){
-        paths = paths.concat(this.children[i].constructPathsForAllDescendents(r)); 
+        paths = paths.concat(this.children[i].constructPathsForAllDescendents(r,false)); 
       } 
 
     }
-
     return paths; 
   }
 
@@ -98,7 +107,6 @@ class ImageSource{
     for(let i = 0; i<this.children.length; i++){
       let pos: Vector3 = this.children[i].position.clone();
       cram.state.renderer.markup.addPoint([pos.x,pos.y,pos.z], [0,0,0]);
-
       if (this.children[i].hasChildren){
         this.children[i].markup(); 
       }else{
@@ -131,6 +139,7 @@ class ImageSource{
 interface intersection{
   point: Vector3; 
   reflectingSurface: Surface | null;
+  angle: number | null; 
 }
 
 class ImageSourcePath{
@@ -149,38 +158,40 @@ class ImageSourcePath{
     }
   }
 
-  isvalid(room_surfaces: Surface[]){
-    for(let order = 1; order <= this.order; order++){
+  isvalid(room_surfaces: Surface[]): boolean{
+
+    for(let order = 1; order <= this.order+1; order++){
+
       let segmentStart: Vector3 = this.path[order-1].point;
       let segmentEnd: Vector3 = this.path[order].point; 
 
-      let prevReflector: Surface | null; 
-      if(this.path[order-1].reflectingSurface != null){
-        prevReflector = this.path[order-1].reflectingSurface; 
-      }else{
-        break;
-      }
-
-      let reflector: Surface | null;
-      if(this.path[order].reflectingSurface != null){
-        reflector = this.path[order].reflectingSurface; 
-      }else{
-        break;
-      }
+      let prevReflector: Surface | null = this.path[order-1].reflectingSurface; 
+      let reflector: Surface | null = this.path[order].reflectingSurface; 
 
       for(let j = 1; j<room_surfaces.length; j++){
-        if((room_surfaces[j] != prevReflector) && (room_surfaces[j] != reflector)){
-          
-          let direction: Vector3 = new Vector3(0,0,0); // from current image source to last image source / receiver
+        if((room_surfaces[j] !== prevReflector) && (room_surfaces[j] !== reflector)){
+
+          // from current image source to last image source / receiver
+          let direction: Vector3 = new Vector3(0,0,0); 
           direction.subVectors(segmentEnd, segmentStart);
           direction.normalize(); 
 
           let raycaster = new THREE.Raycaster; 
           raycaster.set(segmentStart,direction);
           let intersections; 
-          intersections = raycaster.intersectObject(room_surfaces[j], true);
+          intersections = raycaster.intersectObject(room_surfaces[j].mesh, true);
 
-          if (intersections.length > 0){
+          // remove any intersections of surfaces BEHIND the desired end point
+          // (verify this)
+          let trueIntersections = [];
+          for(let i = 0; i<intersections.length; i++){
+            if(segmentStart.distanceTo(intersections[i].point) < segmentStart.distanceTo(segmentEnd)){
+              //@ts-ignore
+              trueIntersections.push(intersections[i]);
+            }
+          }
+
+          if (trueIntersections.length > 0){
             return false; 
           }
         }
@@ -192,6 +203,60 @@ class ImageSourcePath{
 
   public get order(){
     return this.path.length - 2; 
+  }
+
+  public get totalLength(){
+    let length: number = 0; 
+    let startingPoint: Vector3; 
+    let endingPoint: Vector3;
+    for(let i = 1; i<this.path.length; i++){
+      startingPoint = this.path[i-1].point;
+      endingPoint = this.path[i].point;
+      length = length+startingPoint.distanceTo(endingPoint); 
+    }
+    return length; 
+  }
+  
+  public arrivalPressure(initialSPL: number[], freqs: number[]): number[]{
+
+    let intensity = ac.P2I(ac.Lp2P(initialSPL)); 
+    let arrivalPressure = []; 
+
+    for(let s = 0; s<this.path.length; s++){
+
+      let intersection = this.path[s];
+      if(intersection.reflectingSurface == null){
+        // either source or a receiver
+        // do nothing to intensity levels
+      }else{
+        // intersected with a surface
+        for(let findex = 0; findex<freqs.length; findex++){
+          // @ts-ignore
+          let reflectionCoefficient = (intersection.reflectingSurface as Surface).reflectionFunction(freqs[findex],intersection.angle);
+          intensity[findex] = intensity[findex]*reflectionCoefficient; 
+        }
+
+      }
+
+    }
+
+    // convert back to SPL 
+    let arrivalLp = ac.P2Lp(ac.I2P(intensity)); 
+    
+    // apply air absorption (dB/m)
+    const airAttenuationdB = ac.airAttenuation(freqs); 
+
+    for(let f = 0; f<freqs.length; f++){
+      arrivalLp[f] = arrivalLp[f] - airAttenuationdB[f]*this.totalLength; 
+    }
+
+    // convert to pressure
+    return ac.Lp2P(arrivalLp) as number[]; 
+
+  }
+
+  public arrivalTime(c: number): number{
+    return this.totalLength / c; 
   }
 }
 
@@ -276,7 +341,7 @@ export class ImageSourceSolver extends Solver {
 
         let is: ImageSource = new ImageSource(is_params);
         
-        let maxOrder = 1; 
+        let maxOrder = 3; 
         let is_2 = computeImageSources(is,maxOrder); 
         is_2?.markup(); 
         console.log(is_2); 
@@ -287,7 +352,22 @@ export class ImageSourceSolver extends Solver {
         let paths: ImageSourcePath[];
         if(is_2 != null){
           paths = is_2.constructPathsForAllDescendents(receiver);
-          console.log(paths);
+
+          let f = [125, 250, 500, 1000, 2000, 4000];
+          let initialSPL = [100,100,100,100,100,100]; 
+
+          let validCount = 0; 
+          for(let i = 0; i<paths.length; i++){
+            if(paths[i].isvalid(this.room.surfaces.children as Surface[])){
+              paths[i].markup(); 
+              console.log(paths[i]);
+              console.log(paths[i].totalLength)
+              console.log(paths[i].arrivalTime(343)); 
+              console.log(paths[i].arrivalPressure(initialSPL,f))
+              validCount++; 
+            }
+          }
+          console.log(validCount + " out of " + paths.length + " paths are valid"); 
         } 
     }
 
@@ -367,8 +447,8 @@ function computeImageSources(is: ImageSource, maxOrder: number): ImageSource | n
 }
 
 function constructImageSourcePath(is: ImageSource, listener: Receiver): ImageSourcePath | null{
-  // note: will return null
-  // otherwise, will return array of Vector3's representing path 
+  // note: will return null if no valid path
+  // otherwise, will return ImageSourcePath object representing path 
 
   let path: intersection[] = []; 
   
@@ -377,6 +457,7 @@ function constructImageSourcePath(is: ImageSource, listener: Receiver): ImageSou
   let listenerStart: intersection = {
     point: listener.position.clone(),
     reflectingSurface: null, 
+    angle: null,
   }
   path[maxOrder+1] = listenerStart; 
 
@@ -393,18 +474,15 @@ function constructImageSourcePath(is: ImageSource, listener: Receiver): ImageSou
     raycaster.set(lastPosition,direction);
     let intersections; 
     if(is.reflector != null){
-      intersections = raycaster.intersectObject(is.reflector,true);
+      intersections = raycaster.intersectObject(is.reflector.mesh,true);
     }
-
-    console.log(is);
-    console.log(order); 
-    console.log(intersections);
     
     if(intersections.length>0){
       
       let intersect: intersection = {
         point: intersections[0].point, 
         reflectingSurface: is.reflector,
+        angle: direction.clone().multiplyScalar(-1).angleTo(intersections[0].face!.normal),
       };
 
       path[order] = intersect; 
@@ -421,6 +499,7 @@ function constructImageSourcePath(is: ImageSource, listener: Receiver): ImageSou
   let sourceEnd: intersection = {
     point: is.position.clone(),  
     reflectingSurface: null, 
+    angle: null, 
   };
 
   path[0] = sourceEnd; 
@@ -429,7 +508,7 @@ function constructImageSourcePath(is: ImageSource, listener: Receiver): ImageSou
 }
 
 function isInFrontOf(surface1: Surface, surface2: Surface): boolean{
-  // how to check this? 
+  // figure out how to check this
   return true; 
 }
 
