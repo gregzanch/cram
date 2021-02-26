@@ -223,14 +223,14 @@ Object.keys(defaultSettings).map(async (category) => {
 
 cram.state.renderer = renderer;
 
-cram.messenger.addMessageHandler("ADD_CONSTRUCTION", (acc, ...args) => {
+messenger.addMessageHandler("ADD_CONSTRUCTION", (acc, ...args) => {
   if (args && args[0]) {
     const construction = args[0] as Container;
     cram.state.constructions[construction.uuid] = construction;
   }
 });
 
-cram.messenger.addMessageHandler("REMOVE_CONSTRUCTION", (acc, id) => {
+messenger.addMessageHandler("REMOVE_CONSTRUCTION", (acc, id) => {
   if (id) {
     if (cram.state.constructions[id]) {
       delete cram.state.constructions[id];
@@ -238,23 +238,23 @@ cram.messenger.addMessageHandler("REMOVE_CONSTRUCTION", (acc, id) => {
   }
 });
 
-cram.messenger.addMessageHandler("GET_CONSTRUCTIONS", () => {
+messenger.addMessageHandler("GET_CONSTRUCTIONS", () => {
   return cram.state.constructions;
 });
 
-cram.messenger.addMessageHandler("SET_SELECTION", (acc, objects) => {
-  cram.messenger.postMessage("DESELECT_ALL_OBJECTS");
-  cram.messenger.postMessage("APPEND_SELECTION", objects);
+messenger.addMessageHandler("SET_SELECTION", (acc, objects) => {
+  messenger.postMessage("DESELECT_ALL_OBJECTS");
+  messenger.postMessage("APPEND_SELECTION", objects);
 });
 
-cram.messenger.addMessageHandler("DESELECT_ALL_OBJECTS", () => {
+messenger.addMessageHandler("DESELECT_ALL_OBJECTS", () => {
   Object.keys(cram.state.containers).forEach((x) => {
     cram.state.containers[x].deselect();
   });
   cram.state.selectedObjects = [] as Container[];
 });
 
-cram.messenger.addMessageHandler("APPEND_SELECTION", (acc, objects) => {
+messenger.addMessageHandler("APPEND_SELECTION", (acc, objects) => {
   hotkeys.setScope("editor");
   if (objects instanceof Array) {
     for (let i = 0; i < objects.length; i++) {
@@ -267,23 +267,23 @@ cram.messenger.addMessageHandler("APPEND_SELECTION", (acc, objects) => {
 });
 
 
-//cram.state.messenger.addMessageHandler("OPEN_CLF_VIEWER", () => {
+//messenger.addMessageHandler("OPEN_CLF_VIEWER", () => {
 //  console.log("will open CLF viewer");
 //});
 
-//cram.state.messenger.addMessageHandler("CLOSE_CLF_VIEWER", () => {
+//messenger.addMessageHandler("CLOSE_CLF_VIEWER", () => {
 //  console.log("will close CLF viewer");
 //})
 
-cram.messenger.addMessageHandler("GET_SELECTED_OBJECTS", () => {
+messenger.addMessageHandler("GET_SELECTED_OBJECTS", () => {
   return cram.state.selectedObjects;
 });
 
-cram.messenger.addMessageHandler("GET_SELECTED_OBJECT_TYPES", () => {
+messenger.addMessageHandler("GET_SELECTED_OBJECT_TYPES", () => {
   return cram.state.selectedObjects.map((obj) => obj.kind);
 });
 
-cram.messenger.addMessageHandler("FETCH_ROOMS", () => {
+messenger.addMessageHandler("FETCH_ROOMS", () => {
   const roomkeys = Object.keys(cram.state.containers).filter((x) => {
     return cram.state.containers[x].kind === "room";
   });
@@ -292,27 +292,27 @@ cram.messenger.addMessageHandler("FETCH_ROOMS", () => {
   }
 });
 
-cram.messenger.addMessageHandler("FETCH_CONTAINER", (acc, ...args) => {
+messenger.addMessageHandler("FETCH_CONTAINER", (acc, ...args) => {
   return args && args[0] && cram.state.containers[args[0]];
 });
 
-cram.messenger.addMessageHandler("FETCH_ALL_SETTINGS", () => {
+messenger.addMessageHandler("FETCH_ALL_SETTINGS", () => {
   return cram.state.settings;
 });
 
-cram.messenger.addMessageHandler("FETCH_SETTINGS__GENERAL", () => {
+messenger.addMessageHandler("FETCH_SETTINGS__GENERAL", () => {
   return cram.state.settings.general;
 });
 
-cram.messenger.addMessageHandler("FETCH_SETTINGS__EDITOR", () => {
+messenger.addMessageHandler("FETCH_SETTINGS__EDITOR", () => {
   return cram.state.settings.editor;
 });
 
-cram.messenger.addMessageHandler("FETCH_SETTINGS__KEYBINDINGS", () => {
+messenger.addMessageHandler("FETCH_SETTINGS__KEYBINDINGS", () => {
   return cram.state.settings.keybindings;
 });
 
-cram.messenger.addMessageHandler("SUBMIT_ALL_SETTINGS", () => {
+messenger.addMessageHandler("SUBMIT_ALL_SETTINGS", () => {
   for (const key in cram.state.settings) {
     let changedSettings = [] as Setting<number | string | boolean>[];
     for (const subkey in cram.state.settings[key]) {
@@ -328,30 +328,30 @@ cram.messenger.addMessageHandler("SUBMIT_ALL_SETTINGS", () => {
   return cram.state.settings;
 });
 
-cram.messenger.addMessageHandler("SUBMIT_SETTINGS__GENERAL", () => {
+messenger.addMessageHandler("SUBMIT_SETTINGS__GENERAL", () => {
   for (const key in cram.state.settings.general) {
     cram.state.settings.general[key].submit();
   }
   return cram.state.settings;
 });
 
-cram.messenger.addMessageHandler("SUBMIT_SETTINGS__EDITOR", () => {
+messenger.addMessageHandler("SUBMIT_SETTINGS__EDITOR", () => {
   for (const key in cram.state.settings.editor) {
     cram.state.settings.editor[key].submit();
   }
   return cram.state.settings;
 });
 
-cram.messenger.addMessageHandler("FETCH_ALL_MATERIALS", () => {
+messenger.addMessageHandler("FETCH_ALL_MATERIALS", () => {
   return cram.state.materials;
 });
 
-cram.messenger.addMessageHandler("SEARCH_ALL_MATERIALS", (acc, ...args) => {
+messenger.addMessageHandler("SEARCH_ALL_MATERIALS", (acc, ...args) => {
   const res = cram.state.materialSearcher.search(args[0]);
   return res;
 });
 
-cram.messenger.addMessageHandler("SHOULD_ADD_RAYTRACER", (acc, ...args) => {
+messenger.addMessageHandler("SHOULD_ADD_RAYTRACER", (acc, ...args) => {
   const props = (args && args[0]) || {};
   const raytracer = new RayTracer({
     ...props[0],
@@ -365,10 +365,10 @@ cram.messenger.addMessageHandler("SHOULD_ADD_RAYTRACER", (acc, ...args) => {
 });
 
 
-cram.messenger.addMessageHandler("SHOULD_ADD_IMAGE_SOURCE", () => {
+messenger.addMessageHandler("SHOULD_ADD_IMAGE_SOURCE", () => {
   const imagesource = new ImageSourceSolver({
     renderer: cram.state.renderer, 
-    messenger: cram.messenger,
+    messenger: messenger,
     containers: cram.state.containers
   }); 
 
@@ -387,7 +387,7 @@ cram.messenger.addMessageHandler("SHOULD_ADD_IMAGE_SOURCE", () => {
   return imagesource; 
 })
 
-cram.messenger.addMessageHandler("SHOULD_REMOVE_SOLVER", (acc, id) => {
+messenger.addMessageHandler("SHOULD_REMOVE_SOLVER", (acc, id) => {
   if (cram.state.solvers && cram.state.solvers[id]) {
     cram.state.solvers[id].dispose();
     delete cram.state.solvers[id];
@@ -395,7 +395,7 @@ cram.messenger.addMessageHandler("SHOULD_REMOVE_SOLVER", (acc, id) => {
   }
 });
 
-cram.messenger.addMessageHandler("SHOULD_ADD_RT60", (acc, ...args) => {
+messenger.addMessageHandler("SHOULD_ADD_RT60", (acc, ...args) => {
   const props = (args && args[0]) || {};
   const rt60 = new RT60({
     ...props
@@ -405,9 +405,9 @@ cram.messenger.addMessageHandler("SHOULD_ADD_RT60", (acc, ...args) => {
   return cram.state.solvers[rt60.uuid];
 });
 
-cram.messenger.addMessageHandler("SHOULD_ADD_FDTD_2D", (acc, args) => {
+messenger.addMessageHandler("SHOULD_ADD_FDTD_2D", (acc, args) => {
   const defaults = FDTD_2D_Defaults;
-  const selection = cram.messenger.postMessage("GET_SELECTED_OBJECTS")[0];
+  const selection = messenger.postMessage("GET_SELECTED_OBJECTS")[0];
   let width = (args && args.width) || defaults.width;
   let height = (args && args.height) || defaults.height;
   let offsetX = 0;
@@ -449,7 +449,7 @@ cram.messenger.addMessageHandler("SHOULD_ADD_FDTD_2D", (acc, args) => {
     }
   }
   const fdtd2d = new FDTD_2D({
-    messenger: cram.messenger,
+    messenger: messenger,
     renderer: cram.state.renderer,
     width,
     height,
@@ -472,16 +472,16 @@ cram.messenger.addMessageHandler("SHOULD_ADD_FDTD_2D", (acc, args) => {
   return cram.state.solvers[fdtd2d.uuid];
 });
 
-cram.messenger.addMessageHandler("RAYTRACER_CALCULATE_RESPONSE", (acc, id, frequencies) => {
+messenger.addMessageHandler("RAYTRACER_CALCULATE_RESPONSE", (acc, id, frequencies) => {
   cram.state.solvers[id] instanceof RayTracer &&
     (cram.state.solvers[id] as RayTracer).calculateReflectionLoss(frequencies);
 });
 
-cram.messenger.addMessageHandler("RAYTRACER_QUICK_ESTIMATE", (acc, id) => {
+messenger.addMessageHandler("RAYTRACER_QUICK_ESTIMATE", (acc, id) => {
   cram.state.solvers[id] instanceof RayTracer && (cram.state.solvers[id] as RayTracer).startQuickEstimate();
 });
 
-cram.messenger.addMessageHandler("FETCH_ALL_SOURCES", (acc, ...args) => {
+messenger.addMessageHandler("FETCH_ALL_SOURCES", (acc, ...args) => {
   return cram.state.sources.map((x) => {
     if (args && args[0] && args[0] instanceof Array) {
       return args[0].map((y) => cram.state.containers[x][y]);
@@ -489,7 +489,7 @@ cram.messenger.addMessageHandler("FETCH_ALL_SOURCES", (acc, ...args) => {
   });
 });
 
-cram.messenger.addMessageHandler("FETCH_ALL_SOURCES_AS_MAP", () => {
+messenger.addMessageHandler("FETCH_ALL_SOURCES_AS_MAP", () => {
   const sourcemap = new Map<string, Source>();
   for (let i = 0; i < cram.state.sources.length; i++) {
     sourcemap.set(cram.state.sources[i], cram.state.containers[cram.state.sources[i]] as Source);
@@ -497,7 +497,7 @@ cram.messenger.addMessageHandler("FETCH_ALL_SOURCES_AS_MAP", () => {
   return sourcemap;
 });
 
-cram.messenger.addMessageHandler("FETCH_ALL_RECEIVERS", (acc, ...args) => {
+messenger.addMessageHandler("FETCH_ALL_RECEIVERS", (acc, ...args) => {
   return cram.state.receivers.map((x) => {
     if (args && args[0] && args[0] instanceof Array) {
       return args[0].map((y) => cram.state.containers[x][y]);
@@ -505,11 +505,11 @@ cram.messenger.addMessageHandler("FETCH_ALL_RECEIVERS", (acc, ...args) => {
   });
 });
 
-cram.messenger.addMessageHandler("FETCH_SOURCE", (acc, ...args) => {
+messenger.addMessageHandler("FETCH_SOURCE", (acc, ...args) => {
   return cram.state.containers[args[0]];
 });
 
-cram.messenger.addMessageHandler("SHOULD_ADD_SOURCE", (acc, ...args) => {
+messenger.addMessageHandler("SHOULD_ADD_SOURCE", (acc, ...args) => {
   const source = new Source("new source");
   let shouldAddMoment = true;
   if (args && args[0]) {
@@ -551,9 +551,9 @@ cram.messenger.addMessageHandler("SHOULD_ADD_SOURCE", (acc, ...args) => {
       objectId: source.uuid,
       recallFunction: (direction: keyof Directions) => {
         if (direction === "UNDO") {
-          cram.messenger.postMessage("SHOULD_REMOVE_CONTAINER", staticSource.uuid);
+          messenger.postMessage("SHOULD_REMOVE_CONTAINER", staticSource.uuid);
         } else if (direction === "REDO") {
-          cram.messenger.postMessage("SHOULD_ADD_SOURCE", staticSource, false);
+          messenger.postMessage("SHOULD_ADD_SOURCE", staticSource, false);
         }
       }
     });
@@ -562,7 +562,7 @@ cram.messenger.addMessageHandler("SHOULD_ADD_SOURCE", (acc, ...args) => {
   return source;
 });
 
-cram.messenger.addMessageHandler("SHOULD_REMOVE_CONTAINER", (acc, id) => {
+messenger.addMessageHandler("SHOULD_REMOVE_CONTAINER", (acc, id) => {
   if (cram.state.containers[id]) {
     switch (cram.state.containers[id].kind) {
       case "source":
@@ -592,7 +592,7 @@ cram.messenger.addMessageHandler("SHOULD_REMOVE_CONTAINER", (acc, id) => {
   }
 });
 
-cram.messenger.addMessageHandler("SHOULD_ADD_RECEIVER", (acc, ...args) => {
+messenger.addMessageHandler("SHOULD_ADD_RECEIVER", (acc, ...args) => {
   const rec = new Receiver("new receiver");
   let shouldAddMoment = true;
   if (args && args[0]) {
@@ -634,9 +634,9 @@ cram.messenger.addMessageHandler("SHOULD_ADD_RECEIVER", (acc, ...args) => {
       objectId: rec.uuid,
       recallFunction: (direction: keyof Directions) => {
         if (direction === "UNDO") {
-          cram.messenger.postMessage("SHOULD_REMOVE_CONTAINER", staticRec.uuid);
+          messenger.postMessage("SHOULD_REMOVE_CONTAINER", staticRec.uuid);
         } else if (direction === "REDO") {
-          cram.messenger.postMessage("SHOULD_ADD_RECEIVER", staticRec, false);
+          messenger.postMessage("SHOULD_ADD_RECEIVER", staticRec, false);
         }
       }
     });
@@ -645,20 +645,20 @@ cram.messenger.addMessageHandler("SHOULD_ADD_RECEIVER", (acc, ...args) => {
   return rec;
 });
 
-cram.messenger.addMessageHandler("SHOULD_DUPLICATE_SELECTED_OBJECTS", () => {
+messenger.addMessageHandler("SHOULD_DUPLICATE_SELECTED_OBJECTS", () => {
   const objs = [] as Container[];
-  const selection = cram.messenger.postMessage("GET_SELECTED_OBJECTS")[0];
+  const selection = messenger.postMessage("GET_SELECTED_OBJECTS")[0];
   if (selection && selection.length > 0) {
     for (let i = 0; i < selection.length; i++) {
       switch (selection[i].kind) {
         case "source":
           {
-            objs.push(cram.messenger.postMessage("SHOULD_ADD_SOURCE", selection[i], true)[0]);
+            objs.push(messenger.postMessage("SHOULD_ADD_SOURCE", selection[i], true)[0]);
           }
           break;
         case "receiver":
           {
-            objs.push(cram.messenger.postMessage("SHOULD_ADD_RECEIVER", selection[i], true)[0]);
+            objs.push(messenger.postMessage("SHOULD_ADD_RECEIVER", selection[i], true)[0]);
           }
           break;
         default:
@@ -667,26 +667,26 @@ cram.messenger.addMessageHandler("SHOULD_DUPLICATE_SELECTED_OBJECTS", () => {
     }
   }
 
-  cram.messenger.postMessage("SET_SELECTION", objs);
+  messenger.postMessage("SET_SELECTION", objs);
 });
 
-cram.messenger.addMessageHandler("GET_CONTAINERS", () => {
+messenger.addMessageHandler("GET_CONTAINERS", () => {
   return cram.state.containers;
 });
 
-cram.messenger.addMessageHandler("ADDED_ROOM", (acc, ...args) => {
+messenger.addMessageHandler("ADDED_ROOM", (acc, ...args) => {
   args[0];
 });
-cram.messenger.addMessageHandler("ADDED_MODEL", (acc, ...args) => {
+messenger.addMessageHandler("ADDED_MODEL", (acc, ...args) => {
   args[0];
 });
 
-cram.messenger.addMessageHandler("ADDED_AUDIO_FILE", (acc, args) => {
+messenger.addMessageHandler("ADDED_AUDIO_FILE", (acc, args) => {
   const audiofile = args[0] as AudioFile;
   cram.state.audiofiles[audiofile.uuid] = audiofile;
 });
 
-cram.messenger.addMessageHandler("IMPORT_FILE", (acc, ...args) => {
+messenger.addMessageHandler("IMPORT_FILE", (acc, ...args) => {
   const files = Array.from(args[0]);
   files.forEach(async (file: File) => {
     if (allowed[fileType(file.name)]) {
@@ -711,7 +711,7 @@ cram.messenger.addMessageHandler("IMPORT_FILE", (acc, ...args) => {
             cram.state.containers[room.uuid] = room;
             cram.state.room = room.uuid;
             cram.state.renderer.addRoom(room);
-            cram.messenger.postMessage("ADDED_ROOM", room);
+            messenger.postMessage("ADDED_ROOM", room);
           }
           break;
         case "stl":
@@ -723,7 +723,7 @@ cram.messenger.addMessageHandler("IMPORT_FILE", (acc, ...args) => {
             const model = new Model("new model", { bufferGeometry: geom });
             cram.state.containers[model.uuid] = model;
             cram.state.renderer.addModel(model);
-            cram.messenger.postMessage("ADDED_MODEL", model);
+            messenger.postMessage("ADDED_MODEL", model);
 
             // const surfaces = importHandlers.stl(binary).map(
             //   (model) =>
@@ -740,7 +740,7 @@ cram.messenger.addMessageHandler("IMPORT_FILE", (acc, ...args) => {
             // cram.state.containers[room.uuid] = room;
             // cram.state.room = room.uuid;
             // cram.state.renderer.addRoom(room);
-            // cram.messenger.postMessage("ADDED_ROOM", room);
+            // messenger.postMessage("ADDED_ROOM", room);
           }
           break;
         case "dae":
@@ -770,7 +770,7 @@ cram.messenger.addMessageHandler("IMPORT_FILE", (acc, ...args) => {
                   numberOfChannels: buffer.numberOfChannels,
                   channelData
                 });
-                cram.messenger.postMessage("ADDED_AUDIO_FILE", audioFile);
+                messenger.postMessage("ADDED_AUDIO_FILE", audioFile);
               });
               console.log(result);
             } catch (e) {
@@ -785,11 +785,11 @@ cram.messenger.addMessageHandler("IMPORT_FILE", (acc, ...args) => {
   });
 });
 
-cram.messenger.addMessageHandler("APP_MOUNTED", (acc, ...args) => {
+messenger.addMessageHandler("APP_MOUNTED", (acc, ...args) => {
   cram.state.renderer.init(args[0], (cateogry: SettingsCategories) => cram.state.settings[cateogry]);
 });
 
-cram.messenger.addMessageHandler("RENDERER_UPDATED", () => {
+messenger.addMessageHandler("RENDERER_UPDATED", () => {
   cram.state.time += 0.01666666667;
   if (cram.state.simulation.length > 0) {
     cram.state.solvers[cram.state.simulation].update();
@@ -801,27 +801,27 @@ cram.messenger.addMessageHandler("RENDERER_UPDATED", () => {
   }
 });
 
-cram.messenger.addMessageHandler("RAYTRACER_SHOULD_PLAY", (acc, ...args) => {
+messenger.addMessageHandler("RAYTRACER_SHOULD_PLAY", (acc, ...args) => {
   if (cram.state.solvers[args[0]] instanceof RayTracer) {
     (cram.state.solvers[args[0]] as RayTracer).isRunning = true;
   }
   return cram.state.solvers[args[0]] && cram.state.solvers[args[0]].running;
 });
 
-cram.messenger.addMessageHandler("RAYTRACER_SHOULD_PAUSE", (acc, ...args) => {
+messenger.addMessageHandler("RAYTRACER_SHOULD_PAUSE", (acc, ...args) => {
   if (cram.state.solvers[args[0]] instanceof RayTracer) {
     (cram.state.solvers[args[0]] as RayTracer).isRunning = false;
   }
   return cram.state.solvers[args[0]].running;
 });
 
-cram.messenger.addMessageHandler("RAYTRACER_SHOULD_CLEAR", (acc, ...args) => {
+messenger.addMessageHandler("RAYTRACER_SHOULD_CLEAR", (acc, ...args) => {
   if (cram.state.solvers[args[0]] instanceof RayTracer) {
     (cram.state.solvers[args[0]] as RayTracer).clearRays();
   }
 });
 
-cram.messenger.addMessageHandler("FETCH_SURFACES", (acc, ...args) => {
+messenger.addMessageHandler("FETCH_SURFACES", (acc, ...args) => {
   let ids = args[0];
   if (typeof ids === "string") {
     ids = [ids];
@@ -829,7 +829,7 @@ cram.messenger.addMessageHandler("FETCH_SURFACES", (acc, ...args) => {
   if (ids) {
     const surfaces = ids
       .map((id) => {
-        const rooms = cram.messenger.postMessage("FETCH_ROOMS")[0];
+        const rooms = messenger.postMessage("FETCH_ROOMS")[0];
         if (rooms && rooms.length > 0) {
           for (let i = 0; i < rooms.length; i++) {
             const room = rooms[i] as Room;
@@ -846,7 +846,7 @@ cram.messenger.addMessageHandler("FETCH_SURFACES", (acc, ...args) => {
   }
 });
 
-cram.messenger.addMessageHandler("ASSIGN_MATERIAL", (acc, material) => {
+messenger.addMessageHandler("ASSIGN_MATERIAL", (acc, material) => {
   let surfaceCount = 0;
   const previousAcousticMaterials = [] as Array<{ uuid: string; acousticMaterial: AcousticMaterial }>;
   for (let i = 0; i < cram.state.selectedObjects.length; i++) {
@@ -863,7 +863,7 @@ cram.messenger.addMessageHandler("ASSIGN_MATERIAL", (acc, material) => {
     category: "ASSIGN_MATERIAL",
     objectId: uuid(),
     recallFunction: () => {
-      const surfaces = cram.messenger.postMessage(
+      const surfaces = messenger.postMessage(
         "FETCH_SURFACES",
         previousAcousticMaterials.map((x) => x.uuid)
       )[0];
@@ -875,14 +875,14 @@ cram.messenger.addMessageHandler("ASSIGN_MATERIAL", (acc, material) => {
     }
   });
   if (surfaceCount > 0) {
-    cram.messenger.postMessage("SHOW_TOAST", {
+    messenger.postMessage("SHOW_TOAST", {
       message: `Assigned material to ${surfaceCount} surface${surfaceCount > 1 ? "s" : ""}.`,
       intent: "success",
       timeout: 1750,
       icon: "tick"
     } as IToastProps);
   } else {
-    cram.messenger.postMessage("SHOW_TOAST", {
+    messenger.postMessage("SHOW_TOAST", {
       message: `No surfaces are selected.`,
       intent: "warning",
       timeout: 1750,
@@ -892,46 +892,46 @@ cram.messenger.addMessageHandler("ASSIGN_MATERIAL", (acc, material) => {
 });
 
 // for the settings drawer
-cram.messenger.addMessageHandler("SETTING_CHANGE", (acc, ...args) => {
+messenger.addMessageHandler("SETTING_CHANGE", (acc, ...args) => {
   const { setting, value } = args[0];
   console.log(setting, value);
   cram.state.renderer.settingChanged(setting, value);
 });
 
 // new project
-cram.messenger.addMessageHandler("NEW", () => {
+messenger.addMessageHandler("NEW", () => {
   Object.keys(cram.state.solvers).forEach((x) => {
-    cram.messenger.postMessage("SHOULD_REMOVE_SOLVER", x);
+    messenger.postMessage("SHOULD_REMOVE_SOLVER", x);
   });
   Object.keys(cram.state.containers).forEach((x) => {
-    cram.messenger.postMessage("SHOULD_REMOVE_CONTAINER", x);
+    messenger.postMessage("SHOULD_REMOVE_CONTAINER", x);
   });
-  cram.messenger.postMessage("DESELECT_ALL_OBJECTS");
+  messenger.postMessage("DESELECT_ALL_OBJECTS");
 });
 
-cram.messenger.addMessageHandler("CAN_UNDO", () => {
+messenger.addMessageHandler("CAN_UNDO", () => {
   return history.canUndo;
 });
 
-cram.messenger.addMessageHandler("CAN_REDO", () => {
+messenger.addMessageHandler("CAN_REDO", () => {
   return history.canRedo;
 });
 
-cram.messenger.addMessageHandler("UNDO", () => {
+messenger.addMessageHandler("UNDO", () => {
   history.undo();
   return [history.canUndo, history.canRedo];
 });
 
-cram.messenger.addMessageHandler("REDO", () => {
+messenger.addMessageHandler("REDO", () => {
   history.redo();
   return [history.canUndo, history.canRedo];
 });
 
-cram.messenger.addMessageHandler("GET_RENDERER", () => {
+messenger.addMessageHandler("GET_RENDERER", () => {
   return cram.state.renderer;
 });
 
-cram.messenger.addMessageHandler("SET_EDITOR_MODE", (acc, ...args) => {
+messenger.addMessageHandler("SET_EDITOR_MODE", (acc, ...args) => {
   if (EditorModes[args[0]]) {
     cram.state.editorMode = EditorModes[args[0]];
     for (const key in cram.state.containers) {
@@ -944,11 +944,11 @@ cram.messenger.addMessageHandler("SET_EDITOR_MODE", (acc, ...args) => {
   cram.state.renderer.needsToRender = true;
 });
 
-cram.messenger.addMessageHandler("GET_EDITOR_MODE", () => {
+messenger.addMessageHandler("GET_EDITOR_MODE", () => {
   return cram.state.editorMode;
 });
 
-cram.messenger.addMessageHandler("SET_PROCESS", (acc, ...args) => {
+messenger.addMessageHandler("SET_PROCESS", (acc, ...args) => {
   if (Processes[args[0]]) {
     cram.state.currentProcess = Processes[args[0]];
     cram.state.renderer.currentProcess = cram.state.currentProcess;
@@ -956,14 +956,14 @@ cram.messenger.addMessageHandler("SET_PROCESS", (acc, ...args) => {
   }
 });
 
-cram.messenger.addMessageHandler("GET_PROCESS", () => {
+messenger.addMessageHandler("GET_PROCESS", () => {
   return cram.state.currentProcess;
 });
 
-cram.messenger.addMessageHandler("SHOULD_ADD_SKETCH", () => {
-  // cram.messenger.postMessage("PHASE_OUT");
-  // cram.messenger.postMessage("SET_PROCESS", Processes.PICKING_SURFACE)
-  const selectedObjects = cram.messenger.postMessage("GET_SELECTED_OBJECTS")[0];
+messenger.addMessageHandler("SHOULD_ADD_SKETCH", () => {
+  // messenger.postMessage("PHASE_OUT");
+  // messenger.postMessage("SET_PROCESS", Processes.PICKING_SURFACE)
+  const selectedObjects = messenger.postMessage("GET_SELECTED_OBJECTS")[0];
   if (selectedObjects && selectedObjects[selectedObjects.length - 1]) {
     const surface = selectedObjects[selectedObjects.length - 1];
     if (surface instanceof Surface) {
@@ -977,38 +977,38 @@ cram.messenger.addMessageHandler("SHOULD_ADD_SKETCH", () => {
   }
 });
 
-cram.messenger.addMessageHandler("SHOULD_REMOVE_SKETCH", (acc, id) => {
+messenger.addMessageHandler("SHOULD_REMOVE_SKETCH", (acc, id) => {
   if (cram.state.sketches[id]) {
     cram.state.renderer.sketches.remove(cram.state.sketches[id]);
     delete cram.state.sketches[id];
   }
 });
 
-cram.messenger.addMessageHandler("SAVE_CONTAINERS", () => {
+messenger.addMessageHandler("SAVE_CONTAINERS", () => {
   const keys = Object.keys(cram.state.containers);
   const saveObjects = keys.map((key) => cram.state.containers[key].save());
   return saveObjects;
 });
 
-cram.messenger.addMessageHandler("SAVE_SOLVERS", () => {
+messenger.addMessageHandler("SAVE_SOLVERS", () => {
   const keys = Object.keys(cram.state.solvers);
   const saveObjects = keys.map((key) => cram.state.solvers[key].save());
   return saveObjects;
 });
 
-cram.messenger.addMessageHandler("SET_PROJECT_NAME", (acc, ...args) => {
+messenger.addMessageHandler("SET_PROJECT_NAME", (acc, ...args) => {
   cram.state.projectName = (args && args[0]) || cram.state.projectName;
   document.title = cram.state.projectName + " | cram.ui";
 });
 
-cram.messenger.addMessageHandler("GET_PROJECT_NAME", () => {
+messenger.addMessageHandler("GET_PROJECT_NAME", () => {
   return cram.state.projectName;
 });
 
-cram.messenger.addMessageHandler("RESTORE_CONTAINERS", (acc, ...args) => {
+messenger.addMessageHandler("RESTORE_CONTAINERS", (acc, ...args) => {
   const keys = Object.keys(cram.state.containers);
   keys.forEach((key) => {
-    cram.messenger.postMessage("SHOULD_REMOVE_CONTAINER", key);
+    messenger.postMessage("SHOULD_REMOVE_CONTAINER", key);
   });
   if (args && args[0] && args[0] instanceof Array) {
     // console.log(args[0]);
@@ -1018,7 +1018,7 @@ cram.messenger.addMessageHandler("RESTORE_CONTAINERS", (acc, ...args) => {
         case "source":
           {
             const src = new Source("new source", { ...saveObj }).restore(saveObj);
-            cram.messenger.postMessage("SHOULD_ADD_SOURCE", src, false);
+            messenger.postMessage("SHOULD_ADD_SOURCE", src, false);
             // cram.state.containers[src.uuid] = src;
             // cram.state.sources.push(src.uuid);
             // cram.state.renderer.add(src);
@@ -1027,7 +1027,7 @@ cram.messenger.addMessageHandler("RESTORE_CONTAINERS", (acc, ...args) => {
         case "receiver":
           {
             const rec = new Receiver("new receiver", { ...saveObj }).restore(saveObj);
-            cram.messenger.postMessage("SHOULD_ADD_RECEIVER", rec, false);
+            messenger.postMessage("SHOULD_ADD_RECEIVER", rec, false);
             // cram.state.containers[rec.uuid] = rec;
             // cram.state.sources.push(rec.uuid);
             // cram.state.renderer.add(rec);
@@ -1088,7 +1088,7 @@ cram.messenger.addMessageHandler("RESTORE_CONTAINERS", (acc, ...args) => {
             cram.state.containers[room.uuid] = room;
             cram.state.renderer.addRoom(room);
 
-            cram.messenger.postMessage("ADDED_ROOM", room);
+            messenger.postMessage("ADDED_ROOM", room);
           }
           break;
         default:
@@ -1098,10 +1098,10 @@ cram.messenger.addMessageHandler("RESTORE_CONTAINERS", (acc, ...args) => {
   }
 });
 
-cram.messenger.addMessageHandler("RESTORE_SOLVERS", (acc, ...args) => {
+messenger.addMessageHandler("RESTORE_SOLVERS", (acc, ...args) => {
   const keys = Object.keys(cram.state.solvers);
   keys.forEach((key) => {
-    cram.messenger.postMessage("SHOULD_REMOVE_SOLVER", key);
+    messenger.postMessage("SHOULD_REMOVE_SOLVER", key);
   });
   if (args && args[0] && args[0] instanceof Array) {
     // console.log(args[0]);
@@ -1111,13 +1111,13 @@ cram.messenger.addMessageHandler("RESTORE_SOLVERS", (acc, ...args) => {
         case "ray-tracer":
           {
             const props = args && args[0];
-            cram.messenger.postMessage("SHOULD_ADD_RAYTRACER", props);
+            messenger.postMessage("SHOULD_ADD_RAYTRACER", props);
           }
           break;
         case "rt60":
           {
             const props = args && args[0];
-            cram.messenger.postMessage("SHOULD_ADD_RT60", props);
+            messenger.postMessage("SHOULD_ADD_RT60", props);
           }
           break;
         default:
@@ -1127,15 +1127,15 @@ cram.messenger.addMessageHandler("RESTORE_SOLVERS", (acc, ...args) => {
   }
 });
 
-cram.messenger.addMessageHandler("SAVE", (acc, ...args) => {
+messenger.addMessageHandler("SAVE", (acc, ...args) => {
   const savedState = {
     meta: {
       version: cram.meta.version,
       name: cram.state.projectName,
       timestamp: new Date().toISOString()
     },
-    containers: cram.messenger.postMessage("SAVE_CONTAINERS")[0],
-    solvers: cram.messenger.postMessage("SAVE_SOLVERS")[0]
+    containers: messenger.postMessage("SAVE_CONTAINERS")[0],
+    solvers: messenger.postMessage("SAVE_SOLVERS")[0]
   };
   // console.log(savedState);
   // return;
@@ -1149,7 +1149,7 @@ cram.messenger.addMessageHandler("SAVE", (acc, ...args) => {
   }
 });
 
-cram.messenger.addMessageHandler("OPEN", () => {
+messenger.addMessageHandler("OPEN", () => {
   const tempinput = document.createElement("input");
   tempinput.type = "file";
   tempinput.accept = "application/json";
@@ -1166,7 +1166,7 @@ cram.messenger.addMessageHandler("OPEN", () => {
     try {
       const result = await (await fetch(objectURL)).text();
       const json = JSON.parse(result);
-      cram.messenger.postMessage("RESTORE", { file, json });
+      messenger.postMessage("RESTORE", { file, json });
 
       tempinput.remove();
     } catch (e) {
@@ -1176,24 +1176,24 @@ cram.messenger.addMessageHandler("OPEN", () => {
   tempinput.click();
 });
 
-cram.messenger.addMessageHandler("RESTORE", (acc, ...args) => {
+messenger.addMessageHandler("RESTORE", (acc, ...args) => {
   const props = args && args[0];
   const file = props.file;
   const json = props.json;
   const version = (json.meta && json.meta.version) || "0.0.0";
   console.log(version);
   if (gte(version, "0.2.1")) {
-    cram.messenger.postMessage("RESTORE_CONTAINERS", json.containers);
-    cram.messenger.postMessage("RESTORE_SOLVERS", json.solvers);
-    cram.messenger.postMessage("SET_PROJECT_NAME", json.meta.name);
+    messenger.postMessage("RESTORE_CONTAINERS", json.containers);
+    messenger.postMessage("RESTORE_SOLVERS", json.solvers);
+    messenger.postMessage("SET_PROJECT_NAME", json.meta.name);
   } else {
-    cram.messenger.postMessage("RESTORE_CONTAINERS", json);
-    cram.messenger.postMessage("SET_PROJECT_NAME", file.name.replace(".json", ""));
+    messenger.postMessage("RESTORE_CONTAINERS", json);
+    messenger.postMessage("SET_PROJECT_NAME", file.name.replace(".json", ""));
   }
 });
 
-cram.messenger.addMessageHandler("ADD_SELECTED_OBJECTS_TO_GLOBAL_VARIABLES", () => {
-  const selectedObjects = cram.messenger.postMessage("GET_SELECTED_OBJECTS")[0];
+messenger.addMessageHandler("ADD_SELECTED_OBJECTS_TO_GLOBAL_VARIABLES", () => {
+  const selectedObjects = messenger.postMessage("GET_SELECTED_OBJECTS")[0];
   if (selectedObjects && selectedObjects.length) {
     selectedObjects.forEach((x, i, a) => {
       addToGlobalVars(a[i], a[i].name);
@@ -1203,7 +1203,7 @@ cram.messenger.addMessageHandler("ADD_SELECTED_OBJECTS_TO_GLOBAL_VARIABLES", () 
 
 function addHotKey(keybinding, scopes, message, ...args) {
   scopes.forEach((scope) => {
-    hotkeys(keybinding, scope, () => void cram.messenger.postMessage(message, args));
+    hotkeys(keybinding, scope, () => void messenger.postMessage(message, args));
   });
 }
 
@@ -1238,7 +1238,7 @@ async function finishedLoading() {
   const json = JSON.parse(filedata);
   const file = createFileFromData(filename, [filedata]);
 
-  cram.messenger.postMessage("RESTORE", { file, json });
+  messenger.postMessage("RESTORE", { file, json });
 
   expose({
     sizeof,
