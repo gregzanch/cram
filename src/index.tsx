@@ -364,18 +364,10 @@ messenger.addMessageHandler("SHOULD_ADD_RAYTRACER", (acc, ...args) => {
   return raytracer;
 });
 
-
-<<<<<<< HEAD
-cram.messenger.addMessageHandler("SHOULD_ADD_IMAGE_SOURCE", () => {
-  const imagesource = new ImageSourceSolver({
-    renderer: cram.state.renderer, 
-    messenger: cram.messenger,
-=======
 messenger.addMessageHandler("SHOULD_ADD_IMAGE_SOURCE", () => {
   const imagesource = new ImageSourceSolver({
     renderer: cram.state.renderer, 
     messenger: messenger,
->>>>>>> master
     containers: cram.state.containers
   }); 
 
