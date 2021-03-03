@@ -355,10 +355,11 @@ on("ADD_SOURCE", addContainer(Source));
  */
 class DirectivityHandler {
   private dirDataList: directivityData[];
-  private frequencies: number[]; 
-  private sourceDirType: number; 
-  private phi: number[]; 
-  private theta: number[]; 
+  public frequencies: number[]; 
+  public sensitivity: number[];
+  public sourceDirType: number; 
+  public phi: number[]; 
+  public theta: number[]; 
 
   constructor(sourceType: number, importData?: CLFResult){ // if we add more input types, make corresponding result types acceptable as importData type
 
@@ -370,6 +371,7 @@ class DirectivityHandler {
         this.dirDataList = []; 
         this.phi = []; 
         this.theta = []; 
+        this.sensitivity = [90]; // placeholder (90 dBSPL on-axis 1m away at all frequencies)
 
         break; 
       
@@ -380,12 +382,14 @@ class DirectivityHandler {
           this.dirDataList = importData.directivity; 
           this.phi = importData.phi;
           this.theta = importData.theta; 
+          this.sensitivity = importData.sensitivity; 
         }else{
           console.error("DH CLF Import Type specified but no CLFResult data was provided")
           this.frequencies = [0]; // any frequency 
           this.dirDataList = []; 
           this.phi = []; 
           this.theta = []; 
+          this.sensitivity = []; 
         }
 
         break;
@@ -395,6 +399,7 @@ class DirectivityHandler {
         this.dirDataList = []; 
         this.phi = []; 
         this.theta = []; 
+        this.sensitivity = []; 
         
         console.error("Unknown Source Directivity Type");
         break; 
@@ -402,7 +407,7 @@ class DirectivityHandler {
 
   } 
 
-  getDirectivityAtPosition(freqency:number,phi:number,theta:number){
+  getDirectivityAtPosition(gain: number, freqency:number,phi:number,theta:number){
     // returns relative dBSPL of source at a position w.r.t on-axis value 
 
     switch(this.sourceDirType){

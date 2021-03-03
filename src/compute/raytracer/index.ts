@@ -845,7 +845,7 @@ class RayTracer extends Solver {
 
       // this is a placeholder until we decide how to handle source energies 
       let sourceDH = (this.containers[this.sourceIDs[i]] as Source).directivityHandler; 
-      let directivity = sourceDH.getDirectivityAtPosition(0,phi,theta);
+      let directivity = sourceDH.getDirectivityAtPosition(0,0,phi,theta);
       let initialEnergy = 1*directivity; 
 
       // get the path traced by the ray
@@ -1860,7 +1860,6 @@ declare global {
     }
   }
 }
-
 
 
 on("RAYTRACER_SET_PROPERTY", setSolverProperty);

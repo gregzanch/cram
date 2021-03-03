@@ -10,7 +10,7 @@ export class CLFParser{
     // - add support for comma decimal seperator 
     // - fix vertical symmetry (not getting caught in switch statement)
     // - add support for rotation 
-    // - add support for phase (CLF2 v2)
+    // - add support for phase data (CLF2 v2)
 
     private fileContents: string; 
     private clfData: string[][]; 

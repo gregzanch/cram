@@ -364,27 +364,23 @@ messenger.addMessageHandler("SHOULD_ADD_RAYTRACER", (acc, ...args) => {
   return raytracer;
 });
 
-messenger.addMessageHandler("SHOULD_ADD_IMAGE_SOURCE", () => {
-  const imagesource = new ImageSourceSolver({
-    renderer: cram.state.renderer, 
-    messenger: messenger,
-    containers: cram.state.containers
-  }); 
-
-  const numsolvers:number = Object.keys(cram.state.solvers).length;
-
-  Object.keys(cram.state.solvers).forEach(function(key) {
-    if((cram.state.solvers[key]).kind==="image-source"){
-      delete cram.state.solvers[key]; 
-    }
-  })
-
+messenger.addMessageHandler("SHOULD_ADD_IMAGE_SOURCE", (acc, ...args) => {
+  const defaults = {
+    name: "image-source-class",
+    roomID: "",
+    sourceIDs: [] as string[],
+    surfaceIDs: [] as string[],
+    containers: cram.state.containers,
+    receiverIDs: [] as string[],
+    maxReflectionOrder: 2,
+    showImageSources: true,
+    showRayPaths: true, 
+  };
+  const imagesource = new ImageSourceSolver(defaults); 
   cram.state.solvers[imagesource.uuid] = imagesource; 
-
-  imagesource.test(); 
-
+  emit("ADD_IMAGESOURCE",imagesource);
   return imagesource; 
-})
+});
 
 messenger.addMessageHandler("SHOULD_REMOVE_SOLVER", (acc, id) => {
   if (cram.state.solvers && cram.state.solvers[id]) {

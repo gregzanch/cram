@@ -16,6 +16,7 @@ import Solver from '../../compute/solver';
 import RT60Tab from './rt60-tab/RT60Tab';
 import { RT60 } from '../../compute/rt';
 import RayTracerTab from './ray-tracer-tab/RayTracerTab';
+import ImageSourceTab from "./image-source-tab/ImageSourceTab"; 
 import RayTracer from '../../compute/raytracer';
 import RendererTab from './renderer-tab/RendererTab';
 import FDTD_2DTab from './fdtd-2d-tab/FDTD_2DTab';
@@ -128,6 +129,12 @@ export default class ParameterConfig extends React.Component<ParameterConfigProp
           </TabPanel>
           {keys.map((x, i) => {
             switch (this.props.solvers[x].kind) {
+              case "image-source":
+                return (
+                  <TabPanel key={"parameter-config-tabpanel-" + i}>
+                    <ImageSourceTab uuid={this.props.solvers[x].uuid} />
+                  </TabPanel>
+                )
               case "ray-tracer":
                 return (
                   <TabPanel key={"parameter-config-tabpanel-" + i}>

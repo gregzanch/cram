@@ -20,11 +20,12 @@
 //     return OK 
 
 import Solver from "../../solver";
+import { renderer } from "../../../render/renderer";
 import {uuid} from "uuidv4";
 import * as THREE from "three";
 import * as ac from "../../acoustics";
 import Room from "../../../objects/room";
-import Messenger from "../../../messenger";
+import Messenger, { messenger, on } from "../../../messenger";
 import { KVP } from "../../../common/key-value-pair";
 import Container from "../../../objects/container";
 import Renderer from "../../../render/renderer";
@@ -36,6 +37,8 @@ import { LensTwoTone, ThreeSixtyOutlined } from "@material-ui/icons";
 import { cloneElement } from "react";
 import { SSL_OP_SSLEAY_080_CLIENT_DH_BUG } from "constants";
 import { intersection } from "lodash";
+import { addSolver, removeSolver, setSolverProperty, useSolver } from "../../../store";
+
 
 interface ImageSourceParams {
   baseSource: Source,
@@ -49,7 +52,7 @@ interface ImageSourceParams {
 class ImageSource{
 
   // the source that all image sources are based off of
-  // note: this is not the parent image source! that is below 
+  // note: this is not the parent image source! that is 'parent' below 
   public baseSource: Source; 
   
   public children: ImageSource[]; 
@@ -64,7 +67,7 @@ class ImageSource{
   public uuid: string; 
 
   constructor(params: ImageSourceParams){
-    this.baseSource = params.baseSource; 
+    this.baseSource = params.baseSource;
     this.reflector = params.reflector; 
     this.order = params.order; 
 
@@ -106,7 +109,7 @@ class ImageSource{
   public markup(){
     for(let i = 0; i<this.children.length; i++){
       let pos: Vector3 = this.children[i].position.clone();
-      cram.state.renderer.markup.addPoint([pos.x,pos.y,pos.z], [0,0,0]);
+      renderer.markup.addPoint([pos.x,pos.y,pos.z], [0,0,0]);
       if (this.children[i].hasChildren){
         this.children[i].markup(); 
       }else{
@@ -154,7 +157,7 @@ class ImageSourcePath{
     for(let i = 0; i<this.path.length-1; i++){
       let p1: Vector3 = (this.path[i]).point.clone();
       let p2: Vector3 =  (this.path[i+1]).point.clone();
-      cram.state.renderer.markup.addLine([p1.x,p1.y,p1.z],[p2.x,p2.y,p2.z]);
+      renderer.markup.addLine([p1.x,p1.y,p1.z],[p2.x,p2.y,p2.z]);
     }
   }
 
@@ -232,7 +235,8 @@ class ImageSourcePath{
         // intersected with a surface
         for(let findex = 0; findex<freqs.length; findex++){
           // @ts-ignore
-          let reflectionCoefficient = (intersection.reflectingSurface as Surface).reflectionFunction(freqs[findex],intersection.angle);
+          //let reflectionCoefficient = (intersection.reflectingSurface as Surface).reflectionFunction(freqs[findex],intersection.angle);
+          let reflectionCoefficient = 1-(intersection.reflectingSurface as Surface).absorptionFunction(freqs[findex]); 
           intensity[findex] = intensity[findex]*reflectionCoefficient; 
         }
 
@@ -245,14 +249,12 @@ class ImageSourcePath{
     
     // apply air absorption (dB/m)
     const airAttenuationdB = ac.airAttenuation(freqs); 
-
     for(let f = 0; f<freqs.length; f++){
       arrivalLp[f] = arrivalLp[f] - airAttenuationdB[f]*this.totalLength; 
     }
 
-    // convert to pressure
+    // convert back to pressure
     return ac.Lp2P(arrivalLp) as number[]; 
-
   }
 
   public arrivalTime(c: number): number{
@@ -261,25 +263,28 @@ class ImageSourcePath{
 }
 
 export interface ImageSourceSolverParams {
-  renderer;
-  messenger: Messenger;
-  name?: string;
-  roomID?: string;
-  sourceIDs?: string[];
-  surfaceIDs?: string[];
-  containers?: KVP<Container>;
-  receiverIDs?: string[];
-  updateInterval?: number;
-  passes?: number;
-  pointSize?: number;
-  reflectionOrder?: number;
-  isRunning?: boolean;
-  runningWithoutReceivers?: boolean;
-  raysVisible?: boolean;
-  pointsVisible?: boolean;
-  invertedDrawStyle?: boolean;
-  uuid?: string;
+  name: string;
+  roomID: string;
+  sourceIDs: string[];
+  surfaceIDs: string[];
+  containers: KVP<Container>;
+  receiverIDs: string[];
+  maxReflectionOrder: number;
+  showImageSources: boolean;
+  showRayPaths: boolean;
 }
+
+const defaults = {
+  name: "image-source-class",
+  roomID: "",
+  sourceIDs: [] as string[],
+  surfaceIDs: [] as string[],
+  containers: {} as KVP<Container>,
+  receiverIDs: [] as string[],
+  maxReflectionOrder: 2,
+  showImageSources: true,
+  showRayPaths: true, 
+};
 
 export class ImageSourceSolver extends Solver {
 
@@ -287,47 +292,91 @@ export class ImageSourceSolver extends Solver {
     receiverIDs: string[];
     roomID: string;
     surfaceIDs: string[];
-    renderer: Renderer;   
-    containers: KVP<Container | Room>; 
-    messenger: Messenger; 
+    containers: KVP<Container>; 
+    uuid: string; 
 
-    imagesources: ImageSource[]; 
+    maxReflectionOrder: number; 
+    showImageSources: boolean;
+    showRayPaths: boolean;
 
-    constructor(params: ImageSourceSolverParams){
+    rootImageSource: ImageSource | null; 
+
+    constructor(params: ImageSourceSolverParams = defaults){
         super(params);
+        this.uuid = uuid(); 
         this.kind = "image-source";
-        this.name = "image source";
-        this.roomID = params.roomID || "" as string; 
-        this.sourceIDs = params.sourceIDs || [] as string[]; 
-        this.receiverIDs = params.receiverIDs || [] as string[]; 
-        this.renderer = params.renderer; 
-        this.containers = params.containers || {} as KVP<Container>;
-        this.messenger = params.messenger;
+        this.name = "Image Source";
+        this.roomID = params.roomID;
+        this.sourceIDs = params.sourceIDs;
+        this.receiverIDs = params.receiverIDs; 
+        this.containers = params.containers;
+
+        this.maxReflectionOrder = params.maxReflectionOrder; 
+        this.showImageSources = params.showImageSources; 
+        this.showRayPaths = params.showRayPaths; 
 
         this.surfaceIDs = []; 
-        this.imagesources = []; 
+        this.rootImageSource = null; 
 
+        // get room 
+        let room: Room = messenger.postMessage("FETCH_ROOMS")[0][0];
+        this.roomID = room.uuid; 
+
+    }
+
+    updateImageSourceCalculation(){
+
+      // add in checking to make sure only 1 source and 1 receiver are selected
+
+      let is_params: ImageSourceParams = {
+        baseSource: this.containers[this.sourceIDs[0]] as Source,
+        position: (this.containers[this.sourceIDs[0]] as Source).position.clone(), 
+        room: this.room, 
+        reflector: null,
+        parent: null, 
+        order: 0, 
+      };
+      
+      let is_base: ImageSource = new ImageSource(is_params);
+      let is_calculated: ImageSource | null = computeImageSources(is_base,this.maxReflectionOrder); 
+
+      this.rootImageSource = is_calculated; 
+
+      if(this.showImageSources){
+        is_calculated?.markup(); 
+      }
+
+      if(this.showRayPaths){
+
+        if(is_calculated != null){
+          let paths = is_calculated.constructPathsForAllDescendents(this.containers[this.receiverIDs[0]] as Receiver);
+
+          let f = [125, 250, 500, 1000, 2000, 4000];
+          let initialSPL = [100,100,100,100,100,100]; 
+
+          let validCount = 0; 
+          for(let i = 0; i<paths.length; i++){
+            if(paths[i].isvalid(this.room.surfaces.children as Surface[])){
+              paths[i].markup(); 
+              console.log(paths[i]);
+              console.log(paths[i].totalLength)
+              console.log(paths[i].arrivalTime(343)); 
+              console.log(ac.Lp2P(initialSPL));
+              console.log(paths[i].arrivalPressure(initialSPL,f))
+              validCount++; 
+            }
+          }
+          console.log(validCount + " out of " + paths.length + " paths are valid"); 
+        }
+      }
     }
 
     test(){
 
-        // get room 
-        let room: Room = this.messenger.postMessage("FETCH_ROOMS")[0][0];
-        this.roomID = room.uuid; 
-
-        // assign IDs 
-        for (const key in this.containers) {
-            if (this.containers[key].kind === "source") {
-              this.sourceIDs.push(key);
-            } else if (this.containers[key].kind === "receiver") {
-              this.receiverIDs.push(key);
-            } else if (this.containers[key].kind === "surface") {
-              this.surfaceIDs.push(key);
-            }
-        }
+      // debugging
 
         // get source
-        let source: Source = this.messenger.postMessage("FETCH_SOURCE",this.sourceIDs[0])[0];
+        let source: Source = messenger.postMessage("FETCH_SOURCE",this.sourceIDs[0])[0];
 
         // assign base image source
         let is_params: ImageSourceParams = {
@@ -341,7 +390,7 @@ export class ImageSourceSolver extends Solver {
 
         let is: ImageSource = new ImageSource(is_params);
         
-        let maxOrder = 3; 
+        let maxOrder = 1; 
         let is_2 = computeImageSources(is,maxOrder); 
         is_2?.markup(); 
         console.log(is_2); 
@@ -363,20 +412,13 @@ export class ImageSourceSolver extends Solver {
               console.log(paths[i]);
               console.log(paths[i].totalLength)
               console.log(paths[i].arrivalTime(343)); 
+              console.log(ac.Lp2P(initialSPL));
               console.log(paths[i].arrivalPressure(initialSPL,f))
               validCount++; 
             }
           }
           console.log(validCount + " out of " + paths.length + " paths are valid"); 
         } 
-    }
-
-    markupImageSources(){
-      for(let i = 0; i<this.imagesources.length; i++){
-        let pos = this.imagesources[i].position.clone(); 
-        let color: number[]; 
-        cram.state.renderer.markup.addPoint([pos.x,pos.y,pos.z], [1,1,1]);
-      }
     }
 
     get sources() {
@@ -559,3 +601,22 @@ function reflectPointAcrossSurface(point: Vector3, surface: Surface): Vector3{
 
   return mirror; 
 }
+
+declare global {
+  interface EventTypes {
+    ADD_IMAGESOURCE: ImageSourceSolver | undefined,
+    REMOVE_IMAGESOURCE: string;
+    IMAGESOURCE_CLEAR_RAYS: string;
+    IMAGESOURCE_SET_PROPERTY: {
+      uuid: string;
+      property: keyof ImageSourceSolver;
+      value: ImageSourceSolver[EventTypes["IMAGESOURCE_SET_PROPERTY"]["property"]]; 
+    }
+    CALCULATE_IMAGESOURCE: ImageSourceSolver; 
+  }
+}
+
+on("IMAGESOURCE_SET_PROPERTY", setSolverProperty);
+on("REMOVE_IMAGESOURCE", removeSolver);
+on("ADD_IMAGESOURCE", addSolver(ImageSourceSolver));
+//on("RAYTRACER_CLEAR_RAYS", (uuid: string) => void (useSolver.getState().solvers[uuid] as ImageSourceSolver).clearRays());
