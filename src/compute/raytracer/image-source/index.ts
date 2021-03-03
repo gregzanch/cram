@@ -38,6 +38,7 @@ import { cloneElement } from "react";
 import { SSL_OP_SSLEAY_080_CLIENT_DH_BUG } from "constants";
 import { intersection } from "lodash";
 import { addSolver, removeSolver, setSolverProperty, useSolver } from "../../../store";
+import { RayPath } from "..";
 
 
 interface ImageSourceParams {
@@ -270,8 +271,8 @@ export interface ImageSourceSolverParams {
   containers: KVP<Container>;
   receiverIDs: string[];
   maxReflectionOrder: number;
-  showImageSources: boolean;
-  showRayPaths: boolean;
+  imageSourcesVisible: boolean;
+  rayPathsVisible: boolean;
 }
 
 const defaults = {
@@ -282,8 +283,8 @@ const defaults = {
   containers: {} as KVP<Container>,
   receiverIDs: [] as string[],
   maxReflectionOrder: 2,
-  showImageSources: true,
-  showRayPaths: true, 
+  imageSourcesVisible: true,
+  rayPathsVisible: true, 
 };
 
 export class ImageSourceSolver extends Solver {
@@ -296,27 +297,33 @@ export class ImageSourceSolver extends Solver {
     uuid: string; 
 
     maxReflectionOrder: number; 
-    showImageSources: boolean;
-    showRayPaths: boolean;
+    
+    private _imageSourcesVisible: boolean;
+    private _rayPathsVisible: boolean;
 
     rootImageSource: ImageSource | null; 
+    validRayPaths: ImageSourcePath[] | null; 
+    allRayPaths: ImageSourcePath[] | null; 
 
     constructor(params: ImageSourceSolverParams = defaults){
         super(params);
         this.uuid = uuid(); 
         this.kind = "image-source";
-        this.name = "Image Source";
+        this.name = params.name;
         this.roomID = params.roomID;
         this.sourceIDs = params.sourceIDs;
         this.receiverIDs = params.receiverIDs; 
         this.containers = params.containers;
 
         this.maxReflectionOrder = params.maxReflectionOrder; 
-        this.showImageSources = params.showImageSources; 
-        this.showRayPaths = params.showRayPaths; 
+        this._imageSourcesVisible = params.imageSourcesVisible; 
+        this._rayPathsVisible = params.rayPathsVisible; 
 
         this.surfaceIDs = []; 
-        this.rootImageSource = null; 
+        
+        this.rootImageSource = null;
+        this.allRayPaths = null;  
+        this.validRayPaths = null; 
 
         // get room 
         let room: Room = messenger.postMessage("FETCH_ROOMS")[0][0];
@@ -325,6 +332,10 @@ export class ImageSourceSolver extends Solver {
     }
 
     updateImageSourceCalculation(){
+
+      // clear markup (replace with a more robust method eventually)
+      this.clearRayPaths(); 
+      this.clearImageSources(); 
 
       // add in checking to make sure only 1 source and 1 receiver are selected
 
@@ -342,33 +353,40 @@ export class ImageSourceSolver extends Solver {
 
       this.rootImageSource = is_calculated; 
 
-      if(this.showImageSources){
-        is_calculated?.markup(); 
-      }
+      // construct all possible paths
+      let paths: ImageSourcePath[];
+      let valid_paths: ImageSourcePath[] = []; 
+      if(is_calculated != null){
+        paths = is_calculated.constructPathsForAllDescendents(this.containers[this.receiverIDs[0]] as Receiver);
 
-      if(this.showRayPaths){
+        this.allRayPaths = paths; 
 
-        if(is_calculated != null){
-          let paths = is_calculated.constructPathsForAllDescendents(this.containers[this.receiverIDs[0]] as Receiver);
-
-          let f = [125, 250, 500, 1000, 2000, 4000];
-          let initialSPL = [100,100,100,100,100,100]; 
-
-          let validCount = 0; 
-          for(let i = 0; i<paths.length; i++){
-            if(paths[i].isvalid(this.room.surfaces.children as Surface[])){
-              paths[i].markup(); 
-              console.log(paths[i]);
-              console.log(paths[i].totalLength)
-              console.log(paths[i].arrivalTime(343)); 
-              console.log(ac.Lp2P(initialSPL));
-              console.log(paths[i].arrivalPressure(initialSPL,f))
-              validCount++; 
-            }
+        // get valid paths
+        for(let i = 0; i<paths?.length; i++){
+          if(paths[i].isvalid(this.room.surfaces.children as Surface[])){
+            valid_paths.push(paths[i]); 
           }
-          console.log(validCount + " out of " + paths.length + " paths are valid"); 
         }
       }
+      this.validRayPaths = valid_paths; 
+      (this._imageSourcesVisible) && (this.drawImageSources());
+      (this._rayPathsVisible) && (this.drawRayPaths()); 
+    }
+
+    calculateLTP(c: number){
+
+      let sortedPath: ImageSourcePath[] | null = this.validRayPaths; 
+      sortedPath?.sort((a, b) => (a.arrivalTime(c) > b.arrivalTime(c)) ? 1 : -1); 
+
+      if(sortedPath != undefined){
+        for(let i = 0; i<sortedPath?.length; i++){
+          let t = sortedPath[i].arrivalTime(343); 
+          let p = sortedPath[i].arrivalPressure([100],[1000]); 
+          console.log("Arrival: " + (i+1) + " | Arrival Time: (s) " + t + " | Arrival Pressure(1000Hz): " + p + " | Order " + sortedPath[i].order); 
+        }
+      }
+
+
     }
 
     test(){
@@ -421,6 +439,7 @@ export class ImageSourceSolver extends Solver {
         } 
     }
 
+    // getters and setters
     get sources() {
       if (this.sourceIDs.length > 0) {
         return this.sourceIDs.map((x) => this.containers[x]);
@@ -436,6 +455,85 @@ export class ImageSourceSolver extends Solver {
 
     get room(): Room {
       return this.containers[this.roomID] as Room;
+    }
+    
+    get numValidRays(): number {
+      let numValid = this.validRayPaths?.length; 
+
+      if(numValid === undefined){
+        return 0; 
+      }else{
+        return numValid; 
+      }
+    }
+
+    get numTotalRays(): number {
+      let numTotal = this.allRayPaths?.length;
+
+      if(numTotal === undefined){
+        return 0; 
+      }else{
+        return numTotal; 
+      }
+    }
+
+    set rayPathsVisible(vis: boolean){
+      if(vis == this._rayPathsVisible){
+        // do nothing
+      }else{
+        if(vis){
+          this.drawRayPaths(); 
+        }else{
+          this.clearRayPaths(); 
+        }
+      }
+      this._rayPathsVisible = vis; 
+    }
+
+    get rayPathsVisible(){
+      return this._rayPathsVisible; 
+    }
+
+    set imageSourcesVisible(vis: boolean){
+      if(vis == this._imageSourcesVisible){
+        // do nothing
+      }else{
+        if(vis){
+          this.drawImageSources(); 
+        }else{
+          this.clearImageSources(); 
+        }
+      }
+      this._imageSourcesVisible = vis; 
+    }
+
+    get imageSourcesVisible(){
+      return this._imageSourcesVisible; 
+    }
+
+    // plot functions
+    drawImageSources(){
+      if(this.rootImageSource != null){
+        this.rootImageSource.markup(); 
+      }
+    }
+
+    clearImageSources(){
+      // placeholder
+      renderer.markup.clearPoints(); 
+    }
+
+    drawRayPaths(){
+      if(this.validRayPaths != null){
+        for(let i = 0; i<this.validRayPaths.length; i++){
+          this.validRayPaths[i].markup(); 
+        }
+      }
+    }
+
+    clearRayPaths(){
+      // placeholder
+      renderer.markup.clearLines(); 
     }
 
 }

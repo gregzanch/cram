@@ -23,7 +23,7 @@ import Sketch from "./objects/sketch";
 // compute/solvers
 import Solver from "./compute/solver";
 import RayTracer from "./compute/raytracer";
-import {ImageSourceSolver} from "./compute/raytracer/image-source/index"
+import {ImageSourceSolver, ImageSourceSolverParams} from "./compute/raytracer/image-source/index"
 import RT60 from "./compute/rt";
 import { FDTD_2D, FDTD_2D_Defaults } from "./compute/2d-fdtd";
 import * as ac from "./compute/acoustics";
@@ -73,6 +73,7 @@ expose({ useSolver, useContainer, produce, on, emit });
 
 
 import {CLFViewer} from "./objects/CLFViewer";
+import { ImageSourceTabProps } from "./components/parameter-config/image-source-tab/ImageSourceTab";
 
 
 
@@ -365,16 +366,16 @@ messenger.addMessageHandler("SHOULD_ADD_RAYTRACER", (acc, ...args) => {
 });
 
 messenger.addMessageHandler("SHOULD_ADD_IMAGE_SOURCE", (acc, ...args) => {
-  const defaults = {
-    name: "image-source-class",
+  const defaults: ImageSourceSolverParams = {
+    name: "Image Source",
     roomID: "",
     sourceIDs: [] as string[],
     surfaceIDs: [] as string[],
     containers: cram.state.containers,
     receiverIDs: [] as string[],
     maxReflectionOrder: 2,
-    showImageSources: true,
-    showRayPaths: true, 
+    imageSourcesVisible: true,
+    rayPathsVisible: true, 
   };
   const imagesource = new ImageSourceSolver(defaults); 
   cram.state.solvers[imagesource.uuid] = imagesource; 

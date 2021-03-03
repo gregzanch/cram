@@ -110,12 +110,12 @@ export const ImageSourceTab = ({ uuid }: ImageSourceTabProps) => {
 
       <GridRowSeperator />
 
-      <GridRow label={"Calculate"}>
+      <GridRow label={"Calculate Image Sources"}>
         <button
           onClick={(e) => {
             imagesourcesolver.updateImageSourceCalculation(); 
           }}>
-          Calculate
+          Update
         </button>
       </GridRow>
 
@@ -123,9 +123,9 @@ export const ImageSourceTab = ({ uuid }: ImageSourceTabProps) => {
         <input
           type="checkbox"
           name="imagesourcesolver"
-          checked={imagesourcesolver.showImageSources}
+          checked={imagesourcesolver.imageSourcesVisible}
           onChange={(e) => {
-            emit("IMAGESOURCE_SET_PROPERTY", { uuid, property: "showImageSources", value: !imagesourcesolver.showImageSources });
+            emit("IMAGESOURCE_SET_PROPERTY", { uuid, property: "imageSourcesVisible", value: !imagesourcesolver.imageSourcesVisible });
           }}
         />
       </GridRow>
@@ -134,9 +134,9 @@ export const ImageSourceTab = ({ uuid }: ImageSourceTabProps) => {
         <input
           type="checkbox"
           name="imagesourcesolver"
-          checked={imagesourcesolver.showRayPaths}
+          checked={imagesourcesolver.rayPathsVisible}
           onChange={(e) => {
-            emit("IMAGESOURCE_SET_PROPERTY", { uuid, property: "showRayPaths", value: !imagesourcesolver.showRayPaths });
+            emit("IMAGESOURCE_SET_PROPERTY", { uuid, property: "rayPathsVisible", value: !imagesourcesolver.rayPathsVisible });
           }}
         />
       </GridRow>
@@ -167,6 +167,16 @@ export const ImageSourceTab = ({ uuid }: ImageSourceTabProps) => {
         }}
         options={receivers.filter(x=>!imagesourcesolver.receiverIDs.includes(x.uuid))}
       />    
+      </GridRow>
+
+      <GridRowSeperator />
+      <GridRow label="calculate LTP">
+        <button
+          onClick={(e) => {
+            imagesourcesolver.calculateLTP(343); 
+          }}>
+          Calculate LTP (to CONSOLE)
+        </button>
       </GridRow>
 
     </div>
