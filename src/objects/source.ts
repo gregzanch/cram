@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import * as ac from "../compute/acoustics"
 import Container, { ContainerProps } from "./container";
 import chroma from "chroma-js";
 import map from "../common/map";
@@ -90,7 +91,7 @@ export default class Source extends Container {
     this.velocity = 0;
     this.rgba = [0, 0, 0, 1];
     this.fdtdSamples = [] as number[];
-    this.directivityHandler = new DirectivityHandler(0); // omni source 
+    this.directivityHandler = new DirectivityHandler(0); // assume omni source 
 
     this.selectedMaterial = new THREE.MeshMatcapMaterial({
       fog: false,
@@ -352,16 +353,19 @@ on("ADD_SOURCE", addContainer(Source));
 
 /**
  * Directivity Handler
- */
-class DirectivityHandler {
+ **/
+
+export class DirectivityHandler {
   private dirDataList: directivityData[];
   public frequencies: number[]; 
   public sensitivity: number[];
   public sourceDirType: number; 
   public phi: number[]; 
   public theta: number[]; 
+  public clfData; 
 
-  constructor(sourceType: number, importData?: CLFResult){ // if we add more input types, make corresponding result types acceptable as importData type
+  constructor(sourceType: number, importData?: CLFResult){ 
+    // if we add more input types, make corresponding result types acceptable as importData type
 
     this.sourceDirType = sourceType; 
 
@@ -383,6 +387,7 @@ class DirectivityHandler {
           this.phi = importData.phi;
           this.theta = importData.theta; 
           this.sensitivity = importData.sensitivity; 
+          this.clfData = importData; 
         }else{
           console.error("DH CLF Import Type specified but no CLFResult data was provided")
           this.frequencies = [0]; // any frequency 
@@ -390,6 +395,7 @@ class DirectivityHandler {
           this.phi = []; 
           this.theta = []; 
           this.sensitivity = []; 
+          this.clfData = importData; 
         }
 
         break;
@@ -407,16 +413,81 @@ class DirectivityHandler {
 
   } 
 
-  getDirectivityAtPosition(gain: number, freqency:number,phi:number,theta:number){
-    // returns relative dBSPL of source at a position w.r.t on-axis value 
+  getPressureAtPosition(gain: number,frequency:number,phi:number,theta:number){
+    // returns relative Pa of source at a position w.r.t on-axis value 
 
     switch(this.sourceDirType){
 
       case 0: // omni
-        return 1; 
+        return ac.Lp2P(this.sensitivity[0]); 
 
       case 1: // CLF defined
 
+        let angularRes= this.clfData.angleres; 
+        let nearestPhi = Math.round(phi / angularRes) * angularRes; 
+
+        let upperPhi: number; 
+        let lowerPhi: number; 
+
+        if(nearestPhi > phi){
+          upperPhi = nearestPhi; 
+          lowerPhi = upperPhi - angularRes; 
+        }else{
+          lowerPhi = nearestPhi;
+          upperPhi = lowerPhi + angularRes; 
+        }
+
+        if(upperPhi==360){
+          upperPhi = 0; 
+        }
+
+        let nearestTheta = Math.round(theta/angularRes)*angularRes; 
+
+        let upperTheta: number; 
+        let lowerTheta: number; 
+
+        if(nearestTheta > theta){
+          upperTheta = nearestTheta; 
+          lowerTheta = upperTheta - angularRes; 
+        }else{
+          lowerTheta = nearestTheta;
+          upperTheta = lowerTheta + angularRes; 
+        }
+
+        let f_index = this.frequencies.indexOf(frequency); 
+        (f_index == -1) && (console.error("invalid frequency")); 
+
+        let p1: dirDataPoint = {
+          phi: lowerPhi, 
+          theta: lowerTheta, 
+          directivity: this.dirDataList[f_index].directivity[lowerPhi/angularRes][lowerTheta/angularRes]
+        };
+
+        let p2: dirDataPoint = {
+          phi: lowerPhi, 
+          theta: upperTheta, 
+          directivity: this.dirDataList[f_index].directivity[lowerPhi/angularRes][upperTheta/angularRes]
+        };
+
+        let p3: dirDataPoint = {
+          phi: upperPhi, 
+          theta: lowerTheta, 
+          directivity: this.dirDataList[f_index].directivity[upperPhi/angularRes][lowerTheta/angularRes]
+        };
+
+        let p4: dirDataPoint = {
+          phi: upperPhi, 
+          theta: upperTheta, 
+          directivity: this.dirDataList[f_index].directivity[upperPhi/angularRes][upperTheta/angularRes]
+        };
+
+        console.log(p1);
+        console.log(p2);
+        console.log(p3);
+        console.log(p4);
+
+        let interp_pressure = ac.Lp2P(dirinterp(phi,theta,p1,p2,p3,p4)+this.sensitivity[f_index]+gain)
+        return interp_pressure;
 
       default: // behave as omni
         return 1;
@@ -424,8 +495,6 @@ class DirectivityHandler {
     }
 
   }
-
-  
 
 }
 
