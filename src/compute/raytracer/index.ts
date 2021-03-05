@@ -87,7 +87,7 @@ export interface RayPath {
   intersectedReceiver: boolean;
   chain: Chain[];
   chainLength: number;
-  energy: number;
+  energy: number; // used for visualization 
   time: number;
   source: string;
 }
@@ -843,10 +843,10 @@ class RayTracer extends Solver {
       const direction = new THREE.Vector3().setFromSphericalCoords(1, threeJSAngles[0], threeJSAngles[1]);
       direction.applyEuler(rotation);
 
-      // this is a placeholder until we decide how to handle source energies 
+      // assign source energy as a function of direction 
       let sourceDH = (this.containers[this.sourceIDs[i]] as Source).directivityHandler; 
-      let directivity = sourceDH.getDirectivityAtPosition(0,0,phi,theta);
-      let initialEnergy = 1*directivity; 
+      let directivity = sourceDH.getPressureAtPosition(0,125,phi,theta); // assume 0dB gain w.r.t sensitivity 
+      let initialEnergy = 1; 
 
       // get the path traced by the ray
       const path = this.traceRay(position, direction, this.reflectionOrder, initialEnergy, this.sourceIDs[i]);

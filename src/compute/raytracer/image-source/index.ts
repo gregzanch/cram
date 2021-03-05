@@ -107,15 +107,20 @@ class ImageSource{
     return paths; 
   }
 
-  public markup(){
+  public markupAllDescendents(){
     for(let i = 0; i<this.children.length; i++){
       let pos: Vector3 = this.children[i].position.clone();
       renderer.markup.addPoint([pos.x,pos.y,pos.z], [0,0,0]);
       if (this.children[i].hasChildren){
-        this.children[i].markup(); 
+        this.children[i].markupAllDescendents(); 
       }else{
       }
     }
+  }
+
+  public markup(){
+    let pos: Vector3 = this.position.clone(); 
+    renderer.markup.addPoint([pos.x,pos.y,pos.z], [0,0,0]);
   }
 
   public getTotalDescendents(): number{
@@ -128,6 +133,25 @@ class ImageSource{
       } 
     }
     return sum; 
+  }
+
+  public getChildrenOfOrder(order: number): ImageSource[]{
+    let order_children: ImageSource[] = [];
+
+    ((this.order == order) && (this.order == 0)) && order_children.push(this); 
+
+    for(let i = 0; i<this.children.length; i++){
+      if(this.children[i].order == order){
+        order_children.push(this.children[i]); 
+      }
+
+      if(this.children[i].hasChildren){
+        let a = this.children[i].getChildrenOfOrder(order); 
+        order_children = order_children.concat(a); 
+      }
+
+    }
+    return order_children; 
   }
 
   get hasChildren() {
@@ -385,8 +409,18 @@ export class ImageSourceSolver extends Solver {
           console.log("Arrival: " + (i+1) + " | Arrival Time: (s) " + t + " | Arrival Pressure(1000Hz): " + p + " | Order " + sortedPath[i].order); 
         }
       }
+    }
 
-
+    getPathsOfOrder(order: number): ImageSourcePath[]{
+      let rayPathsOfOrder: ImageSourcePath[] = []; 
+      if(this.validRayPaths != null){
+        for(let i = 0; i<this.validRayPaths?.length; i++){
+          if(this.validRayPaths[i].order == order){
+            rayPathsOfOrder.push(this.validRayPaths[i]); 
+          }
+        }
+      }
+      return rayPathsOfOrder; 
     }
 
     test(){
@@ -512,7 +546,17 @@ export class ImageSourceSolver extends Solver {
     }
 
     // plot functions
-    drawImageSources(){
+    drawImageSources(orders:number[] = [-1]){
+
+      if(orders[0]==-1){
+        console.log("hello")
+        this.rootImageSource?.markupAllDescendents(); 
+      }else{
+        for(let i = 0; i<orders.length; i++){
+          
+        }
+      }
+
       if(this.rootImageSource != null){
         this.rootImageSource.markup(); 
       }
@@ -523,7 +567,7 @@ export class ImageSourceSolver extends Solver {
       renderer.markup.clearPoints(); 
     }
 
-    drawRayPaths(){
+    drawRayPaths(orders?:number[]){
       if(this.validRayPaths != null){
         for(let i = 0; i<this.validRayPaths.length; i++){
           this.validRayPaths[i].markup(); 
