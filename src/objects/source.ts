@@ -307,6 +307,7 @@ export default class Source extends Container {
         break;
     }
   }
+
   get color() {
     return String.fromCharCode(35) + (this.mesh.material as THREE.MeshBasicMaterial).color.getHexString();
   }
@@ -419,7 +420,7 @@ export class DirectivityHandler {
     switch(this.sourceDirType){
 
       case 0: // omni
-        return ac.Lp2P(this.sensitivity[0]); 
+        return ac.Lp2P(this.sensitivity[0]+gain); 
 
       case 1: // CLF defined
 
@@ -490,7 +491,7 @@ export class DirectivityHandler {
         return interp_pressure;
 
       default: // behave as omni
-        return 1;
+        return ac.Lp2P(this.sensitivity[0]+gain);;
     
     }
 

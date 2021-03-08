@@ -90,6 +90,8 @@ export interface RayPath {
   energy: number; // used for visualization 
   time: number;
   source: string;
+  initialPhi: number; 
+  initialTheta: number; 
 }
 export interface EnergyTime {
   time: number;
@@ -582,9 +584,11 @@ class RayTracer extends Solver {
     order: number,
     energy: number,
     source: string,
+    initialPhi: number,
+    initialTheta: number,
     iter: number = 1,
     chain: Partial<Chain>[] = [],
-    frequency = 4000
+    frequency = 4000,
   ) {
     // normalize the ray
     rd = rd.normalize();
@@ -632,7 +636,9 @@ class RayTracer extends Solver {
           chainLength: chain.length,
           intersectedReceiver: true,
           energy,
-          source
+          source,
+          initialPhi,
+          initialTheta,
         } as RayPath;
       } else {
         // find the incident angle
@@ -680,8 +686,11 @@ class RayTracer extends Solver {
             order,
             reflectionloss,
             source,
+            initialPhi,
+            initialTheta,
             iter + 1,
-            chain
+            chain,
+            4000,
           );
         }
       }
@@ -844,12 +853,11 @@ class RayTracer extends Solver {
       direction.applyEuler(rotation);
 
       // assign source energy as a function of direction 
-      let sourceDH = (this.containers[this.sourceIDs[i]] as Source).directivityHandler; 
-      let directivity = sourceDH.getPressureAtPosition(0,125,phi,theta); // assume 0dB gain w.r.t sensitivity 
-      let initialEnergy = 1; 
+      let sourceDH = (this.containers[this.sourceIDs[i]] as Source).directivityHandler;
+      let initialEnergy = 1; // used for plotting
 
       // get the path traced by the ray
-      const path = this.traceRay(position, direction, this.reflectionOrder, initialEnergy, this.sourceIDs[i]);
+      const path = this.traceRay(position, direction, this.reflectionOrder, initialEnergy, this.sourceIDs[i],phi,theta);
 
       // if path exists
       if (path) {
@@ -1281,15 +1289,24 @@ class RayTracer extends Solver {
         const Itotal = ac.P2I(ac.Lp2P((this.containers[sourceKey] as Source).initialSPL)) as number;
 
         // for each path
-        for (let i = 0; i < paths[receiverKey][sourceKey].length; i++) {
+        for (let i = 0; i < paths[receiverKey][sourceKey].length; i++) { 
+
           // propogagtion time
           let time = 0;
 
           // ray initial intensity
-          const Iray = Itotal / (this.containers[sourceKey] as Source).numRays;
+          // const Iray = Itotal / (this.containers[sourceKey] as Source).numRays;
 
-          // intensity at each frequency
-          const IrayArray = Array(freqs.length).fill(Iray);
+          // initial intensity at each frequency
+          let IrayArray: number[] = []; 
+          let phi = paths[receiverKey][sourceKey][i].initialPhi;
+          let theta = paths[receiverKey][sourceKey][i].initialTheta; 
+
+          let srcDirectivityHandler = (this.containers[sourceKey] as Source).directivityHandler; 
+
+          for(let findex = 0; findex<freqs.length; findex++){
+            IrayArray[findex] = ac.P2I(srcDirectivityHandler.getPressureAtPosition(0,freqs[findex],phi,theta)) as number; 
+          }
 
           // for each intersection
           for (let j = 0; j < paths[receiverKey][sourceKey][i].chain.length; j++) {
@@ -1312,9 +1329,9 @@ class RayTracer extends Solver {
                 // coefficient = surface.reflectionFunction(freq, angle);
                 coefficient = 1 - (surface as Surface).absorptionFunction(freq);
               }
-              IrayArray[f] = ac.P2I(
+              IrayArray.push(ac.P2I(
                 ac.Lp2P((ac.P2Lp(ac.I2P(IrayArray[f] * coefficient)) as number) - airAttenuationdB[f] * distance)
-              ) as number;
+              ) as number);
             }
           }
           const level = ac.P2Lp(ac.I2P(IrayArray)) as number[];
@@ -1714,6 +1731,7 @@ class RayTracer extends Solver {
         for (let i = 0; i < chainLength; i++) {
           chain.push(decodeChainItem(buffer.slice(o, (o += chainItemLength))));
         }
+        /*
         paths.push({
           source,
           chainLength,
@@ -1722,6 +1740,7 @@ class RayTracer extends Solver {
           energy,
           chain
         });
+        */
       }
       return paths as RayPath[];
     };
