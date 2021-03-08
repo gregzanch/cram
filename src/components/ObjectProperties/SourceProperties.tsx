@@ -74,7 +74,7 @@ export default function SourceProperties(props: SourcePropertiesProps) {
         )}
 
         {props.object.hasOwnProperty("rotation") && (
-          <GridRow label={"rotation"}>
+          <GridRow label={"rotation (degrees)"}>
             <NumberInput name="rotationx" value={props.object.rotation.x} {...XYZProps} />
             <NumberInput name="rotationy" value={props.object.rotation.y} {...XYZProps} />
             <NumberInput name="rotationz" value={props.object.rotation.z} {...XYZProps} />

@@ -297,6 +297,7 @@ export interface ImageSourceSolverParams {
   maxReflectionOrder: number;
   imageSourcesVisible: boolean;
   rayPathsVisible: boolean;
+  plotOrders: number[];
 }
 
 const defaults = {
@@ -309,6 +310,7 @@ const defaults = {
   maxReflectionOrder: 2,
   imageSourcesVisible: true,
   rayPathsVisible: true, 
+  plotOrders: [0, 1, 2] // all paths
 };
 
 export class ImageSourceSolver extends Solver {
@@ -324,6 +326,7 @@ export class ImageSourceSolver extends Solver {
     
     private _imageSourcesVisible: boolean;
     private _rayPathsVisible: boolean;
+    public plotOrders: number[]; 
 
     rootImageSource: ImageSource | null; 
     validRayPaths: ImageSourcePath[] | null; 
@@ -342,6 +345,7 @@ export class ImageSourceSolver extends Solver {
         this.maxReflectionOrder = params.maxReflectionOrder; 
         this._imageSourcesVisible = params.imageSourcesVisible; 
         this._rayPathsVisible = params.rayPathsVisible; 
+        this.plotOrders = params.plotOrders; 
 
         this.surfaceIDs = []; 
         
@@ -473,6 +477,15 @@ export class ImageSourceSolver extends Solver {
         } 
     }
 
+    reset(){
+      this.rootImageSource = null;
+      this.allRayPaths = null;  
+      this.validRayPaths = null; 
+
+      this.clearImageSources(); 
+      this.clearRayPaths(); 
+    }
+
     // getters and setters
     get sources() {
       if (this.sourceIDs.length > 0) {
@@ -545,20 +558,55 @@ export class ImageSourceSolver extends Solver {
       return this._imageSourcesVisible; 
     }
 
-    // plot functions
-    drawImageSources(orders:number[] = [-1]){
+    get possibleOrders(){
+      type OptionType = {
+        value: number;
+        label: any; 
+      };
 
-      if(orders[0]==-1){
-        console.log("hello")
-        this.rootImageSource?.markupAllDescendents(); 
-      }else{
-        for(let i = 0; i<orders.length; i++){
-          
+      let o: OptionType[] = []; 
+      for(let i = 0; i<=this.maxReflectionOrder; i++){
+        let op: OptionType = {
+          value: i,
+          label: i.toString()
         }
+        o.push(op); 
       }
+      return o;
+    }
 
-      if(this.rootImageSource != null){
-        this.rootImageSource.markup(); 
+    get selectedPlotOrders(){
+      type OptionType = {
+        value: number;
+        label: any; 
+      };
+      let o: OptionType[] = []; 
+      for(let i = 0; i<this.plotOrders.length; i++){
+        let op: OptionType = {
+          value: this.plotOrders[i],
+          label: this.plotOrders[i].toString()
+        }
+        o.push(op); 
+      }
+      return o;
+    }
+
+    set plotOrdersControl(order: number[]){
+      if(order == undefined){
+        this.plotOrders = [];
+      }else{
+        this.plotOrders = order; 
+      }       
+    }
+
+    // plot functions
+    drawImageSources(){
+      this.clearImageSources(); 
+      for(let i = 0; i<this.plotOrders.length; i++){
+        let is = this.rootImageSource?.getChildrenOfOrder(this.plotOrders[i]) as ImageSource[];   
+        for(let j = 0; j<is?.length; j++){
+          is[j].markup(); 
+        }
       }
     }
 
@@ -568,9 +616,11 @@ export class ImageSourceSolver extends Solver {
     }
 
     drawRayPaths(orders?:number[]){
-      if(this.validRayPaths != null){
-        for(let i = 0; i<this.validRayPaths.length; i++){
-          this.validRayPaths[i].markup(); 
+      this.clearRayPaths(); 
+      for(let i = 0; i<this.plotOrders.length; i++){
+        let is_paths = this.getPathsOfOrder(this.plotOrders[i]) as ImageSourcePath[]; 
+        for(let j = 0; j<is_paths.length; j++){
+          is_paths[j].markup(); 
         }
       }
     }

@@ -119,6 +119,15 @@ export const ImageSourceTab = ({ uuid }: ImageSourceTabProps) => {
         </button>
       </GridRow>
 
+      <GridRow label={"Clear Calculation"}>
+        <button
+          onClick={(e) => {
+            imagesourcesolver.reset(); 
+          }}>
+          Clear
+        </button>
+      </GridRow>
+
       <GridRow label={"Show Image Sources"}>
         <input
           type="checkbox"
@@ -139,6 +148,23 @@ export const ImageSourceTab = ({ uuid }: ImageSourceTabProps) => {
             emit("IMAGESOURCE_SET_PROPERTY", { uuid, property: "rayPathsVisible", value: !imagesourcesolver.rayPathsVisible });
           }}
         />
+      </GridRow>
+
+      <GridRowSeperator /> 
+      <GridRow label="orders">
+          <Select
+            isMulti
+            isClearable
+            value={imagesourcesolver.selectedPlotOrders}
+            onChange={e=>{
+              console.log(e?.map(x => x.value));
+              emit("IMAGESOURCE_SET_PROPERTY", {uuid, property: "plotOrdersControl", value: e ? e.map(x => x.value) : []});
+              (imagesourcesolver.imageSourcesVisible) && (imagesourcesolver.drawImageSources());
+              (imagesourcesolver.rayPathsVisible) && (imagesourcesolver.drawRayPaths()); 
+              console.log(imagesourcesolver.selectedPlotOrders);
+            }}
+            options={imagesourcesolver.possibleOrders.filter(x=>!imagesourcesolver.plotOrders.includes(x.value))}
+          />
       </GridRow>
 
       <GridRowSeperator />
