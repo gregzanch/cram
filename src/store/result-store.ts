@@ -6,19 +6,42 @@ import { on } from '../messenger';
 // import { ChartDataSets } from 'chart.js';
 
 
-export type XY = {
-  x: number;
-  y: number;
+export enum ResultKind {
+  LinearTimeProgression = "linear-time-progression",
+  Default = "default"
 }
 
-export interface Result {
+export interface ResultTypes {
+  [ResultKind.Default]: {
+    info: {};
+    data: number;
+  };
+  [ResultKind.LinearTimeProgression]: {
+    info: {
+      spl: number[];
+      frequency: number[];
+    };
+    data: { 
+      time: number, 
+      pressure: number[], 
+      order: number, 
+      arrival: number 
+    };
+  }
+}
+
+export interface Result<Kind extends ResultKind> {
+  kind: Kind;
+  info: ResultTypes[Kind]["info"];
+  data: ResultTypes[Kind]["data"][];
   name: string;
-  data: XY[];
   uuid: string;
 }
 
+
+
 export type ResultStore = {
-  results: KeyValuePair<Result>;
+  results: KeyValuePair<Result<ResultKind>>;
   openTabIndex: number;
   set: SetFunction<ResultStore>;
 }
@@ -31,11 +54,16 @@ export const useResult = create<ResultStore>((set)=>({
 
 export const getResultKeys = () => Object.keys(useResult.getState().results);
 
+export interface ResultEvent<Kind extends ResultKind> {
+  uuid: string;
+  item: ResultTypes[Kind]["data"]
+}
 
 declare global {
   interface EventTypes {
-    ADD_RESULT: Result;
-    UPDATE_RESULT: { uuid: string, result: Result };
+    ADD_RESULT: Result<ResultKind>;
+    UPDATE_RESULT: { uuid: string, result: Result<ResultKind> };
+    RESULT_DATA_CLICKED: ResultEvent<ResultKind>
   }
 }
 
@@ -45,4 +73,4 @@ on("ADD_RESULT", (result) => {
 
 on("UPDATE_RESULT", ({ uuid, result }) => {
   useResult.getState().set((store) => void (store.results[result.uuid] = result));
-})
+});

@@ -796,9 +796,15 @@ export default class App extends React.Component<AppProps, AppState> {
               // this.setState({ rightPanelSize: value });
             }}
           >
-            <SplitterLayout vertical>
+            <SplitterLayout 
+              vertical 
+              onDragStart={() => {emit("RENDERER_SHOULD_ANIMATE", true);}}
+              onDragEnd={() => {emit("RENDERER_SHOULD_ANIMATE", false);}}
+            >
               {Editor}
-              <ResultsPanel />
+              <PanelContainer>
+                <ResultsPanel />
+              </PanelContainer>
             </SplitterLayout>
 
             <SplitterLayout

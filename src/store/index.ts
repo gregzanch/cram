@@ -17,6 +17,7 @@ import Solver from "../compute/solver";
 
 export * from './container-store';
 export * from './material-store';
+export * from './result-store';
 export * from './solver-store';
 export * from './app-store';
 

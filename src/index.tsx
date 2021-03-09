@@ -67,16 +67,18 @@ import FileSaver from "file-saver";
 import { createFileFromData } from "./common/file";
 import produce from "immer";
 
-import { useContainer, useSolver } from "./store";
+import { useContainer, useSolver, useResult } from "./store";
 
 
 import './objects/events';
 import './compute/events';
 
-expose({ useSolver, useContainer, produce, on, emit });
+expose({ useSolver, useContainer, useResult, produce, on, emit });
 
 
 import {CLFViewer} from "./objects/CLFViewer";
+import { ResultKind } from "./store/result-store";
+import LTPTestData from "./components/results/LTPTestData";
 
 
 
@@ -1227,26 +1229,26 @@ window.addEventListener("resize", () => {
 });
 
 async function finishedLoading() {
-  const filepath = "/res/saves/shoebox.json";
+  const filepath = "/res/saves/concord.json";
   const filename = filepath.slice(filepath.lastIndexOf("/") + 1);
   const filedata = await(await fetch(filepath)).text();
   const json = JSON.parse(filedata);
   const file = createFileFromData(filename, [filedata]);
 
   messenger.postMessage("RESTORE", { file, json });
-
+  // emit("ADD_RESULT", {
+  //   kind: ResultKind.LinearTimeProgression, 
+  //   data: LTPTestData,
+  //   info: {
+  //     spl: [100],
+  //     frequency: [1000],
+  //   },
+  //   name: "LTP",
+  //   uuid: uuid()
+  // });
   expose({
-    sizeof,
-    Container,
-    r: cram.state.renderer,
-    Polygon,
-    Sketch,
-    CSG,
-    CAG,
-    csg,
     ac,
     THREE,
-    chunk
   });
 }
 
