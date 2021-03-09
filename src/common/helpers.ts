@@ -1,3 +1,11 @@
+export type FilterFlags<Base, Condition> = {
+  [Key in keyof Base]: Base[Key] extends Condition ? Key : never;
+};
+export type AllowedNames<Base, Condition> = FilterFlags<Base, Condition>[keyof Base];
+
+export type SubType<Base, Condition> = Pick<Base, AllowedNames<Base, Condition>>;
+
+
 export function intersection<T>(set1: Set<T>, set2: Set<T>): Set<T> {
   return new Set([...set1].filter((x) => set2.has(x)));
 }
@@ -290,6 +298,17 @@ export function* map<T, U>(data: Iterable<T>, fn: (curr: T) => U): Iterable<U> {
   }
 }
 
+export function mapObject<T, U>(obj: T, fn: (val: T[keyof T], key: keyof T, obj: T) => U): U[] {
+  return (Object.keys(obj) as (keyof T)[]).map(key => fn(obj[key], key, obj)) as U[];
+}
+
+export function filteredMapObject<T, U>(obj: T, fn: (val: T[keyof T], key: keyof T, obj: T) => U): U[] {
+  return (Object.keys(obj) as (keyof T)[]).reduce((acc, key) => {
+    const result = fn(obj[key], key, obj);
+    return typeof result !== "undefined" && result !== null ? acc.concat(result) : acc;
+  }, [] as U[]) as U[];
+}
+
 export async function* mapAsync<T, U>(data: AsyncIterable<T>, fn: (curr: T) => Promise<U>): AsyncIterableIterator<U> {
   for await (const x of data) {
     yield await fn(x);
@@ -391,5 +410,6 @@ export const omit = <T extends Object, K extends keyof T>(props: K[], obj: T) =>
     }
   );
 };
+
 
 

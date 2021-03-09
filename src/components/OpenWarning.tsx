@@ -14,7 +14,6 @@ function OpenWarning(props: OpenWarningProps) {
     <Dialog
       isOpen={props.isOpen}
       transitionDuration={100}
-      // icon="floppy-disk"
     >
       <div className={Classes.DIALOG_BODY}>
         <p>This project has unsaved changes</p>

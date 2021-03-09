@@ -11,7 +11,7 @@ import Renderer from "../../render/renderer";
 import Surface from "../../objects/surface";
 import Receiver from "../../objects/receiver";
 import { Stat } from "../../components/parameter-config/Stats";
-import Messenger, { messenger, on } from "../../messenger";
+import Messenger, { emit, messenger, on } from "../../messenger";
 import sort from "fast-sort";
 import FileSaver from "file-saver";
 import Plotly, { PlotData } from "plotly.js";
@@ -115,6 +115,26 @@ export class ReceiverData {
     this.id = id;
     this.data = [] as EnergyTime[];
   }
+}
+
+export type RayTracerSaveObject = {
+  name: string;
+  kind: "ray-tracer";
+  uuid: string;
+  roomID: string;
+  sourceIDs: string[];
+  surfaceIDs: string[];
+  receiverIDs: string[];
+  updateInterval: number;
+  passes: number;
+  pointSize: number;
+  reflectionOrder: number;
+  runningWithoutReceivers: boolean;
+  raysVisible: boolean;
+  pointsVisible: boolean;
+  invertedDrawStyle: boolean;
+  plotStyle: Partial<Plotly.PlotData>;
+  paths: KVP<RayPath[]>;
 }
 
 export interface RayTracerParams {
@@ -267,6 +287,9 @@ class RayTracer extends Solver {
     this.colorBufferAttribute.setUsage(THREE.DynamicDrawUsage);
     this.rayBufferGeometry.setAttribute("color", this.colorBufferAttribute);
     this.chartdata = [] as ChartData[];
+    
+
+
     this.rays = new THREE.LineSegments(
       this.rayBufferGeometry,
       new THREE.LineBasicMaterial({
@@ -672,7 +695,7 @@ class RayTracer extends Solver {
           energy * abs((intersections[0].object.parent as Surface).reflectionFunction(frequency, angle!));
 
         // end condition
-        if (rr && normal && reflectionloss > 1 / 2 ** 16 && iter < order) {
+        if (rr && normal && reflectionloss > 1 / 2 ** 16 && iter < order - 1) {
           // recurse
           return this.traceRay(
             intersections[0].point.clone().addScaledVector(normal.clone(), 0.01),
@@ -1309,11 +1332,15 @@ class RayTracer extends Solver {
               const freq = freqs[f];
               let coefficient = 1;
               if (surface && surface.kind === "surface") {
-                // coefficient = surface.reflectionFunction(freq, angle);
-                coefficient = 1 - (surface as Surface).absorptionFunction(freq);
+                coefficient = (surface as Surface).reflectionFunction(freq, angle);
+                // coefficient = 1 - (surface as Surface).absorptionFunction(freq);
               }
               IrayArray[f] = ac.P2I(
-                ac.Lp2P((ac.P2Lp(ac.I2P(IrayArray[f] * coefficient)) as number) - airAttenuationdB[f] * distance)
+                ac.Lp2P((
+                  ac.P2Lp(
+                    ac.I2P(IrayArray[f] * coefficient)) as number) 
+                      - airAttenuationdB[f] * distance
+                    )
               ) as number;
             }
           }
@@ -1853,11 +1880,8 @@ declare global {
     ADD_RAYTRACER: RayTracer | undefined,
     REMOVE_RAYTRACER: string;
     RAYTRACER_CLEAR_RAYS: string;
-    RAYTRACER_SET_PROPERTY: {
-      uuid: string;
-      property: keyof RayTracer;
-      value: RayTracer[EventTypes["RAYTRACER_SET_PROPERTY"]["property"]]
-    }
+    RAYTRACER_SET_PROPERTY: SetPropertyPayload<RayTracer>
+    
   }
 }
 
@@ -1867,3 +1891,4 @@ on("RAYTRACER_SET_PROPERTY", setSolverProperty);
 on("REMOVE_RAYTRACER", removeSolver);
 on("ADD_RAYTRACER", addSolver(RayTracer))
 on("RAYTRACER_CLEAR_RAYS", (uuid: string) => void (useSolver.getState().solvers[uuid] as RayTracer).clearRays());
+

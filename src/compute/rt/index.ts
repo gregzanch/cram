@@ -13,6 +13,12 @@ export interface RT60Props extends SolverParams{
   uuid?: string;
 }
 
+export type RT60SaveObject = {
+  uuid: string;
+  name: string;
+  kind: "rt60";
+}
+
 const defaults = {
   name: "RT60"
 };
@@ -30,7 +36,7 @@ export class RT60 extends Solver{
        name,
        kind,
        uuid,
-     };
+     } as RT60SaveObject;
   }
   sabine(room: Room, frequencies: number[] = third_octave) {
     const unitsConstant = RT_CONSTANTS[room.units] || RT_CONSTANTS[UNITS.METERS];

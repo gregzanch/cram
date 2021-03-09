@@ -41,7 +41,6 @@ export default class PickHelper {
     const intersectedObjects = this.raycaster.intersectObjects(objects, true);
 
     if (intersectedObjects.length) {
-      console.log(intersectedObjects);
       let i = 0;
       let clickedOnSourceReceiver = false;
       let sourceReceiverIndex = 0;

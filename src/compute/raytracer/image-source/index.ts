@@ -24,7 +24,7 @@ import {uuid} from "uuidv4";
 import * as THREE from "three";
 import * as ac from "../../acoustics";
 import Room from "../../../objects/room";
-import Messenger from "../../../messenger";
+import Messenger, { on } from "../../../messenger";
 import { KVP } from "../../../common/key-value-pair";
 import Container from "../../../objects/container";
 import Renderer from "../../../render/renderer";
@@ -559,3 +559,17 @@ function reflectPointAcrossSurface(point: Vector3, surface: Surface): Vector3{
 
   return mirror; 
 }
+
+
+
+// this allows for nice type checking with 'on' and 'emit' from messenger
+declare global {
+  interface EventTypes {
+    IMAGESOURCE_SET_PROPERTY: SetPropertyPayload<ImageSource>   
+  }
+}
+
+
+// on("IMAGESOURCE_SET_PROPERTY", setSolverProperty);
+
+// on("IMAGESOURCE_SET_PROPERTY", setSolverProperty);

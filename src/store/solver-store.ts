@@ -39,9 +39,13 @@ export const removeSolver = (uuid: keyof SolverStore['solvers']) => {
     solvers: omit([uuid], state.solvers)
   }), true);
 }
+
+
 export const setSolverProperty = ({uuid, property, value}) => {
   useSolver.getState().set(store => {
     store.solvers[uuid][property]=value;
   });
 }
 
+
+export const getSolverKeys = () => Object.keys(useSolver.getState().solvers);
