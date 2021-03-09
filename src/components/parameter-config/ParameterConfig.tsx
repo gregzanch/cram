@@ -1,25 +1,15 @@
 import React, {useState} from 'react';
 import Messenger from '../../messenger';
-
-
-import Stats, {StatsProps, Stat} from './Stats';
-import { ParametersPanel } from './ParametersPanel';
-import MaterialsPanel from './MaterialsPanel';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import ContextMenu from "../context-menu/ContextMenu";
-import { SvgIcon } from '@material-ui/core';
-import MoreVert from '@material-ui/icons/MoreVert';
-import CloseIcon from "@material-ui/icons/Close";
 import './ParameterConfig.css';
 import { KeyValuePair } from "../../common/key-value-pair";
 import Solver from '../../compute/solver';
-import RT60Tab from './rt60-tab/RT60Tab';
+import RT60Tab from './RT60Tab';
 import { RT60 } from '../../compute/rt';
-import RayTracerTab from './ray-tracer-tab/RayTracerTab';
-import ImageSourceTab from "./image-source-tab/ImageSourceTab"; 
-import RayTracer from '../../compute/raytracer';
-import RendererTab from './renderer-tab/RendererTab';
-import FDTD_2DTab from './fdtd-2d-tab/FDTD_2DTab';
+import RayTracerTab from './RayTracerTab';
+import RendererTab from './RendererTab';
+import FDTD_2DTab from './FDTD_2DTab';
 import { FDTD_2D } from '../../compute/2d-fdtd';
 import { addToGlobalVars } from '../../common/global-vars';
 

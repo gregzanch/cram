@@ -1,5 +1,4 @@
 import create from "zustand";
-import { Searcher } from "fast-fuzzy";
 import produce from "immer";
 import { KeyValuePair } from "../common/key-value-pair";
 import { SetFunction } from ".";
@@ -19,7 +18,7 @@ export const useContainer = create<ContainerStore>((set) => ({
   set: (fn) => set(produce(fn))
 }));
 
-export const addContainer = <T extends Container>(ContainerClass: new() => T) => (container: T|undefined) => {
+export const addContainer = <T extends Container>(ContainerClass: new(...args) => T) => (container: T|undefined) => {
   const c = container || new ContainerClass() as T;
   useContainer.setState((state) => ({ 
     ...state, 
@@ -29,3 +28,5 @@ export const addContainer = <T extends Container>(ContainerClass: new() => T) =>
     } 
   }), true);
 };
+
+export const getContainerKeys = () => Object.keys(useContainer.getState().containers);

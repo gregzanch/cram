@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import * as ac from "../compute/acoustics"
-import Container, { ContainerProps } from "./container";
+import Container, { ContainerProps, ContainerSaveObject } from "./container";
 import chroma from "chroma-js";
 import map from "../common/map";
 import { MATCAP_PORCELAIN_WHITE, MATCAP_UNDER_SHADOW } from "./asset-store";
@@ -16,7 +16,7 @@ const defaults = {
   color: 0xa2c982
 };
 
-export interface SourceSaveObject {
+export interface SourceSaveObject extends ContainerSaveObject {
   name: string;
   visible: boolean;
   position: number[];
@@ -67,9 +67,9 @@ export default class Source extends Container {
   previousZ: number;
   shouldClearPreviousPosition: boolean;
   pinkNoiseSamples: Float32Array;
-  signalSource: SignalSource;
-  _initialSPL: number;
-  _initialIntensity: number;
+  public signalSource: SignalSource;
+  private _initialSPL: number;
+  private _initialIntensity: number;
   fdtdSamples: number[];
   public directivityHandler: DirectivityHandler; 
 
@@ -350,6 +350,7 @@ declare global {
 }
 
 on("ADD_SOURCE", addContainer(Source));
+
 
 
 /**

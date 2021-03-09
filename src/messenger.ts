@@ -82,9 +82,11 @@ export default class Messenger{
         this.events[event].add(callback);
         return (() => {
             this.events[event].delete(callback);
-        }).bind(this);
+        }).bind(this) as () => void;
     }
     emit<T extends keyof EventTypes>(event: T, payload: EventTypes[T]) {
+        if(!this.events[event]) return;
+        
         for(const handler of this.events[event]){
             const handlerResult = handler(payload);
             if(typeof handlerResult !== "undefined" && !handlerResult){
@@ -107,3 +109,5 @@ export const messenger = new Messenger();
 export const emit = messenger.emit.bind(messenger) as Messenger['emit'];
 export const on = messenger.on.bind(messenger) as Messenger['on'];
 export const postMessage = messenger.postMessage.bind(messenger) as Messenger['postMessage'];
+export const addMessageHandler = messenger.addMessageHandler.bind(messenger) as Messenger['addMessageHandler'];
+export const removeMessageHandler = messenger.removeMessageHandler.bind(messenger) as Messenger['removeMessageHandler'];

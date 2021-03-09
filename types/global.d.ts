@@ -14,6 +14,7 @@ declare global {
     vars: any;
     cram: Cram;
   }
+
 }
 export {};
 

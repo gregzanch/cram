@@ -23,7 +23,7 @@ import defaults from "../default-storage";
 import Axes from "./env/axes";
 import Lights from "./env/lights";
 import Room from "../objects/room";
-import Messenger, { messenger } from "../messenger";
+import Messenger, { emit, messenger, on } from "../messenger";
 
 import { addMoment, Directions } from "../history";
 
@@ -1137,6 +1137,7 @@ export default class Renderer {
       this.orientationControl.shouldRender = true;
 
       messenger.postMessage("RENDERER_UPDATED");
+      emit("RENDERER_UPDATED", undefined);
       this.needsToRender = false;
     }
     if (this.orientationControl.shouldRender) {
@@ -1291,3 +1292,14 @@ export default class Renderer {
 }
 
 export const renderer = new Renderer();
+
+declare global {
+  interface EventTypes {
+    RENDERER_UPDATED: any;
+    RENDERER_SHOULD_ANIMATE: boolean
+  }
+}
+
+on("RENDERER_SHOULD_ANIMATE", shouldAnimate => {
+  renderer.shouldAnimate = shouldAnimate;
+});

@@ -1,6 +1,14 @@
 import React from "react";
-import "./PropertyRowLabel.css";
-import Label from '../../../label/Label';
+import styled from 'styled-components'
+import Label from '../../label/Label';
+
+const PropertyRowLabelContainer = styled.div`
+  text-align: right;
+  min-width: 100px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+`;
 
 export interface PropertyRowLabelProps {
   label: string;
@@ -9,10 +17,10 @@ export interface PropertyRowLabelProps {
 }
 export default function PropertyRowLabel(props: PropertyRowLabelProps) {
   return (
-    <div className="property-row-label-container">
+    <PropertyRowLabelContainer>
       <Label hasTooltip={props.hasToolTip} tooltipText={props.tooltip || ""}>
         {props.label}
       </Label>
-    </div>
+    </PropertyRowLabelContainer>
   );
 }

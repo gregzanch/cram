@@ -8,7 +8,7 @@ import ObjectView from "./object-view/ObjectView";
 import Container from "../objects/container";
 import PanelContainer from "./panel-container/PanelContainer";
 import ObjectProperties from "./ObjectProperties/index";
-import Messenger, { messenger } from "../messenger";
+import Messenger, { emit, messenger } from "../messenger";
 import { KeyValuePair } from "../common/key-value-pair";
 import SettingsDrawer from "./settings-drawer/SettingsDrawer";
 import { Report } from "../common/browser-report";
@@ -38,9 +38,10 @@ import { NavBarComponent } from "./NavBarComponent";
 
 import TreeViewComponent from "../components/TreeViewComponent";
 
+import create from "zustand";
+import App2 from "./App2";
 
-import create from 'zustand';
-
+import {ResultsPanel} from './ResultsPanel';
 
 const AppToaster = Toaster.create({
   className: "app-toaster",
@@ -60,15 +61,8 @@ export interface AppProps {
   leftPanelInitialSize: number;
 }
 
-
 type AppState = {
-  // rightPanelTopSize: number;
-  // bottomPanelSize: number;
-  // rightPanelSize: number;
-  // leftPanelSize: number;
-
   rendererStatsVisible: boolean;
-
   importDialogVisible: boolean;
   containers: KeyValuePair<Container>;
   selectedObject: Container;
@@ -102,11 +96,7 @@ type AppState = {
   canRedo: boolean;
   canDuplicate: boolean;
   selectedSettingsDrawerTab: number;
-
-  constructions: KeyValuePair<Container>;
-}
-
-
+};
 
 type treeitem = {
   id: string | number;
@@ -136,7 +126,6 @@ export default class App extends React.Component<AppProps, AppState> {
       rendererStatsVisible: true,
       saveDialogVisible: false,
       projectName: messenger.postMessage("GET_PROJECT_NAME")[0],
-      constructions: messenger.postMessage("GET_CONSTRUCTIONS")[0],
       openWarningVisible: false,
       terminalOpen: false,
       newWarningVisible: false,
@@ -678,93 +667,28 @@ export default class App extends React.Component<AppProps, AppState> {
       </PanelContainer>
     );
 
+    const Editor = (
+      <div className="webgl-canvas">
+              <div
+                id="response-overlay"
+                className={"response_overlay response_overlay-hidden"}
+                ref={this.responseOverlay}
+              ></div>
+              {/* {<div
+                id="clf_viewer_overaly"
+                className={"clf_viewer_overlay clv_viewer_overlay-hidden"}
+                ref={this.clfViewerOverlay}
+              ></div>} */}
+              <div id="canvas_overlay" ref={this.canvasOverlay}></div>
+              <div id="orientation-overlay" ref={this.orientationOverlay}></div>
+              <canvas id="renderer-canvas" ref={this.canvas} />
+            </div>
+    )
+
     return (
       <div>
-        <NavBarComponent
-          canUndo={this.state.canUndo}
-          canRedo={this.state.canRedo}
-          canDuplicate={this.state.canDuplicate}
-          projectName={this.state.projectName}
-          rendererStatsVisible={this.state.rendererStatsVisible}
-        />
-        <Alert
-          isOpen={this.state.newWarningVisible}
-          transitionDuration={100}
-          canOutsideClickCancel
-          canEscapeKeyCancel
-          cancelButtonText="No, cancel"
-          confirmButtonText="Yes, start over"
-          intent={Intent.DANGER}
-          onConfirm={() => {
-            messenger.postMessage("NEW");
-            this.setState({
-              newWarningVisible: false
-            });
-          }}
-          onCancel={() => {
-            this.setState({
-              newWarningVisible: false
-            });
-          }}
-        >
-          Are you sure you want to start over?
-        </Alert>
-        <OpenWarning
-          isOpen={this.state.openWarningVisible}
-          onDiscard={() => {
-            this.setState(
-              {
-                openWarningVisible: false
-              },
-              () => messenger.postMessage("OPEN")
-            );
-          }}
-          onSave={() => {
-            this.setState(
-              {
-                openWarningVisible: false
-              },
-              () => {
-                messenger.postMessage("SHOW_SAVE_DIALOG_THEN_OPEN");
-              }
-            );
-          }}
-          onCancel={() => {
-            this.setState({
-              openWarningVisible: false
-            });
-          }}
-        />
-        <SaveDialog
-          messenger={messenger}
-          isOpen={this.state.saveDialogVisible}
-          filename={messenger.postMessage("GET_PROJECT_NAME")[0]}
-          onCancel={() => this.setState({ saveDialogVisible: false })}
-          onSave={(e) => {
-            let openAfterSaveCallback = () => {
-              this.setState(
-                {
-                  openAfterSave: false
-                },
-                () => messenger.postMessage("OPEN")
-              );
-            };
-            openAfterSaveCallback = openAfterSaveCallback.bind(this);
-            const callback = this.state.openAfterSave ? openAfterSaveCallback : () => {};
-            this.setState(
-              {
-                projectName: e.filename,
-                saveDialogVisible: false
-              },
-              () => {
-                messenger.postMessage("SAVE", {
-                  filename: this.state.projectName,
-                  callback
-                });
-              }
-            );
-          }}
-        />
+        <NavBarComponent />
+
         <SettingsDrawer
           size={"55%"}
           onClose={this.handleSettingsButtonClick}
@@ -833,7 +757,7 @@ export default class App extends React.Component<AppProps, AppState> {
             messenger.postMessage("IMPORT_FILE", file);
           }}
         />
-                 
+
         <SplitterLayout
           secondaryMinSize={5}
           primaryMinSize={50}
@@ -866,10 +790,10 @@ export default class App extends React.Component<AppProps, AppState> {
             secondaryInitialSize={this.props.rightPanelInitialSize}
             primaryIndex={0}
             onDragStart={() => {
-              messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", true);
+              emit("RENDERER_SHOULD_ANIMATE", true);
             }}
             onDragEnd={() => {
-              messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", false);
+              emit("RENDERER_SHOULD_ANIMATE", false);
               this.saveLayout();
             }}
             onSecondaryPaneSizeChange={(value: number) => {
@@ -877,25 +801,19 @@ export default class App extends React.Component<AppProps, AppState> {
               // this.setState({ rightPanelSize: value });
             }}
           >
-   <div className="webgl-canvas">
-              <div
-                id="response-overlay"
-                className={"response_overlay response_overlay-hidden"}
-                ref={this.responseOverlay}
-              ></div>
-              {/* {<div
-                id="clf_viewer_overaly"
-                className={"clf_viewer_overlay clv_viewer_overlay-hidden"}
-                ref={this.clfViewerOverlay}
-              ></div>} */}
-              <div id="canvas_overlay" ref={this.canvasOverlay}></div>
-              <div id="orientation-overlay" ref={this.orientationOverlay}></div>
-              <canvas id="renderer-canvas" ref={this.canvas} />
-            </div>
-
+            <SplitterLayout 
+              vertical 
+              onDragStart={() => {emit("RENDERER_SHOULD_ANIMATE", true);}}
+              onDragEnd={() => {emit("RENDERER_SHOULD_ANIMATE", false);}}
+            >
+              {Editor}
+              <PanelContainer>
+                <ResultsPanel />
+              </PanelContainer>
+            </SplitterLayout>
 
             <SplitterLayout
-              vertical={true}
+              vertical
               primaryMinSize={40}
               secondaryMinSize={1}
               secondaryInitialSize={this.props.rightPanelTopInitialSize}

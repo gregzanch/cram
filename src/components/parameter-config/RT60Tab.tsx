@@ -1,9 +1,8 @@
 import React from 'react';
-import { RT60 } from '../../../compute/rt';
-import Messenger from "../../../messenger";
-import { ObjectPropertyInputEvent } from "../../ObjectProperties";
-import "./RT60Tab.css"
-import RT60Properties from '../../ObjectProperties/RT60Properties';
+import { RT60 } from '../../compute/rt';
+import Messenger from "../../messenger";
+import { ObjectPropertyInputEvent } from "../ObjectProperties";
+import RT60Properties from '../ObjectProperties/RT60Properties';
 
 export interface RT60TabProps {
   solver: RT60;

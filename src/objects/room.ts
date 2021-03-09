@@ -41,20 +41,20 @@ export default class Room extends Container {
   originalFileData!: string;
   surfaceMap!: KVP<Surface>;
   rt!: RT60;
-  constructor(name: string, props: RoomProps) {
-    super(name);
+  constructor(name?: string, props?: RoomProps) {
+    super(name || "new room");
     this.kind = "room";
-    this.init(props, true);
+    props && this.init(props, true);
   }
   init(props: RoomProps, fromConstructor: boolean = false) {
     if (!fromConstructor) {
       this.remove(this.surfaces);
     }
-
+    
+    this.surfaces = new Container("surfaces");
     this.originalFileName = props.originalFileName || "";
     this.originalFileData = props.originalFileData || "";
     this.units = props.units || UNITS.METERS;
-    this.surfaces = new Container("surfaces");
     props.surfaces.forEach((surface) => {
       this.surfaces.add(surface);
     });
@@ -99,6 +99,11 @@ export default class Room extends Container {
     this.scale.set(state.scale[0], state.scale[1], state.scale[2]);
     this.uuid = state.uuid;
     return this;
+  }
+
+  static from(saveObject: RoomSaveObject) {
+    const room = new Room(saveObject.name).restore(saveObject);
+    return room;
   }
 
   select() {
@@ -192,5 +197,5 @@ declare global {
   }
 }
 
-// on("ADD_ROOM", addContainer)
+on("ADD_ROOM", addContainer(Room))
 

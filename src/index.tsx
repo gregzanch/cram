@@ -67,14 +67,19 @@ import FileSaver from "file-saver";
 import { createFileFromData } from "./common/file";
 import produce from "immer";
 
-import { useContainer, useSolver } from "./store";
+import { useContainer, useSolver, useResult } from "./store";
 
-expose({ useSolver, useContainer, produce, on, emit });
+
+import './objects/events';
+import './compute/events';
+
+expose({ useSolver, useContainer, useResult, produce, on, emit });
 
 
 import {CLFViewer} from "./objects/CLFViewer";
 import { ImageSourceTabProps } from "./components/parameter-config/image-source-tab/ImageSourceTab";
-
+import { ResultKind } from "./store/result-store";
+import LTPTestData from "./components/results/LTPTestData";
 
 
 const materialsIndex = {} as KeyValuePair<AcousticMaterial>;
@@ -117,12 +122,10 @@ export interface State {
   materialSearcher: any;
   sources: string[];
   receivers: string[];
-  room: string;
   containers: KeyValuePair<Container>;
   constructions: KeyValuePair<Container>;
   sketches: KeyValuePair<Sketch>;
   solvers: KeyValuePair<Solver>;
-  simulation: string;
   renderer: Renderer;
   settings: {
     general: {
@@ -177,12 +180,11 @@ export class Cram implements Cram {
       }),
       sources: [] as string[],
       receivers: [] as string[],
-      room: "" as string,
+
       containers: {} as KeyValuePair<Container>,
       constructions: {} as KeyValuePair<Container>,
       sketches: {} as KeyValuePair<Sketch>,
       solvers: {} as KeyValuePair<Solver>,
-      simulation: "",
       renderer: {} as Renderer,
       settings: defaultSettings as ApplicationSettings,
       settingsManagers: {} as KeyValuePair<SettingsManager>,
@@ -446,8 +448,6 @@ messenger.addMessageHandler("SHOULD_ADD_FDTD_2D", (acc, args) => {
     }
   }
   const fdtd2d = new FDTD_2D({
-    messenger: messenger,
-    renderer: cram.state.renderer,
     width,
     height,
     offsetX,
@@ -465,7 +465,7 @@ messenger.addMessageHandler("SHOULD_ADD_FDTD_2D", (acc, args) => {
     receivers.forEach((rec) => fdtd2d.addReceiver(rec));
   }
   cram.state.solvers[fdtd2d.uuid] = fdtd2d;
-
+  emit("ADD_FDTD_2D", fdtd2d);
   return cram.state.solvers[fdtd2d.uuid];
 });
 
@@ -706,7 +706,6 @@ messenger.addMessageHandler("IMPORT_FILE", (acc, ...args) => {
               originalFileData: result
             });
             cram.state.containers[room.uuid] = room;
-            cram.state.room = room.uuid;
             cram.state.renderer.addRoom(room);
             messenger.postMessage("ADDED_ROOM", room);
           }
@@ -788,9 +787,6 @@ messenger.addMessageHandler("APP_MOUNTED", (acc, ...args) => {
 
 messenger.addMessageHandler("RENDERER_UPDATED", () => {
   cram.state.time += 0.01666666667;
-  if (cram.state.simulation.length > 0) {
-    cram.state.solvers[cram.state.simulation].update();
-  }
   if (cram.state.selectedObjects.length > 0) {
     cram.state.selectedObjects.forEach((x) => {
       x.renderCallback(cram.state.time);
@@ -1236,19 +1232,19 @@ async function finishedLoading() {
   const file = createFileFromData(filename, [filedata]);
 
   messenger.postMessage("RESTORE", { file, json });
-
+  // emit("ADD_RESULT", {
+  //   kind: ResultKind.LinearTimeProgression, 
+  //   data: LTPTestData,
+  //   info: {
+  //     spl: [100],
+  //     frequency: [1000],
+  //   },
+  //   name: "LTP",
+  //   uuid: uuid()
+  // });
   expose({
-    sizeof,
-    Container,
-    r: cram.state.renderer,
-    Polygon,
-    Sketch,
-    CSG,
-    CAG,
-    csg,
     ac,
     THREE,
-    chunk
   });
 }
 

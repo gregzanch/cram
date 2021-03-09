@@ -55,7 +55,12 @@ export default class SurfaceGroup extends Container {
       uuid: this.uuid
     } as SurfaceGroupSaveObject;
   }
-  restore(state: any) {}
+  restore(state: SurfaceGroupSaveObject) {
+    for(const key in state){
+      this[key] = state[key];
+    }
+    return this;
+  }
   onModeChange(mode: EditorModes) {}
   select() {
     this.children.forEach((x: Container) => {

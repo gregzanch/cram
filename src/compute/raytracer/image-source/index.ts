@@ -794,6 +794,7 @@ function reflectPointAcrossSurface(point: Vector3, surface: Surface): Vector3{
   return mirror; 
 }
 
+
 declare global {
   interface EventTypes {
     ADD_IMAGESOURCE: ImageSourceSolver | undefined,
@@ -811,4 +812,3 @@ declare global {
 on("IMAGESOURCE_SET_PROPERTY", setSolverProperty);
 on("REMOVE_IMAGESOURCE", removeSolver);
 on("ADD_IMAGESOURCE", addSolver(ImageSourceSolver));
-//on("RAYTRACER_CLEAR_RAYS", (uuid: string) => void (useSolver.getState().solvers[uuid] as ImageSourceSolver).clearRays());
