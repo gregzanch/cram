@@ -119,6 +119,12 @@ export default class ParameterConfig extends React.Component<ParameterConfigProp
           </TabPanel>
           {keys.map((x, i) => {
             switch (this.props.solvers[x].kind) {
+              case "image-source":
+                return (
+                  <TabPanel key={"parameter-config-tabpanel-" + i}>
+                    <ImageSourceTab uuid={this.props.solvers[x].uuid} />
+                  </TabPanel>
+                )
               case "ray-tracer":
                 return (
                   <TabPanel key={"parameter-config-tabpanel-" + i}>

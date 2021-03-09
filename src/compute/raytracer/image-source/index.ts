@@ -20,11 +20,12 @@
 //     return OK 
 
 import Solver from "../../solver";
+import { renderer } from "../../../render/renderer";
 import {uuid} from "uuidv4";
 import * as THREE from "three";
 import * as ac from "../../acoustics";
 import Room from "../../../objects/room";
-import Messenger, { on } from "../../../messenger";
+import Messenger, { messenger, on } from "../../../messenger";
 import { KVP } from "../../../common/key-value-pair";
 import Container from "../../../objects/container";
 import Renderer from "../../../render/renderer";
@@ -36,6 +37,9 @@ import { LensTwoTone, ThreeSixtyOutlined } from "@material-ui/icons";
 import { cloneElement } from "react";
 import { SSL_OP_SSLEAY_080_CLIENT_DH_BUG } from "constants";
 import { intersection } from "lodash";
+import { addSolver, removeSolver, setSolverProperty, useSolver } from "../../../store";
+import { RayPath } from "..";
+
 
 interface ImageSourceParams {
   baseSource: Source,
@@ -49,7 +53,7 @@ interface ImageSourceParams {
 class ImageSource{
 
   // the source that all image sources are based off of
-  // note: this is not the parent image source! that is below 
+  // note: this is not the parent image source! that is 'parent' below 
   public baseSource: Source; 
   
   public children: ImageSource[]; 
@@ -64,7 +68,7 @@ class ImageSource{
   public uuid: string; 
 
   constructor(params: ImageSourceParams){
-    this.baseSource = params.baseSource; 
+    this.baseSource = params.baseSource;
     this.reflector = params.reflector; 
     this.order = params.order; 
 
@@ -103,15 +107,20 @@ class ImageSource{
     return paths; 
   }
 
-  public markup(){
+  public markupAllDescendents(){
     for(let i = 0; i<this.children.length; i++){
       let pos: Vector3 = this.children[i].position.clone();
-      cram.state.renderer.markup.addPoint([pos.x,pos.y,pos.z], [0,0,0]);
+      renderer.markup.addPoint([pos.x,pos.y,pos.z], [0,0,0]);
       if (this.children[i].hasChildren){
-        this.children[i].markup(); 
+        this.children[i].markupAllDescendents(); 
       }else{
       }
     }
+  }
+
+  public markup(){
+    let pos: Vector3 = this.position.clone(); 
+    renderer.markup.addPoint([pos.x,pos.y,pos.z], [0,0,0]);
   }
 
   public getTotalDescendents(): number{
@@ -124,6 +133,25 @@ class ImageSource{
       } 
     }
     return sum; 
+  }
+
+  public getChildrenOfOrder(order: number): ImageSource[]{
+    let order_children: ImageSource[] = [];
+
+    ((this.order == order) && (this.order == 0)) && order_children.push(this); 
+
+    for(let i = 0; i<this.children.length; i++){
+      if(this.children[i].order == order){
+        order_children.push(this.children[i]); 
+      }
+
+      if(this.children[i].hasChildren){
+        let a = this.children[i].getChildrenOfOrder(order); 
+        order_children = order_children.concat(a); 
+      }
+
+    }
+    return order_children; 
   }
 
   get hasChildren() {
@@ -154,7 +182,7 @@ class ImageSourcePath{
     for(let i = 0; i<this.path.length-1; i++){
       let p1: Vector3 = (this.path[i]).point.clone();
       let p2: Vector3 =  (this.path[i+1]).point.clone();
-      cram.state.renderer.markup.addLine([p1.x,p1.y,p1.z],[p2.x,p2.y,p2.z]);
+      renderer.markup.addLine([p1.x,p1.y,p1.z],[p2.x,p2.y,p2.z]);
     }
   }
 
@@ -232,7 +260,8 @@ class ImageSourcePath{
         // intersected with a surface
         for(let findex = 0; findex<freqs.length; findex++){
           // @ts-ignore
-          let reflectionCoefficient = (intersection.reflectingSurface as Surface).reflectionFunction(freqs[findex],intersection.angle);
+          //let reflectionCoefficient = (intersection.reflectingSurface as Surface).reflectionFunction(freqs[findex],intersection.angle);
+          let reflectionCoefficient = 1-(intersection.reflectingSurface as Surface).absorptionFunction(freqs[findex]); 
           intensity[findex] = intensity[findex]*reflectionCoefficient; 
         }
 
@@ -245,14 +274,12 @@ class ImageSourcePath{
     
     // apply air absorption (dB/m)
     const airAttenuationdB = ac.airAttenuation(freqs); 
-
     for(let f = 0; f<freqs.length; f++){
       arrivalLp[f] = arrivalLp[f] - airAttenuationdB[f]*this.totalLength; 
     }
 
-    // convert to pressure
+    // convert back to pressure
     return ac.Lp2P(arrivalLp) as number[]; 
-
   }
 
   public arrivalTime(c: number): number{
@@ -261,25 +288,30 @@ class ImageSourcePath{
 }
 
 export interface ImageSourceSolverParams {
-  renderer;
-  messenger: Messenger;
-  name?: string;
-  roomID?: string;
-  sourceIDs?: string[];
-  surfaceIDs?: string[];
-  containers?: KVP<Container>;
-  receiverIDs?: string[];
-  updateInterval?: number;
-  passes?: number;
-  pointSize?: number;
-  reflectionOrder?: number;
-  isRunning?: boolean;
-  runningWithoutReceivers?: boolean;
-  raysVisible?: boolean;
-  pointsVisible?: boolean;
-  invertedDrawStyle?: boolean;
-  uuid?: string;
+  name: string;
+  roomID: string;
+  sourceIDs: string[];
+  surfaceIDs: string[];
+  containers: KVP<Container>;
+  receiverIDs: string[];
+  maxReflectionOrder: number;
+  imageSourcesVisible: boolean;
+  rayPathsVisible: boolean;
+  plotOrders: number[];
 }
+
+const defaults = {
+  name: "image-source-class",
+  roomID: "",
+  sourceIDs: [] as string[],
+  surfaceIDs: [] as string[],
+  containers: {} as KVP<Container>,
+  receiverIDs: [] as string[],
+  maxReflectionOrder: 2,
+  imageSourcesVisible: true,
+  rayPathsVisible: true, 
+  plotOrders: [0, 1, 2] // all paths
+};
 
 export class ImageSourceSolver extends Solver {
 
@@ -287,47 +319,120 @@ export class ImageSourceSolver extends Solver {
     receiverIDs: string[];
     roomID: string;
     surfaceIDs: string[];
-    renderer: Renderer;   
-    containers: KVP<Container | Room>; 
-    messenger: Messenger; 
+    containers: KVP<Container>; 
+    uuid: string; 
 
-    imagesources: ImageSource[]; 
+    maxReflectionOrder: number; 
+    
+    private _imageSourcesVisible: boolean;
+    private _rayPathsVisible: boolean;
+    public plotOrders: number[]; 
 
-    constructor(params: ImageSourceSolverParams){
+    rootImageSource: ImageSource | null; 
+    validRayPaths: ImageSourcePath[] | null; 
+    allRayPaths: ImageSourcePath[] | null; 
+
+    constructor(params: ImageSourceSolverParams = defaults){
         super(params);
+        this.uuid = uuid(); 
         this.kind = "image-source";
-        this.name = "image source";
-        this.roomID = params.roomID || "" as string; 
-        this.sourceIDs = params.sourceIDs || [] as string[]; 
-        this.receiverIDs = params.receiverIDs || [] as string[]; 
-        this.renderer = params.renderer; 
-        this.containers = params.containers || {} as KVP<Container>;
-        this.messenger = params.messenger;
+        this.name = params.name;
+        this.roomID = params.roomID;
+        this.sourceIDs = params.sourceIDs;
+        this.receiverIDs = params.receiverIDs; 
+        this.containers = params.containers;
+
+        this.maxReflectionOrder = params.maxReflectionOrder; 
+        this._imageSourcesVisible = params.imageSourcesVisible; 
+        this._rayPathsVisible = params.rayPathsVisible; 
+        this.plotOrders = params.plotOrders; 
 
         this.surfaceIDs = []; 
-        this.imagesources = []; 
+        
+        this.rootImageSource = null;
+        this.allRayPaths = null;  
+        this.validRayPaths = null; 
 
+        // get room 
+        let room: Room = messenger.postMessage("FETCH_ROOMS")[0][0];
+        this.roomID = room.uuid; 
+
+    }
+
+    updateImageSourceCalculation(){
+
+      // clear markup (replace with a more robust method eventually)
+      this.clearRayPaths(); 
+      this.clearImageSources(); 
+
+      // add in checking to make sure only 1 source and 1 receiver are selected
+
+      let is_params: ImageSourceParams = {
+        baseSource: this.containers[this.sourceIDs[0]] as Source,
+        position: (this.containers[this.sourceIDs[0]] as Source).position.clone(), 
+        room: this.room, 
+        reflector: null,
+        parent: null, 
+        order: 0, 
+      };
+      
+      let is_base: ImageSource = new ImageSource(is_params);
+      let is_calculated: ImageSource | null = computeImageSources(is_base,this.maxReflectionOrder); 
+
+      this.rootImageSource = is_calculated; 
+
+      // construct all possible paths
+      let paths: ImageSourcePath[];
+      let valid_paths: ImageSourcePath[] = []; 
+      if(is_calculated != null){
+        paths = is_calculated.constructPathsForAllDescendents(this.containers[this.receiverIDs[0]] as Receiver);
+
+        this.allRayPaths = paths; 
+
+        // get valid paths
+        for(let i = 0; i<paths?.length; i++){
+          if(paths[i].isvalid(this.room.surfaces.children as Surface[])){
+            valid_paths.push(paths[i]); 
+          }
+        }
+      }
+      this.validRayPaths = valid_paths; 
+      (this._imageSourcesVisible) && (this.drawImageSources());
+      (this._rayPathsVisible) && (this.drawRayPaths()); 
+    }
+
+    calculateLTP(c: number){
+
+      let sortedPath: ImageSourcePath[] | null = this.validRayPaths; 
+      sortedPath?.sort((a, b) => (a.arrivalTime(c) > b.arrivalTime(c)) ? 1 : -1); 
+
+      if(sortedPath != undefined){
+        for(let i = 0; i<sortedPath?.length; i++){
+          let t = sortedPath[i].arrivalTime(343); 
+          let p = sortedPath[i].arrivalPressure([100],[1000]); 
+          console.log("Arrival: " + (i+1) + " | Arrival Time: (s) " + t + " | Arrival Pressure(1000Hz): " + p + " | Order " + sortedPath[i].order); 
+        }
+      }
+    }
+
+    getPathsOfOrder(order: number): ImageSourcePath[]{
+      let rayPathsOfOrder: ImageSourcePath[] = []; 
+      if(this.validRayPaths != null){
+        for(let i = 0; i<this.validRayPaths?.length; i++){
+          if(this.validRayPaths[i].order == order){
+            rayPathsOfOrder.push(this.validRayPaths[i]); 
+          }
+        }
+      }
+      return rayPathsOfOrder; 
     }
 
     test(){
 
-        // get room 
-        let room: Room = this.messenger.postMessage("FETCH_ROOMS")[0][0];
-        this.roomID = room.uuid; 
-
-        // assign IDs 
-        for (const key in this.containers) {
-            if (this.containers[key].kind === "source") {
-              this.sourceIDs.push(key);
-            } else if (this.containers[key].kind === "receiver") {
-              this.receiverIDs.push(key);
-            } else if (this.containers[key].kind === "surface") {
-              this.surfaceIDs.push(key);
-            }
-        }
+      // debugging
 
         // get source
-        let source: Source = this.messenger.postMessage("FETCH_SOURCE",this.sourceIDs[0])[0];
+        let source: Source = messenger.postMessage("FETCH_SOURCE",this.sourceIDs[0])[0];
 
         // assign base image source
         let is_params: ImageSourceParams = {
@@ -341,7 +446,7 @@ export class ImageSourceSolver extends Solver {
 
         let is: ImageSource = new ImageSource(is_params);
         
-        let maxOrder = 3; 
+        let maxOrder = 1; 
         let is_2 = computeImageSources(is,maxOrder); 
         is_2?.markup(); 
         console.log(is_2); 
@@ -363,6 +468,7 @@ export class ImageSourceSolver extends Solver {
               console.log(paths[i]);
               console.log(paths[i].totalLength)
               console.log(paths[i].arrivalTime(343)); 
+              console.log(ac.Lp2P(initialSPL));
               console.log(paths[i].arrivalPressure(initialSPL,f))
               validCount++; 
             }
@@ -371,14 +477,16 @@ export class ImageSourceSolver extends Solver {
         } 
     }
 
-    markupImageSources(){
-      for(let i = 0; i<this.imagesources.length; i++){
-        let pos = this.imagesources[i].position.clone(); 
-        let color: number[]; 
-        cram.state.renderer.markup.addPoint([pos.x,pos.y,pos.z], [1,1,1]);
-      }
+    reset(){
+      this.rootImageSource = null;
+      this.allRayPaths = null;  
+      this.validRayPaths = null; 
+
+      this.clearImageSources(); 
+      this.clearRayPaths(); 
     }
 
+    // getters and setters
     get sources() {
       if (this.sourceIDs.length > 0) {
         return this.sourceIDs.map((x) => this.containers[x]);
@@ -394,6 +502,132 @@ export class ImageSourceSolver extends Solver {
 
     get room(): Room {
       return this.containers[this.roomID] as Room;
+    }
+    
+    get numValidRays(): number {
+      let numValid = this.validRayPaths?.length; 
+
+      if(numValid === undefined){
+        return 0; 
+      }else{
+        return numValid; 
+      }
+    }
+
+    get numTotalRays(): number {
+      let numTotal = this.allRayPaths?.length;
+
+      if(numTotal === undefined){
+        return 0; 
+      }else{
+        return numTotal; 
+      }
+    }
+
+    set rayPathsVisible(vis: boolean){
+      if(vis == this._rayPathsVisible){
+        // do nothing
+      }else{
+        if(vis){
+          this.drawRayPaths(); 
+        }else{
+          this.clearRayPaths(); 
+        }
+      }
+      this._rayPathsVisible = vis; 
+    }
+
+    get rayPathsVisible(){
+      return this._rayPathsVisible; 
+    }
+
+    set imageSourcesVisible(vis: boolean){
+      if(vis == this._imageSourcesVisible){
+        // do nothing
+      }else{
+        if(vis){
+          this.drawImageSources(); 
+        }else{
+          this.clearImageSources(); 
+        }
+      }
+      this._imageSourcesVisible = vis; 
+    }
+
+    get imageSourcesVisible(){
+      return this._imageSourcesVisible; 
+    }
+
+    get possibleOrders(){
+      type OptionType = {
+        value: number;
+        label: any; 
+      };
+
+      let o: OptionType[] = []; 
+      for(let i = 0; i<=this.maxReflectionOrder; i++){
+        let op: OptionType = {
+          value: i,
+          label: i.toString()
+        }
+        o.push(op); 
+      }
+      return o;
+    }
+
+    get selectedPlotOrders(){
+      type OptionType = {
+        value: number;
+        label: any; 
+      };
+      let o: OptionType[] = []; 
+      for(let i = 0; i<this.plotOrders.length; i++){
+        let op: OptionType = {
+          value: this.plotOrders[i],
+          label: this.plotOrders[i].toString()
+        }
+        o.push(op); 
+      }
+      return o;
+    }
+
+    set plotOrdersControl(order: number[]){
+      if(order == undefined){
+        this.plotOrders = [];
+      }else{
+        this.plotOrders = order; 
+      }       
+    }
+
+    // plot functions
+    drawImageSources(){
+      this.clearImageSources(); 
+      for(let i = 0; i<this.plotOrders.length; i++){
+        let is = this.rootImageSource?.getChildrenOfOrder(this.plotOrders[i]) as ImageSource[];   
+        for(let j = 0; j<is?.length; j++){
+          is[j].markup(); 
+        }
+      }
+    }
+
+    clearImageSources(){
+      // placeholder
+      renderer.markup.clearPoints(); 
+    }
+
+    drawRayPaths(orders?:number[]){
+      this.clearRayPaths(); 
+      for(let i = 0; i<this.plotOrders.length; i++){
+        let is_paths = this.getPathsOfOrder(this.plotOrders[i]) as ImageSourcePath[]; 
+        for(let j = 0; j<is_paths.length; j++){
+          is_paths[j].markup(); 
+        }
+      }
+    }
+
+    clearRayPaths(){
+      // placeholder
+      renderer.markup.clearLines(); 
     }
 
 }
@@ -561,15 +795,20 @@ function reflectPointAcrossSurface(point: Vector3, surface: Surface): Vector3{
 }
 
 
-
-// this allows for nice type checking with 'on' and 'emit' from messenger
 declare global {
   interface EventTypes {
-    IMAGESOURCE_SET_PROPERTY: SetPropertyPayload<ImageSource>   
+    ADD_IMAGESOURCE: ImageSourceSolver | undefined,
+    REMOVE_IMAGESOURCE: string;
+    IMAGESOURCE_CLEAR_RAYS: string;
+    IMAGESOURCE_SET_PROPERTY: {
+      uuid: string;
+      property: keyof ImageSourceSolver;
+      value: ImageSourceSolver[EventTypes["IMAGESOURCE_SET_PROPERTY"]["property"]]; 
+    }
+    CALCULATE_IMAGESOURCE: ImageSourceSolver; 
   }
 }
 
-
-// on("IMAGESOURCE_SET_PROPERTY", setSolverProperty);
-
-// on("IMAGESOURCE_SET_PROPERTY", setSolverProperty);
+on("IMAGESOURCE_SET_PROPERTY", setSolverProperty);
+on("REMOVE_IMAGESOURCE", removeSolver);
+on("ADD_IMAGESOURCE", addSolver(ImageSourceSolver));

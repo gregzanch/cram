@@ -1,0 +1,16 @@
+.imagesource_tab {
+  margin: 1em;
+}
+.imagesource_tab-plots-container{
+  display: grid;
+  grid-template-columns: auto auto;
+}
+.imagesource_tab-intersection_plot-container{
+  grid-column-start: 1;
+  grid-column-end: 2;
+}
+
+.imagesource_tab-response_plot-container{
+  grid-column-start: 2;
+  grid-column-end: 3;
+}

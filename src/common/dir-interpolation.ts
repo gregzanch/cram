@@ -8,7 +8,7 @@ export function dirinterp(desiredPhi: number, desiredTheta: number, dirPoint1: d
 
     let desiredDir; 
     let X = dirPoint2.theta - dirPoint1.theta; 
-    let Y = dirPoint4.phi - dirPoint4.phi;
+    let Y = dirPoint3.phi - dirPoint2.phi;
     
     let deltaX = desiredTheta - dirPoint1.theta; 
     let deltaY = desiredPhi - dirPoint1.phi; 

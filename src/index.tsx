@@ -23,7 +23,7 @@ import Sketch from "./objects/sketch";
 // compute/solvers
 import Solver from "./compute/solver";
 import RayTracer from "./compute/raytracer";
-import {ImageSourceSolver} from "./compute/raytracer/image-source/index"
+import {ImageSourceSolver, ImageSourceSolverParams} from "./compute/raytracer/image-source/index"
 import RT60 from "./compute/rt";
 import { FDTD_2D, FDTD_2D_Defaults } from "./compute/2d-fdtd";
 import * as ac from "./compute/acoustics";
@@ -77,9 +77,9 @@ expose({ useSolver, useContainer, useResult, produce, on, emit });
 
 
 import {CLFViewer} from "./objects/CLFViewer";
+import { ImageSourceTabProps } from "./components/parameter-config/image-source-tab/ImageSourceTab";
 import { ResultKind } from "./store/result-store";
 import LTPTestData from "./components/results/LTPTestData";
-
 
 
 const materialsIndex = {} as KeyValuePair<AcousticMaterial>;
@@ -367,28 +367,24 @@ messenger.addMessageHandler("SHOULD_ADD_RAYTRACER", (acc, ...args) => {
   return raytracer;
 });
 
-
-messenger.addMessageHandler("SHOULD_ADD_IMAGE_SOURCE", () => {
-  const imagesource = new ImageSourceSolver({
-    renderer: cram.state.renderer, 
-    messenger: messenger,
-    containers: cram.state.containers
-  }); 
-
-  const numsolvers:number = Object.keys(cram.state.solvers).length;
-
-  Object.keys(cram.state.solvers).forEach(function(key) {
-    if((cram.state.solvers[key]).kind==="image-source"){
-      delete cram.state.solvers[key]; 
-    }
-  })
-
+messenger.addMessageHandler("SHOULD_ADD_IMAGE_SOURCE", (acc, ...args) => {
+  const defaults: ImageSourceSolverParams = {
+    name: "Image Source",
+    roomID: "",
+    sourceIDs: [] as string[],
+    surfaceIDs: [] as string[],
+    containers: cram.state.containers,
+    receiverIDs: [] as string[],
+    maxReflectionOrder: 2,
+    imageSourcesVisible: true,
+    rayPathsVisible: true, 
+    plotOrders: [0, 1, 2],
+  };
+  const imagesource = new ImageSourceSolver(defaults); 
   cram.state.solvers[imagesource.uuid] = imagesource; 
-
-  imagesource.test(); 
-
+  emit("ADD_IMAGESOURCE",imagesource);
   return imagesource; 
-})
+});
 
 messenger.addMessageHandler("SHOULD_REMOVE_SOLVER", (acc, id) => {
   if (cram.state.solvers && cram.state.solvers[id]) {

@@ -372,6 +372,11 @@ export default class App extends React.Component<AppProps, AppState> {
       solvers[acc[0].uuid] = acc[0];
       return { solvers };
     });
+    this.addMessageHandler("SHOULD_ADD_IMAGE_SOURCE", (acc) => {
+      const solvers = { ...this.state.solvers };
+      solvers[acc[0].uuid] = acc[0];
+      return { solvers };
+    });
     this.addMessageHandler("SHOULD_REMOVE_SOLVER", (acc, ...args) => {
       if (args[0] && this.state.solvers[args[0]]) {
         const solvers = { ...this.state.solvers };
