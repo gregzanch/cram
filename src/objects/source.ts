@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import Container, { ContainerProps } from "./container";
+import Container, { ContainerProps, ContainerSaveObject } from "./container";
 import chroma from "chroma-js";
 import map from "../common/map";
 import { MATCAP_PORCELAIN_WHITE, MATCAP_UNDER_SHADOW } from "./asset-store";
@@ -15,7 +15,7 @@ const defaults = {
   color: 0xa2c982
 };
 
-export interface SourceSaveObject {
+export interface SourceSaveObject extends ContainerSaveObject {
   name: string;
   visible: boolean;
   position: number[];
@@ -348,6 +348,7 @@ declare global {
 }
 
 on("ADD_SOURCE", addContainer(Source));
+
 
 
 /**

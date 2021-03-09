@@ -8,7 +8,7 @@ import ObjectView from "./object-view/ObjectView";
 import Container from "../objects/container";
 import PanelContainer from "./panel-container/PanelContainer";
 import ObjectProperties from "./ObjectProperties/index";
-import Messenger, { messenger } from "../messenger";
+import Messenger, { emit, messenger } from "../messenger";
 import { KeyValuePair } from "../common/key-value-pair";
 import SettingsDrawer from "./settings-drawer/SettingsDrawer";
 import { Report } from "../common/browser-report";
@@ -38,10 +38,10 @@ import { NavBarComponent } from "./NavBarComponent";
 
 import TreeViewComponent from "../components/TreeViewComponent";
 
-
-import create from 'zustand';
+import create from "zustand";
 import App2 from "./App2";
 
+import {ResultsPanel} from './ResultsPanel';
 
 const AppToaster = Toaster.create({
   className: "app-toaster",
@@ -60,7 +60,6 @@ export interface AppProps {
   rightPanelInitialSize: number;
   leftPanelInitialSize: number;
 }
-
 
 type AppState = {
   rendererStatsVisible: boolean;
@@ -97,9 +96,7 @@ type AppState = {
   canRedo: boolean;
   canDuplicate: boolean;
   selectedSettingsDrawerTab: number;
-}
-
-
+};
 
 type treeitem = {
   id: string | number;
@@ -665,10 +662,28 @@ export default class App extends React.Component<AppProps, AppState> {
       </PanelContainer>
     );
 
+    const Editor = (
+      <div className="webgl-canvas">
+              <div
+                id="response-overlay"
+                className={"response_overlay response_overlay-hidden"}
+                ref={this.responseOverlay}
+              ></div>
+              {/* {<div
+                id="clf_viewer_overaly"
+                className={"clf_viewer_overlay clv_viewer_overlay-hidden"}
+                ref={this.clfViewerOverlay}
+              ></div>} */}
+              <div id="canvas_overlay" ref={this.canvasOverlay}></div>
+              <div id="orientation-overlay" ref={this.orientationOverlay}></div>
+              <canvas id="renderer-canvas" ref={this.canvas} />
+            </div>
+    )
+
     return (
       <div>
         <NavBarComponent />
-       
+
         <SettingsDrawer
           size={"55%"}
           onClose={this.handleSettingsButtonClick}
@@ -737,7 +752,7 @@ export default class App extends React.Component<AppProps, AppState> {
             messenger.postMessage("IMPORT_FILE", file);
           }}
         />
-                 
+
         <SplitterLayout
           secondaryMinSize={5}
           primaryMinSize={50}
@@ -770,10 +785,10 @@ export default class App extends React.Component<AppProps, AppState> {
             secondaryInitialSize={this.props.rightPanelInitialSize}
             primaryIndex={0}
             onDragStart={() => {
-              messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", true);
+              emit("RENDERER_SHOULD_ANIMATE", true);
             }}
             onDragEnd={() => {
-              messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", false);
+              emit("RENDERER_SHOULD_ANIMATE", false);
               this.saveLayout();
             }}
             onSecondaryPaneSizeChange={(value: number) => {
@@ -781,25 +796,13 @@ export default class App extends React.Component<AppProps, AppState> {
               // this.setState({ rightPanelSize: value });
             }}
           >
-   <div className="webgl-canvas">
-              <div
-                id="response-overlay"
-                className={"response_overlay response_overlay-hidden"}
-                ref={this.responseOverlay}
-              ></div>
-              {/* {<div
-                id="clf_viewer_overaly"
-                className={"clf_viewer_overlay clv_viewer_overlay-hidden"}
-                ref={this.clfViewerOverlay}
-              ></div>} */}
-              <div id="canvas_overlay" ref={this.canvasOverlay}></div>
-              <div id="orientation-overlay" ref={this.orientationOverlay}></div>
-              <canvas id="renderer-canvas" ref={this.canvas} />
-            </div>
-
+            <SplitterLayout vertical>
+              {Editor}
+              <ResultsPanel />
+            </SplitterLayout>
 
             <SplitterLayout
-              vertical={true}
+              vertical
               primaryMinSize={40}
               secondaryMinSize={1}
               secondaryInitialSize={this.props.rightPanelTopInitialSize}

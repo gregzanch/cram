@@ -17,8 +17,10 @@ export type AppStore = {
   settingsDrawerVisible: boolean,
   canUndo: boolean,
   canRedo: boolean,
-  set: (fn: any) => void;
+  set: (fn: (draft: AppStore) => void) => void;
 };
+
+
 
 export const useAppStore = create<AppStore>((set) => ({
   version: "0.2.1",
@@ -34,7 +36,7 @@ export const useAppStore = create<AppStore>((set) => ({
   canUndo: false,
   materialDrawerOpen: false,
   settingsDrawerVisible: false,
-  set: (fn) => set(produce(fn))
+  set: (fn: (draft: AppStore) => void) => set(produce(fn))
 }));
 
 

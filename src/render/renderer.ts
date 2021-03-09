@@ -23,7 +23,7 @@ import defaults from "../default-storage";
 import Axes from "./env/axes";
 import Lights from "./env/lights";
 import Room from "../objects/room";
-import Messenger, { emit, messenger } from "../messenger";
+import Messenger, { emit, messenger, on } from "../messenger";
 
 import { addMoment, Directions } from "../history";
 
@@ -1296,6 +1296,10 @@ export const renderer = new Renderer();
 declare global {
   interface EventTypes {
     RENDERER_UPDATED: any;
+    RENDERER_SHOULD_ANIMATE: boolean
   }
 }
 
+on("RENDERER_SHOULD_ANIMATE", shouldAnimate => {
+  renderer.shouldAnimate = shouldAnimate;
+});

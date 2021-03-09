@@ -1,10 +1,13 @@
 import * as THREE from "three";
-import Receiver from "./receiver";
+import Receiver, { ReceiverSaveObject } from "./receiver";
 import Surface from "./surface";
-import Room from "./room";
-import Source from "./source";
+import Room, { RoomSaveObject } from "./room";
+import Source, { SourceSaveObject } from "./source";
 import { KeyValuePair } from "../common/key-value-pair";
 import { EditorModes } from "../constants";
+import { emit, on } from "../messenger";
+import { getContainerKeys, useContainer } from "../store";
+import { omit } from "../common/helpers";
 
 type UserData = {
   [key: string]: any;
@@ -54,7 +57,12 @@ export default class Container extends THREE.Group {
       uuid: this.uuid
     } as ContainerSaveObject;
   }
-  restore(state: any) {}
+  restore(state: ContainerSaveObject) {
+    for(const key in state){
+      this[key] = state[key];
+    }
+    return this;
+  }
   onModeChange(mode: EditorModes) {}
   select() {
     this.children.forEach((x: Surface) => {
@@ -164,6 +172,4 @@ export default class Container extends THREE.Group {
   set rotationz(val) {
     this.rotation.z = val;
   }
-
-  
 }

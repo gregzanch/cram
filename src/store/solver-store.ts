@@ -47,3 +47,5 @@ export const setSolverProperty = ({uuid, property, value}) => {
   });
 }
 
+
+export const getSolverKeys = () => Object.keys(useSolver.getState().solvers);

@@ -40,6 +40,7 @@ import { clamp } from "../../common/clamp";
 import { EditorModes } from "../../constants";
 import { addSolver, removeSolver, setSolverProperty } from "../../store";
 import { renderer } from "../../render/renderer";
+import { pickProps } from "../../common/helpers";
 
 export const FDTD_2D_Defaults = {
   width: 10,
@@ -340,6 +341,9 @@ class FDTD_2D extends Solver {
     this.running = false;
     renderer.fdtd2drunning = false;
   }
+  // save() {
+  //   return pickProps(["name", "uuid", "width", "height", "offsetX", "offsetY", "cellSize"], this);
+  // }
   setWireframeVisible(show: boolean) {
     (this.mesh.material as ShaderMaterial).wireframe = show;
   }

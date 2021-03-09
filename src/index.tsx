@@ -69,6 +69,10 @@ import produce from "immer";
 
 import { useContainer, useSolver } from "./store";
 
+
+import './objects/events';
+import './compute/events';
+
 expose({ useSolver, useContainer, produce, on, emit });
 
 

@@ -117,6 +117,26 @@ export class ReceiverData {
   }
 }
 
+export type RayTracerSaveObject = {
+  name: string;
+  kind: "ray-tracer";
+  uuid: string;
+  roomID: string;
+  sourceIDs: string[];
+  surfaceIDs: string[];
+  receiverIDs: string[];
+  updateInterval: number;
+  passes: number;
+  pointSize: number;
+  reflectionOrder: number;
+  runningWithoutReceivers: boolean;
+  raysVisible: boolean;
+  pointsVisible: boolean;
+  invertedDrawStyle: boolean;
+  plotStyle: Partial<Plotly.PlotData>;
+  paths: KVP<RayPath[]>;
+}
+
 export interface RayTracerParams {
   name?: string;
   roomID?: string;
