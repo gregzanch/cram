@@ -2,24 +2,15 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import "./ImageSourceTab.css";
 import RayTracer from "../../../compute/raytracer";
 import {ImageSourceSolver} from "../../../compute/raytracer/image-source/index"; 
-import Plot from "react-plotly.js";
-import { Button } from "@blueprintjs/core";
-import ObjectProperties from "../../ObjectProperties";
-import Messenger, { emit, on } from "../../../messenger";
+import { emit, on } from "../../../messenger";
 import { ObjectPropertyInputEvent } from "../../ObjectProperties";
-import SplitterLayout from "react-splitter-layout";
-import RayTracerResults from "../ray-tracer-results/RayTracerResults";
-import PanelContainer from "../../panel-container/PanelContainer";
-import RayTracerProperties from "../../ObjectProperties/RayTracerProperties";
 import { useContainer, useSolver } from "../../../store";
-import produce from "immer";
 import GridRow from "../../grid-row/GridRow";
 import TextInput from "../../text-input/TextInput";
 import NumberInput from "../../number-input/NumberInput";
 import { pickProps } from "../../../common/helpers";
 import GridRowSeperator from "../../grid-row/GridRowSeperator";
 import Select from 'react-select';
-import { StringNullableChain } from "lodash";
 
 export interface ImageSourceTabProps {
   uuid: string;

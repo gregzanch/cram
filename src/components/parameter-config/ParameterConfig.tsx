@@ -12,6 +12,7 @@ import RendererTab from './RendererTab';
 import FDTD_2DTab from './FDTD_2DTab';
 import { FDTD_2D } from '../../compute/2d-fdtd';
 import { addToGlobalVars } from '../../common/global-vars';
+import { ImageSourceTab } from './image-source-tab/ImageSourceTab';
 
 
 export interface ParameterConfigProps {
