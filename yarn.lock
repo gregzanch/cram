@@ -13473,15 +13473,10 @@ three-mesh-bvh@^0.1.5:
   resolved "https://registry.yarnpkg.com/three-mesh-bvh/-/three-mesh-bvh-0.1.5.tgz#b76cabdc98a31a3499b6f3bbb4162b3dc0468911"
   integrity sha512-ryT4RVDlSlwrRtCFgtH5PTRrAC+JGfzFxXJ1E5Wdfu2xVVcoeBkl2ocVp4XgOhzWJQWiSaHyq30VmSBhBPcigQ==
 
-three@*:
-  version "0.124.0"
-  resolved "https://registry.yarnpkg.com/three/-/three-0.124.0.tgz#14ab1a26ba6c56e51190e1b55695cd3c1e69ea55"
-  integrity sha512-ROXp1Ly7YyF+jC910DQyAWj++Qlw2lQv0qwYLNQwdDbjk4bsOXAfGO92wYTMPNei1GMJUmCxSxc3MjGBTS09Rg==
-
-three@^0.111.0:
-  version "0.111.0"
-  resolved "https://registry.yarnpkg.com/three/-/three-0.111.0.tgz#9cedb73e79b7f6bf2440cb67a273f883faa923b6"
-  integrity sha512-AcTqyGJ3H75AIusOuADy0LsP958QKQwm/YhABHFMzd6RFXPNVay1rlSbbG6WYv7KM72G2THMMwqbjQd4dVHMkQ==
+three@*, three@^0.125.0:
+  version "0.125.0"
+  resolved "https://registry.yarnpkg.com/three/-/three-0.125.0.tgz#19e922b9dc51ad0b706893aeee888de68e99850a"
+  integrity sha512-qL36qUGsPQ/Ofo/RZdXwHwM7A8wzUSAIyawtjIebJSPvounUQeneSqxI0aBY2iwKpseGy+RUtj3C5f/z4poyXw==
 
 throat@^4.0.0:
   version "4.1.0"
