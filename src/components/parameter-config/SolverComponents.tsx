@@ -11,12 +11,14 @@ import Solver from "../../compute/solver";
 import RayTracer from "../../compute/raytracer";
 import FDTD_2D from "../../compute/2d-fdtd"
 import {AllowedNames } from '../../common/helpers';
+import { ImageSourceSolver } from "../../compute/raytracer/image-source";
 
 type SetPropertyEventTypes =
   | AllowedNames<EventTypes, SetPropertyPayload<FDTD_2D>>
-  | AllowedNames<EventTypes, SetPropertyPayload<RayTracer>>;
+  | AllowedNames<EventTypes, SetPropertyPayload<RayTracer>>
+  | AllowedNames<EventTypes, SetPropertyPayload<ImageSourceSolver>>;
 
-export function useSolverProperty<T extends RayTracer | FDTD_2D, K extends keyof T>(
+export function useSolverProperty<T extends RayTracer | FDTD_2D|ImageSourceSolver, K extends keyof T>(
   uuid: string,
   property: K,
   event: SetPropertyEventTypes
@@ -39,14 +41,14 @@ export function useSolverProperty<T extends RayTracer | FDTD_2D, K extends keyof
 }
 
 type PropertyRowInputElement = ({ value, onChange }) => JSX.Element;
-type Props<T extends RayTracer | FDTD_2D, K extends keyof T> = {
+type Props<T extends RayTracer | FDTD_2D|ImageSourceSolver, K extends keyof T> = {
   uuid: string;
   property: K;
   label: string;
   tooltip: string;
 };
 
-export const createPropertyInput = <T extends RayTracer | FDTD_2D>(
+export const createPropertyInput = <T extends RayTracer | FDTD_2D|ImageSourceSolver>(
   event: SetPropertyEventTypes,
   Element: PropertyRowInputElement
 ) => <K extends keyof T>({ uuid, property, label, tooltip }: Props<T, K>) => {
@@ -59,7 +61,7 @@ export const createPropertyInput = <T extends RayTracer | FDTD_2D>(
   );
 };
 
-export const createPropertyInputs = <T extends RayTracer|FDTD_2D>(event: SetPropertyEventTypes) => ({
+export const createPropertyInputs = <T extends RayTracer|FDTD_2D|ImageSourceSolver>(event: SetPropertyEventTypes) => ({
   PropertyTextInput: createPropertyInput<T>(event, PropertyRowTextInput),
   PropertyNumberInput: createPropertyInput<T>(event, PropertyRowNumberInput),
   PropertyCheckboxInput: createPropertyInput<T>(event, PropertyRowCheckbox),

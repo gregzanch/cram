@@ -80,7 +80,7 @@ import {CLFViewer} from "./objects/CLFViewer";
 import { ImageSourceTabProps } from "./components/parameter-config/image-source-tab/ImageSourceTab";
 import { ResultKind } from "./store/result-store";
 import LTPTestData from "./components/results/LTPTestData";
-
+import chroma from 'chroma-js';
 
 const materialsIndex = {} as KeyValuePair<AcousticMaterial>;
 
@@ -1232,17 +1232,9 @@ async function finishedLoading() {
   const file = createFileFromData(filename, [filedata]);
 
   messenger.postMessage("RESTORE", { file, json });
-  // emit("ADD_RESULT", {
-  //   kind: ResultKind.LinearTimeProgression, 
-  //   data: LTPTestData,
-  //   info: {
-  //     spl: [100],
-  //     frequency: [1000],
-  //   },
-  //   name: "LTP",
-  //   uuid: uuid()
-  // });
+
   expose({
+    chroma,
     ac,
     THREE,
   });

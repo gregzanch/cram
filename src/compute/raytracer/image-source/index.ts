@@ -25,7 +25,7 @@ import {uuid} from "uuidv4";
 import * as THREE from "three";
 import * as ac from "../../acoustics";
 import Room from "../../../objects/room";
-import Messenger, { messenger, on } from "../../../messenger";
+import Messenger, { emit, messenger, on } from "../../../messenger";
 import { KVP } from "../../../common/key-value-pair";
 import Container from "../../../objects/container";
 import Renderer from "../../../render/renderer";
@@ -37,7 +37,7 @@ import { LensTwoTone, ThreeSixtyOutlined } from "@material-ui/icons";
 import { cloneElement } from "react";
 import { SSL_OP_SSLEAY_080_CLIENT_DH_BUG } from "constants";
 import { intersection } from "lodash";
-import { addSolver, removeSolver, setSolverProperty, useSolver } from "../../../store";
+import { addSolver, removeSolver, Result, ResultKind, ResultTypes, setSolverProperty, useSolver } from "../../../store";
 import { RayPath } from "..";
 
 
@@ -321,7 +321,7 @@ export class ImageSourceSolver extends Solver {
     surfaceIDs: string[];
     containers: KVP<Container>; 
     uuid: string; 
-
+    linearTimePath: Result<ResultKind.LinearTimeProgression>;
     maxReflectionOrder: number; 
     
     private _imageSourcesVisible: boolean;
@@ -341,11 +341,22 @@ export class ImageSourceSolver extends Solver {
         this.sourceIDs = params.sourceIDs;
         this.receiverIDs = params.receiverIDs; 
         this.containers = params.containers;
-
         this.maxReflectionOrder = params.maxReflectionOrder; 
         this._imageSourcesVisible = params.imageSourcesVisible; 
         this._rayPathsVisible = params.rayPathsVisible; 
         this.plotOrders = params.plotOrders; 
+        this.linearTimePath = {
+          kind: ResultKind.LinearTimeProgression, 
+          data: [],
+          info: {
+            initialSPL: [100],
+            frequency: [1000],
+            maxOrder: this.maxReflectionOrder
+          },
+          name: `LTP - ${this.name}`,
+          uuid: uuid(),
+          from: this.uuid
+        };
 
         this.surfaceIDs = []; 
         
@@ -405,14 +416,22 @@ export class ImageSourceSolver extends Solver {
 
       let sortedPath: ImageSourcePath[] | null = this.validRayPaths; 
       sortedPath?.sort((a, b) => (a.arrivalTime(c) > b.arrivalTime(c)) ? 1 : -1); 
-
+      this.linearTimePath.info.maxOrder=this.maxReflectionOrder;
+      this.linearTimePath.data = [] as ResultTypes[ResultKind.LinearTimeProgression]["data"]
       if(sortedPath != undefined){
         for(let i = 0; i<sortedPath?.length; i++){
           let t = sortedPath[i].arrivalTime(343); 
-          let p = sortedPath[i].arrivalPressure([100],[1000]); 
+          let p = sortedPath[i].arrivalPressure(this.linearTimePath.info.initialSPL, this.linearTimePath.info.frequency); 
           console.log("Arrival: " + (i+1) + " | Arrival Time: (s) " + t + " | Arrival Pressure(1000Hz): " + p + " | Order " + sortedPath[i].order); 
+          this.linearTimePath.data.push({
+            time: t,
+            pressure: p,
+            arrival: i+1,
+            order: sortedPath[i].order
+          })
         }
       }
+      emit("UPDATE_RESULT", { uuid: this.linearTimePath.uuid, result: this.linearTimePath });
     }
 
     getPathsOfOrder(order: number): ImageSourcePath[]{

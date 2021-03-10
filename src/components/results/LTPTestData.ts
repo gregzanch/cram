@@ -1,4 +1,5 @@
 export default [
+  { time: 0, pressure: [1], order: 1, arrival: 1 },
   { time: 0.044990627928670625, pressure: [0.8415345676007642], order: 1, arrival: 1 },
   { time: 0.04544178614697253, pressure: [0.35700325002617855], order: 2, arrival: 2 },
   { time: 0.04767740771985991, pressure: [0.35685646299730917], order: 2, arrival: 3 },

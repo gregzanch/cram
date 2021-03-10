@@ -11,10 +11,17 @@ import NumberInput from "../../number-input/NumberInput";
 import { pickProps } from "../../../common/helpers";
 import GridRowSeperator from "../../grid-row/GridRowSeperator";
 import Select from 'react-select';
+import useToggle from "../../hooks/use-toggle";
+import { createPropertyInputs, useSolverProperty, PropertyButton } from "../SolverComponents";
+import PropertyRowFolder from "../property-row/PropertyRowFolder";
 
 export interface ImageSourceTabProps {
   uuid: string;
 }
+
+const { PropertyTextInput, PropertyNumberInput, PropertyCheckboxInput } = createPropertyInputs<ImageSourceSolver>(
+  "IMAGESOURCE_SET_PROPERTY"
+);
 
 function useImageSourceProperties(properties: (keyof ImageSourceSolver)[], imagesourcesolver: ImageSourceSolver, set: any) {
   const [state, setState] = useState(pickProps(properties, imagesourcesolver));
@@ -68,6 +75,16 @@ const LabeledNumberInputRow = ({label, name, value, onChange}: LabeledInputRowPr
   </GridRow>
 )
 
+
+const General = ({ uuid }: { uuid: string }) => {
+  const [open, toggle] = useToggle(true);
+  return (
+    <PropertyRowFolder label="General" open={open} onOpenClose={toggle}>
+      <PropertyTextInput uuid={uuid} label="Name" property="name" tooltip="Sets the name of this solver" />
+    </PropertyRowFolder>
+  );
+};
+
 export const ImageSourceTab = ({ uuid }: ImageSourceTabProps) => {
   const [imagesourcesolver, set] = useSolver<[ImageSourceSolver, any]>((state) => [state.solvers[uuid] as ImageSourceSolver, state.set]);
   const [sources, receivers] = useContainer(getSourcesAndReceivers);
@@ -87,6 +104,7 @@ export const ImageSourceTab = ({ uuid }: ImageSourceTabProps) => {
 
   return (
     <div style={{display: 'grid'}}>
+      <General uuid={uuid} />
       <LabeledTextInputRow label="Name" name="name" value={state.name} onChange={onChangeHandler} />
     
       <GridRow label={"Maximum Order"}>
@@ -103,6 +121,7 @@ export const ImageSourceTab = ({ uuid }: ImageSourceTabProps) => {
 
       <GridRow label={"Calculate Image Sources"}>
         <button
+          disabled={imagesourcesolver.sourceIDs.length==0 || imagesourcesolver.receiverIDs.length==0}
           onClick={(e) => {
             imagesourcesolver.updateImageSourceCalculation(); 
           }}>
@@ -112,6 +131,7 @@ export const ImageSourceTab = ({ uuid }: ImageSourceTabProps) => {
 
       <GridRow label={"Clear Calculation"}>
         <button
+          disabled={imagesourcesolver.sourceIDs.length==0 || imagesourcesolver.receiverIDs.length==0}
           onClick={(e) => {
             imagesourcesolver.reset(); 
           }}>
