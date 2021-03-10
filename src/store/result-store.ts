@@ -14,28 +14,33 @@ export enum ResultKind {
 export interface ResultTypes {
   [ResultKind.Default]: {
     info: {};
-    data: number;
+    data: number[];
   };
   [ResultKind.LinearTimeProgression]: {
     info: {
-      spl: number[];
+      initialSPL: number[];
       frequency: number[];
+      maxOrder: number;
     };
     data: { 
       time: number, 
       pressure: number[], 
       order: number, 
       arrival: number 
-    };
+    }[];
   }
 }
 
 export interface Result<Kind extends ResultKind> {
   kind: Kind;
   info: ResultTypes[Kind]["info"];
-  data: ResultTypes[Kind]["data"][];
+  data: ResultTypes[Kind]["data"];
   name: string;
   uuid: string;
+  /**
+   * the uuid of this 
+   */
+  from: string;
 }
 
 
@@ -74,3 +79,4 @@ on("ADD_RESULT", (result) => {
 on("UPDATE_RESULT", ({ uuid, result }) => {
   useResult.getState().set((store) => void (store.results[result.uuid] = result));
 });
+
