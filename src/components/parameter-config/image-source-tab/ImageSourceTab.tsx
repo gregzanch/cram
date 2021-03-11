@@ -12,8 +12,9 @@ import { pickProps } from "../../../common/helpers";
 import GridRowSeperator from "../../grid-row/GridRowSeperator";
 import Select from 'react-select';
 import useToggle from "../../hooks/use-toggle";
-import { createPropertyInputs, useSolverProperty, PropertyButton } from "../SolverComponents";
+import { createPropertyInputs, useSolverProperty } from "../SolverComponents";
 import PropertyRowFolder from "../property-row/PropertyRowFolder";
+import PropertyButton from '../property-row/PropertyButton';
 
 export interface ImageSourceTabProps {
   uuid: string;

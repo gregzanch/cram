@@ -10,6 +10,7 @@ import GenericObjectProperties, { GenericObjectPropertiesProps } from './Generic
 import Container from "../../objects/container";
 import Solver from "../../compute/solver";
 import Messenger from "../../messenger";
+import { SourceTab } from "../parameter-config/SourceTab";
 
 export interface ObjectPropertyInputEvent {
   name: string;
@@ -44,7 +45,7 @@ export default class ObjectProperties extends React.Component<ObjectPropertiesPr
   }
   render() {
     switch (this.props.object.kind) {
-      case "source": return <SourceProperties {...this.props as SourcePropertiesProps} />;
+      case "source": return <SourceTab uuid={this.props.object.uuid} />;
       case "receiver": return <ReceiverProperties {...this.props as ReceiverPropertiesProps} />;
       case "room": return <RoomProperties {...this.props as RoomPropertiesProps} />;
       case "surface": return <SurfaceProperties {...this.props as SurfacePropertiesProps} />;

@@ -10,6 +10,8 @@ import { BRDF } from "../compute/raytracer/brdf";
 import Room from "./room";
 import csg from "../compute/csg";
 import { numbersEqualWithinTolerence, equalWithinTolerenceFactory } from "../common/equal-within-range";
+import { addContainer, removeContainer, setContainerProperty } from "../store";
+import { on } from "../messenger";
 
 const v3eq = equalWithinTolerenceFactory(["x", "y", "z"])(csg.math.constants.EPS as number);
 
@@ -544,5 +546,22 @@ function mergeSurfaces(surfaces: Surface[]) {
 }
 
 export { Surface, mergeSurfaces };
+
+
+
+// this allows for nice type checking with 'on' and 'emit' from messenger
+declare global {
+  interface EventTypes {
+    ADD_SURFACE: Surface | undefined;
+    SURFACE_SET_PROPERTY: SetPropertyPayload<Surface>;
+    REMOVE_SURFACE: string;
+  }
+}
+
+on("ADD_SURFACE", addContainer(Surface))
+on("REMOVE_SURFACE", removeContainer);
+on("SURFACE_SET_PROPERTY", setContainerProperty);
+
+
 
 export default Surface;

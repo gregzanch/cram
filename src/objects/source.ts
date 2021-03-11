@@ -8,9 +8,10 @@ import { EditorModes } from "../constants/editor-modes";
 import { P2I, Lp2P } from "../compute/acoustics";
 import FileSaver from "file-saver";
 import { on } from "../messenger";
-import { addContainer, useContainer } from "../store";
+import { addContainer, callContainerMethod, removeContainer, setContainerProperty, useContainer } from "../store";
 import {CLFResult} from "../import-handlers/CLFParser";
 import {dirinterp, dirDataPoint} from "../common/dir-interpolation";
+import { AllowedNames, FilterFlags } from "../common/helpers";
 
 const defaults = {
   color: 0xa2c982
@@ -45,7 +46,24 @@ export enum SignalSource {
   PULSE = 4
 }
 
-export default class Source extends Container {
+export const SignalSourceOptions = [{
+  value: `${SignalSource.NONE}`,
+  label: "None",
+},{
+  value: `${SignalSource.OSCILLATOR}`,
+  label: "Oscillator",
+},{
+  value: `${SignalSource.PINK_NOISE}`,
+  label: "Pink Noise",
+},{
+  value: `${SignalSource.WHITE_NOISE}`,
+  label: "White Noise",
+},{
+  value: `${SignalSource.PULSE}`,
+  label: "Pulse",
+}];
+
+export class Source extends Container {
   f: (t: number) => number;
   
   public theta: number;
@@ -342,15 +360,25 @@ export default class Source extends Container {
   }
 }
 
+
 // this allows for nice type checking with 'on' and 'emit' from messenger
 declare global {
   interface EventTypes {
     ADD_SOURCE: Source | undefined;
+    SOURCE_SET_PROPERTY: SetPropertyPayload<Source>;
+    REMOVE_SOURCE: string;
+    SOURCE_CALL_METHOD: CallContainerMethod<Source>;
   }
 }
 
-on("ADD_SOURCE", addContainer(Source));
 
+on("ADD_SOURCE", addContainer(Source));
+on("REMOVE_SOURCE", removeContainer);
+on("SOURCE_SET_PROPERTY", setContainerProperty);
+on("SOURCE_CALL_METHOD", callContainerMethod);
+
+
+export default Source;
 
 
 /**
@@ -509,3 +537,8 @@ export interface directivityData{
   frequency: number;
   directivity: number[][]; 
 }
+
+function containerCallMethod(arg0: string, containerCallMethod: any) {
+  throw new Error("Function not implemented.");
+}
+

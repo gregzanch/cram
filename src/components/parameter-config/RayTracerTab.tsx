@@ -11,16 +11,17 @@ import Select from "react-select";
 import PropertyRow from "./property-row/PropertyRow";
 import PropertyRowFolder from "./property-row/PropertyRowFolder";
 import Solver from "../../compute/solver";
-import { createPropertyInputs, useSolverProperty, PropertyButton } from "./SolverComponents";
+import { createPropertyInputs, useSolverProperty } from "./SolverComponents";
 import useToggle from "../hooks/use-toggle";
 import PropertyRowLabel from "./property-row/PropertyRowLabel";
 import PropertyRowCheckbox from "./property-row/PropertyRowCheckbox";
+import PropertyButton from "./property-row/PropertyButton";
 
 const { PropertyTextInput, PropertyNumberInput, PropertyCheckboxInput } = createPropertyInputs<RayTracer>(
   "RAYTRACER_SET_PROPERTY"
 );
 
-const Option = ({ item }) => <option value={item.uuid}>{item.name}</option>;
+// const Option = ({ item }) => <option value={item.uuid}>{item.name}</option>;
 
 export const ReceiverSelect = ({ uuid }: { uuid: string }) => {
   const receivers = useContainer((state) => {
@@ -53,6 +54,7 @@ export const ReceiverSelect = ({ uuid }: { uuid: string }) => {
     </>
   );
 };
+
 export const SourceSelect = ({ uuid }: { uuid: string }) => {
   const sources = useContainer((state) => {
     return filteredMapObject(state.containers, (container) =>

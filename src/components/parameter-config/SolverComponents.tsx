@@ -67,21 +67,3 @@ export const createPropertyInputs = <T extends RayTracer|FDTD_2D|ImageSourceSolv
   PropertyCheckboxInput: createPropertyInput<T>(event, PropertyRowCheckbox),
 })
 
-export const PropertyButton = <T extends keyof EventTypes>({
-  args,
-  event,
-  label,
-  tooltip
-}: {
-  args: EventTypes[T];
-  event: T;
-  label: string;
-  tooltip: string;
-}) => {
-  return (
-    <PropertyRow>
-      <PropertyRowLabel label={label} hasToolTip tooltip={tooltip} />
-      <PropertyRowButton onClick={(e) => emit(event, args)} label={label} />
-    </PropertyRow>
-  );
-};

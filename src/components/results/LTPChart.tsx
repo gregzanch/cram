@@ -39,7 +39,7 @@ export type LTPChartProps = {
 
 
 const range = (start: number, stop: number) => [...Array(stop-start)].map((x,i) => start + i)
-const colorScale = chroma.scale(['yellow', 'navy']).mode('lch');
+const colorScale = chroma.scale(['#ff8a0b', '#000080']).mode('lch');
 const getOrderColors = (n: number) => colorScale.colors(n);
 
 
@@ -115,8 +115,8 @@ const Chart = ({ uuid, width = 400, height = 200, events = false }: LTPChartProp
 
     const ordinalColorScale = useMemo(
       () => scaleOrdinal(
-      range(1, info.maxOrder),
-      getOrderColors(info.maxOrder)
+      range(1, info.maxOrder+1),
+      getOrderColors(info.maxOrder+1)
     ),
       [info.maxOrder]
     );
@@ -169,11 +169,14 @@ export const LTPChart = ({ uuid, width = 400, height = 300, events = false }: LT
   const {name, info} = useResult(state=>pickProps(["name", "info"], state.results[uuid] as Result<ResultKind.LinearTimeProgression>));
   const ordinalColorScale = useMemo(
     () => scaleOrdinal(
-    range(1, info.maxOrder),
-    getOrderColors(info.maxOrder)
+    range(1, info.maxOrder+1),
+    getOrderColors(info.maxOrder+1)
   ),
     [info.maxOrder]
   );
+
+
+
   return width < 10 ? null : (
     <VerticalContainer>
       <Title>{name}</Title>
