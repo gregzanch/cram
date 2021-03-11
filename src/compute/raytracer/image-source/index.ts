@@ -323,7 +323,7 @@ export class ImageSourceSolver extends Solver {
     surfaceIDs: string[];
     containers: KVP<Container>; 
     uuid: string; 
-    linearTimePath: Result<ResultKind.LinearTimeProgression>;
+    levelTimeProgression: Result<ResultKind.LinearTimeProgression>;
     maxReflectionOrder: number; 
     
     private _imageSourcesVisible: boolean;
@@ -347,7 +347,7 @@ export class ImageSourceSolver extends Solver {
         this._imageSourcesVisible = params.imageSourcesVisible; 
         this._rayPathsVisible = params.rayPathsVisible; 
         this.plotOrders = params.plotOrders; 
-        this.linearTimePath = {
+        this.levelTimeProgression = {
           kind: ResultKind.LinearTimeProgression, 
           data: [],
           info: {
@@ -418,14 +418,14 @@ export class ImageSourceSolver extends Solver {
 
       let sortedPath: ImageSourcePath[] | null = this.validRayPaths; 
       sortedPath?.sort((a, b) => (a.arrivalTime(c) > b.arrivalTime(c)) ? 1 : -1); 
-      this.linearTimePath.info.maxOrder=this.maxReflectionOrder;
-      this.linearTimePath.data = [] as ResultTypes[ResultKind.LinearTimeProgression]["data"]
+      this.levelTimeProgression.info.maxOrder = this.maxReflectionOrder;
+      this.levelTimeProgression.data = [] as ResultTypes[ResultKind.LinearTimeProgression]["data"]
       if(sortedPath != undefined){
         for(let i = 0; i<sortedPath?.length; i++){
           let t = sortedPath[i].arrivalTime(343); 
-          let p = sortedPath[i].arrivalPressure(this.linearTimePath.info.initialSPL, this.linearTimePath.info.frequency); 
+          let p = sortedPath[i].arrivalPressure(this.levelTimeProgression.info.initialSPL, this.levelTimeProgression.info.frequency); 
           console.log("Arrival: " + (i+1) + " | Arrival Time: (s) " + t + " | Arrival Pressure(1000Hz): " + p + " | Order " + sortedPath[i].order); 
-          this.linearTimePath.data.push({
+          this.levelTimeProgression.data.push({
             time: t,
             pressure: ac.P2Lp(p) as number[],
             arrival: i+1,
@@ -434,7 +434,7 @@ export class ImageSourceSolver extends Solver {
           })
         }
       }
-      emit("UPDATE_RESULT", { uuid: this.linearTimePath.uuid, result: this.linearTimePath });
+      emit("UPDATE_RESULT", { uuid: this.levelTimeProgression.uuid, result: this.levelTimeProgression });
     }
 
     getPathsOfOrder(order: number): ImageSourcePath[]{
@@ -505,9 +505,10 @@ export class ImageSourceSolver extends Solver {
       this.validRayPaths = null; 
 
       this.plotOrders = (this.possibleOrders).map((e)=>e.value); 
-
+this.levelTimeProgression.data = [];
       this.clearImageSources(); 
       this.clearRayPaths(); 
+            emit("UPDATE_RESULT", { uuid: this.levelTimeProgression.uuid, result: this.levelTimeProgression });
     }
 
     // plot functions

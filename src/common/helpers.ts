@@ -413,3 +413,4 @@ export const omit = <T extends Object, K extends keyof T>(props: K[], obj: T) =>
 
 
 
+export const ensureArray = <T>(value: T|T[]) => value instanceof Array ? value : [value];

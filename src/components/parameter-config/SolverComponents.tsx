@@ -67,6 +67,7 @@ export const createPropertyInputs = <T extends RayTracer|FDTD_2D|ImageSourceSolv
   PropertyCheckboxInput: createPropertyInput<T>(event, PropertyRowCheckbox),
 })
 
+
 export const PropertyButton = <T extends keyof EventTypes>({
   args,
   event,
@@ -106,3 +107,4 @@ export const PropertyButtonDisabled = <T extends keyof EventTypes>({
     </PropertyRow>
   );
 };
+
