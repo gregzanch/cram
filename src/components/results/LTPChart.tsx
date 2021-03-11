@@ -24,6 +24,8 @@ import { scaleOrdinal } from 'd3-scale';
 import { pickProps } from '../../common/helpers';
 import { on } from '../../messenger';
 import chroma from 'chroma-js';
+import { ImageSourceSolver } from '../../compute/raytracer/image-source';
+import { useSolver } from '../../store';
 // accessors
 const getTime = (d) => d.time;
 const getPressure = (d) => d.pressure[0];
@@ -85,7 +87,7 @@ const useUpdate = () => {
 
 
 const Chart = ({ uuid, width = 400, height = 200, events = false }: LTPChartProps) => {
-    const {info, data} = useResult(state=>pickProps(["info", "data"], state.results[uuid] as Result<ResultKind.LinearTimeProgression>));
+    const {info, data, from} = useResult(state=>pickProps(["info", "data", "from"], state.results[uuid] as Result<ResultKind.LinearTimeProgression>));
     
     const [count, update] = useUpdate();
 
@@ -151,14 +153,15 @@ const Chart = ({ uuid, width = 400, height = 200, events = false }: LTPChartProp
 
               }}
               onClick={() => {
-                if (events) alert(`clicked: ${JSON.stringify(Object.values(d))}`);
+                let imagesourcesolver = useSolver.getState().solvers[from] as ImageSourceSolver;
+                if (events) imagesourcesolver.toggleRayPathHighlight(d.uuid);
               }}
             />
           );
         })}
       </Group>
       <AxisBottom {...{scale: xScale, top: scaleHeight, left: scalePadding, label: "Time (s)" }} />
-      <AxisLeft {...{scale: yScale, left: scalePadding, label: "Pressure" }} />
+      <AxisLeft {...{scale: yScale, left: scalePadding, label: "Sound Pressure Level (dB re: 20uPa)" }} />
     </svg>
     )
 

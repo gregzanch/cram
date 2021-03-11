@@ -27,6 +27,7 @@ export interface ResultTypes {
       pressure: number[], 
       order: number, 
       arrival: number 
+      uuid: string
     }[];
   }
 }

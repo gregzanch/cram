@@ -8,16 +8,110 @@ import { useContainer, useSolver } from "../../../store";
 import GridRow from "../../grid-row/GridRow";
 import TextInput from "../../text-input/TextInput";
 import NumberInput from "../../number-input/NumberInput";
-import { pickProps } from "../../../common/helpers";
+import { filteredMapObject, pickProps } from "../../../common/helpers";
 import GridRowSeperator from "../../grid-row/GridRowSeperator";
 import Select from 'react-select';
 import useToggle from "../../hooks/use-toggle";
-import { createPropertyInputs, useSolverProperty, PropertyButton } from "../SolverComponents";
+import { createPropertyInputs, useSolverProperty, PropertyButton, PropertyButtonDisabled } from "../SolverComponents";
 import PropertyRowFolder from "../property-row/PropertyRowFolder";
+import PropertyRow from "../property-row/PropertyRow";
+import PropertyRowLabel from "../property-row/PropertyRowLabel";
+import PropertyRowCheckbox from "../property-row/PropertyRowCheckbox";
 
 export interface ImageSourceTabProps {
   uuid: string;
 }
+
+export const ReceiverSelect = ({ uuid }: { uuid: string }) => {
+  const receivers = useContainer((state) => {
+    return filteredMapObject(state.containers, (container) =>
+      container.kind === "receiver" ? pickProps(["uuid", "name"], container) : undefined
+    ) as { uuid: string; name: string }[];
+  });
+
+  const [receiverIDs, setReceiverIDs] = useSolverProperty<RayTracer, "receiverIDs">(
+    uuid,
+    "receiverIDs",
+    "IMAGESOURCE_SET_PROPERTY"
+  );
+
+  return (
+    <>
+      {receivers.map((rec) => (
+        <PropertyRow key={rec.uuid}>
+          <PropertyRowLabel label={rec.name} hasToolTip={false} />
+          <PropertyRowCheckbox
+            value={receiverIDs.includes(rec.uuid)}
+            onChange={(e) =>
+              setReceiverIDs({
+                value: e.value ? [...receiverIDs, rec.uuid] : receiverIDs.filter((x) => x !== rec.uuid)
+              })
+            }
+          />
+        </PropertyRow>
+      ))}
+    </>
+  );
+};
+export const SourceSelect = ({ uuid }: { uuid: string }) => {
+  const sources = useContainer((state) => {
+    return filteredMapObject(state.containers, (container) =>
+      container.kind === "source" ? pickProps(["uuid", "name"], container) : undefined
+    ) as { uuid: string; name: string }[];
+  });
+
+  const [sourceIDs, setSourceIDs] = useSolverProperty<RayTracer, "sourceIDs">(
+    uuid,
+    "sourceIDs",
+    "IMAGESOURCE_SET_PROPERTY"
+  );
+
+  return (
+    <>
+      {sources.map((src) => (
+        <PropertyRow key={src.uuid}>
+          <PropertyRowLabel label={src.name} hasToolTip={false} />
+          <PropertyRowCheckbox
+            value={sourceIDs.includes(src.uuid)}
+            onChange={(e) =>
+              setSourceIDs({
+                value: e.value ? [...sourceIDs, src.uuid] : sourceIDs.filter((x) => x !== src.uuid)
+              })
+            }
+          />
+        </PropertyRow>
+      ))}
+    </>
+  );
+};
+export const OrderSelect = ({ uuid }: { uuid: string }) => {
+  const imagesourcesolver = cram.state.solvers[uuid] as ImageSourceSolver; 
+  let allOrders = imagesourcesolver.possibleOrders;
+  let selectedOrders = imagesourcesolver.plotOrders;  
+
+  const [sourceIDs, setSourceIDs] = useSolverProperty<RayTracer, "sourceIDs">(
+    uuid,
+    "sourceIDs",
+    "IMAGESOURCE_SET_PROPERTY"
+  );
+
+  return (
+    <>
+      {console.log("update")}
+      {allOrders.map((o) => (
+        <PropertyRow key={o.value}>
+          <PropertyRowLabel label={o.value.toString()} hasToolTip={false} />
+          <PropertyRowCheckbox
+            value={selectedOrders.includes(o.value)}
+            onChange={(e) =>
+              emit("IMAGESOURCE_SET_PROPERTY",{uuid,property: "toggleOrder",value: o.value})
+            }
+          />
+        </PropertyRow>
+      ))}
+    </>
+  );
+};
 
 const { PropertyTextInput, PropertyNumberInput, PropertyCheckboxInput } = createPropertyInputs<ImageSourceSolver>(
   "IMAGESOURCE_SET_PROPERTY"
@@ -85,6 +179,72 @@ const General = ({ uuid }: { uuid: string }) => {
   );
 };
 
+const Calculation = ({ uuid }: { uuid: string}) => {
+  const [open, toggle] = useToggle(true);
+  const imagesourcesolver = cram.state.solvers[uuid] as ImageSourceSolver; 
+  return (
+    <PropertyRowFolder label="Calculation" open={open} onOpenClose={toggle}>
+      <PropertyTextInput uuid={uuid} label="Maximum Order" property="maxReflectionOrderReset" tooltip="Sets the maximum reflection order"/>
+      <PropertyButtonDisabled disableCondition={imagesourcesolver.sourceIDs.length!=1 || imagesourcesolver.receiverIDs.length!=1} event="UPDATE_IMAGESOURCE" args={uuid} label="Update" tooltip="Updates Imagesource Calculation" />
+      <PropertyButtonDisabled disableCondition={imagesourcesolver.sourceIDs.length!=1 || imagesourcesolver.receiverIDs.length!=1} event="RESET_IMAGESOURCE" args={uuid} label="Clear" tooltip="Clears Imagesource Calculation" />
+    </PropertyRowFolder>
+  );
+}
+
+const SourceConfiguration = ({ uuid }: { uuid: string}) => {
+  const [open, toggle] = useToggle(true);
+  const imagesourcesolver = cram.state.solvers[uuid] as ImageSourceSolver; 
+  return (
+    <PropertyRowFolder label="Source Configuration" open={open} onOpenClose={toggle}>
+      <SourceSelect uuid={uuid} />
+    </PropertyRowFolder>
+  );
+}
+
+const ReceiverConfiguration = ({ uuid }: { uuid: string}) => {
+  const [open, toggle] = useToggle(true);
+  const imagesourcesolver = cram.state.solvers[uuid] as ImageSourceSolver; 
+  return (
+    <PropertyRowFolder label="Receiver Configuration" open={open} onOpenClose={toggle}>
+      <ReceiverSelect uuid={uuid} />
+    </PropertyRowFolder>
+  );
+}
+
+const Graphing = ({ uuid }: { uuid: string}) => {
+  const [open, toggle] = useToggle(true);
+  const imagesourcesolver = cram.state.solvers[uuid] as ImageSourceSolver; 
+  return (
+    <PropertyRowFolder label="Graphing" open={open} onOpenClose={toggle}>
+      <PropertyCheckboxInput uuid={uuid} label="Show Sources" property="imageSourcesVisible" tooltip="Shows/Hides Image Sources"/>
+      <PropertyCheckboxInput uuid={uuid} label="Show Paths" property="rayPathsVisible" tooltip="Shows/Hides Ray Paths"/>
+      {/* <Select
+            isMulti
+            isClearable
+            value={imagesourcesolver.selectedPlotOrders}
+            onChange={e=>{
+              console.log(e?.map(x => x.value));
+              emit("IMAGESOURCE_SET_PROPERTY", {uuid, property: "plotOrdersControl", value: e ? e.map(x => x.value) : []});
+              (imagesourcesolver.imageSourcesVisible) && (imagesourcesolver.drawImageSources());
+              (imagesourcesolver.rayPathsVisible) && (imagesourcesolver.drawRayPaths()); 
+              console.log(imagesourcesolver.selectedPlotOrders);
+            }}
+            options={imagesourcesolver.possibleOrders.filter(x=>!imagesourcesolver.plotOrders.includes(x.value))}
+        /> */}
+      <OrderSelect uuid={uuid}></OrderSelect>
+    </PropertyRowFolder>
+  );
+}
+
+const Developer = ({ uuid }: { uuid: string}) => {
+  const [open, toggle] = useToggle(true);
+  const imagesourcesolver = cram.state.solvers[uuid] as ImageSourceSolver; 
+  return (
+    <PropertyRowFolder label="Developer" open={open} onOpenClose={toggle}>
+      <PropertyButton event="CALCULATE_LTP" args={uuid} label="Calculate LTP" tooltip="Calculates Level Time Progression"/>
+    </PropertyRowFolder>
+  );
+}
 export const ImageSourceTab = ({ uuid }: ImageSourceTabProps) => {
   const [imagesourcesolver, set] = useSolver<[ImageSourceSolver, any]>((state) => [state.solvers[uuid] as ImageSourceSolver, state.set]);
   const [sources, receivers] = useContainer(getSourcesAndReceivers);
@@ -103,119 +263,13 @@ export const ImageSourceTab = ({ uuid }: ImageSourceTabProps) => {
 
 
   return (
-    <div style={{display: 'grid'}}>
+    <div>
       <General uuid={uuid} />
-      <LabeledTextInputRow label="Name" name="name" value={state.name} onChange={onChangeHandler} />
-    
-      <GridRow label={"Maximum Order"}>
-        <NumberInput
-          name="maxReflectionOrder"
-          value={imagesourcesolver.maxReflectionOrder}
-          onChange={(e) => {
-            emit("IMAGESOURCE_SET_PROPERTY", { uuid, property: "maxReflectionOrder", value: e.value });
-          }}
-        />
-      </GridRow>
-
-      <GridRowSeperator />
-
-      <GridRow label={"Calculate Image Sources"}>
-        <button
-          disabled={imagesourcesolver.sourceIDs.length==0 || imagesourcesolver.receiverIDs.length==0}
-          onClick={(e) => {
-            imagesourcesolver.updateImageSourceCalculation(); 
-          }}>
-          Update
-        </button>
-      </GridRow>
-
-      <GridRow label={"Clear Calculation"}>
-        <button
-          disabled={imagesourcesolver.sourceIDs.length==0 || imagesourcesolver.receiverIDs.length==0}
-          onClick={(e) => {
-            imagesourcesolver.reset(); 
-          }}>
-          Clear
-        </button>
-      </GridRow>
-
-      <GridRow label={"Show Image Sources"}>
-        <input
-          type="checkbox"
-          name="imagesourcesolver"
-          checked={imagesourcesolver.imageSourcesVisible}
-          onChange={(e) => {
-            emit("IMAGESOURCE_SET_PROPERTY", { uuid, property: "imageSourcesVisible", value: !imagesourcesolver.imageSourcesVisible });
-          }}
-        />
-      </GridRow>
-
-      <GridRow label={"Show Ray Paths"}>
-        <input
-          type="checkbox"
-          name="imagesourcesolver"
-          checked={imagesourcesolver.rayPathsVisible}
-          onChange={(e) => {
-            emit("IMAGESOURCE_SET_PROPERTY", { uuid, property: "rayPathsVisible", value: !imagesourcesolver.rayPathsVisible });
-          }}
-        />
-      </GridRow>
-
-      <GridRowSeperator /> 
-      <GridRow label="orders">
-          <Select
-            isMulti
-            isClearable
-            value={imagesourcesolver.selectedPlotOrders}
-            onChange={e=>{
-              console.log(e?.map(x => x.value));
-              emit("IMAGESOURCE_SET_PROPERTY", {uuid, property: "plotOrdersControl", value: e ? e.map(x => x.value) : []});
-              (imagesourcesolver.imageSourcesVisible) && (imagesourcesolver.drawImageSources());
-              (imagesourcesolver.rayPathsVisible) && (imagesourcesolver.drawRayPaths()); 
-              console.log(imagesourcesolver.selectedPlotOrders);
-            }}
-            options={imagesourcesolver.possibleOrders.filter(x=>!imagesourcesolver.plotOrders.includes(x.value))}
-          />
-      </GridRow>
-
-      <GridRowSeperator />
-      <GridRow label="sources">
-      <Select
-        isMulti
-        isClearable
-        getOptionLabel={item=>item.name}
-        getOptionValue={item=>item.uuid}
-        value={sources.filter(x=>imagesourcesolver.sourceIDs.includes(x.uuid))}
-        onChange={e=>{
-          emit("IMAGESOURCE_SET_PROPERTY", {uuid, property: "sourceIDs", value: e ? e.map(x=>x.uuid) : []})
-        }}
-        options={sources.filter(x=>!imagesourcesolver.sourceIDs.includes(x.uuid))}
-      />    
-      </GridRow>
-      <GridRow label="receivers">
-      <Select
-        isMulti
-        isClearable
-        getOptionLabel={item=>item.name}
-        getOptionValue={item=>item.uuid}
-        value={receivers.filter(x=>imagesourcesolver.receiverIDs.includes(x.uuid))}
-        onChange={e=>{
-          emit("IMAGESOURCE_SET_PROPERTY", {uuid, property: "receiverIDs", value: e ? e.map(x=>x.uuid) : []})
-        }}
-        options={receivers.filter(x=>!imagesourcesolver.receiverIDs.includes(x.uuid))}
-      />    
-      </GridRow>
-
-      <GridRowSeperator />
-      <GridRow label="calculate LTP">
-        <button
-          onClick={(e) => {
-            imagesourcesolver.calculateLTP(343); 
-          }}>
-          Calculate LTP (to CONSOLE)
-        </button>
-      </GridRow>
-
+      <Calculation uuid={uuid}/>
+      <SourceConfiguration uuid={uuid}/>
+      <ReceiverConfiguration uuid={uuid}/>
+      <Graphing uuid={uuid}/>
+      <Developer uuid={uuid}/>
     </div>
   );
 };
