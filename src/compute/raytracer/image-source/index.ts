@@ -36,7 +36,7 @@ import Surface from "../../../objects/surface";
 import { LensTwoTone, ThreeSixtyOutlined } from "@material-ui/icons";
 import { cloneElement } from "react";
 import { SSL_OP_SSLEAY_080_CLIENT_DH_BUG } from "constants";
-import { intersection } from "lodash";
+import _, { intersection } from "lodash";
 import { addSolver, removeSolver, Result, ResultKind, ResultTypes, setSolverProperty, useSolver } from "../../../store";
 import { RayPath } from "..";
 
@@ -173,9 +173,11 @@ interface intersection{
 class ImageSourcePath{
 
   public path: intersection[]; 
+  public uuid; 
   
   constructor(path: intersection[]){
     this.path = path; 
+    this.uuid = uuid(); 
   }
 
   markup(){
@@ -351,7 +353,7 @@ export class ImageSourceSolver extends Solver {
           info: {
             initialSPL: [100],
             frequency: [1000],
-            maxOrder: this.maxReflectionOrder
+            maxOrder: this.maxReflectionOrder,
           },
           name: `LTP - ${this.name}`,
           uuid: uuid(),
@@ -425,9 +427,10 @@ export class ImageSourceSolver extends Solver {
           console.log("Arrival: " + (i+1) + " | Arrival Time: (s) " + t + " | Arrival Pressure(1000Hz): " + p + " | Order " + sortedPath[i].order); 
           this.levelTimeProgression.data.push({
             time: t,
-            pressure: p,
+            pressure: ac.P2Lp(p) as number[],
             arrival: i+1,
-            order: sortedPath[i].order
+            order: sortedPath[i].order,
+            uuid: sortedPath[i].uuid
           })
         }
       }
@@ -500,10 +503,55 @@ export class ImageSourceSolver extends Solver {
       this.rootImageSource = null;
       this.allRayPaths = null;  
       this.validRayPaths = null; 
-      this.levelTimeProgression.data = [];
+
+      this.plotOrders = (this.possibleOrders).map((e)=>e.value); 
+this.levelTimeProgression.data = [];
       this.clearImageSources(); 
-      this.clearRayPaths();
-      emit("UPDATE_RESULT", { uuid: this.levelTimeProgression.uuid, result: this.levelTimeProgression });
+      this.clearRayPaths(); 
+            emit("UPDATE_RESULT", { uuid: this.levelTimeProgression.uuid, result: this.levelTimeProgression });
+    }
+
+    // plot functions
+    drawImageSources(){
+      this.clearImageSources(); 
+      for(let i = 0; i<this.plotOrders.length; i++){
+        let is = this.rootImageSource?.getChildrenOfOrder(this.plotOrders[i]) as ImageSource[];   
+        for(let j = 0; j<is?.length; j++){
+          is[j].markup(); 
+        }
+      }
+    }
+
+    clearImageSources(){
+      // placeholder
+      renderer.markup.clearPoints(); 
+    }
+
+    drawRayPaths(orders?:number[]){
+      this.clearRayPaths(); 
+      for(let i = 0; i<this.plotOrders.length; i++){
+        let is_paths = this.getPathsOfOrder(this.plotOrders[i]) as ImageSourcePath[]; 
+        for(let j = 0; j<is_paths.length; j++){
+          is_paths[j].markup(); 
+        }
+      }
+    }
+
+    clearRayPaths(){
+      // placeholder
+      renderer.markup.clearLines(); 
+    }
+
+    toggleRayPathHighlight(rayPathUUID: string){
+      if(this.validRayPaths != undefined){
+        for(let i = 0; i<this.validRayPaths?.length; i++){
+          if(rayPathUUID === this.validRayPaths[i].uuid){
+            //@ts-ignore
+            console.log("WILL HIGHLIGHT RAY PATH WITH ARRIVAL SPL " + ac.P2Lp(this.validRayPaths[i].arrivalPressure([100], [1000]) as number) + " AND ARRIVAL TIME " + this.validRayPaths[i].arrivalTime(343)); 
+          }
+        }
+      }
+
     }
 
     // getters and setters
@@ -542,6 +590,15 @@ export class ImageSourceSolver extends Solver {
       }else{
         return numTotal; 
       }
+    }
+
+    set maxReflectionOrderReset(o: number){
+      this.maxReflectionOrder = o; 
+      this.reset(); 
+    }
+
+    get maxReflectionOrderReset(){
+      return this.maxReflectionOrder; 
     }
 
     set rayPathsVisible(vis: boolean){
@@ -611,45 +668,24 @@ export class ImageSourceSolver extends Solver {
       return o;
     }
 
-    set plotOrdersControl(order: number[]){
-      if(order == undefined){
-        this.plotOrders = [];
+    set toggleOrder(order: number){
+      console.log(this.plotOrders);
+      if(order > this.maxReflectionOrder){
+        // do nothing
+      }else if(this.plotOrders.includes(order)){
+        console.log("hello")
+        this.plotOrders.splice(this.plotOrders.indexOf(order), 1);
       }else{
-        this.plotOrders = order; 
-      }       
-    }
-
-    // plot functions
-    drawImageSources(){
-      this.clearImageSources(); 
-      for(let i = 0; i<this.plotOrders.length; i++){
-        let is = this.rootImageSource?.getChildrenOfOrder(this.plotOrders[i]) as ImageSource[];   
-        for(let j = 0; j<is?.length; j++){
-          is[j].markup(); 
-        }
+        console.log("hello2")
+        this.plotOrders.push(order); 
       }
-    }
-
-    clearImageSources(){
-      // placeholder
-      renderer.markup.clearPoints(); 
-    }
-
-    drawRayPaths(orders?:number[]){
       this.clearRayPaths(); 
-      for(let i = 0; i<this.plotOrders.length; i++){
-        let is_paths = this.getPathsOfOrder(this.plotOrders[i]) as ImageSourcePath[]; 
-        for(let j = 0; j<is_paths.length; j++){
-          is_paths[j].markup(); 
-        }
-      }
+      this.clearImageSources(); 
+      this.drawRayPaths();
+      this.drawImageSources(); 
     }
 
-    clearRayPaths(){
-      // placeholder
-      renderer.markup.clearLines(); 
-    }
-
+  
 }
 
 function computeImageSources(is: ImageSource, maxOrder: number): ImageSource | null {
@@ -825,10 +861,15 @@ declare global {
       property: keyof ImageSourceSolver;
       value: ImageSourceSolver[EventTypes["IMAGESOURCE_SET_PROPERTY"]["property"]]; 
     }
-    CALCULATE_IMAGESOURCE: ImageSourceSolver; 
+    UPDATE_IMAGESOURCE: string; 
+    RESET_IMAGESOURCE: string;
+    CALCULATE_LTP: string; 
   }
 }
 
 on("IMAGESOURCE_SET_PROPERTY", setSolverProperty);
 on("REMOVE_IMAGESOURCE", removeSolver);
 on("ADD_IMAGESOURCE", addSolver(ImageSourceSolver));
+on("UPDATE_IMAGESOURCE", (uuid: string) => void (useSolver.getState().solvers[uuid] as ImageSourceSolver).updateImageSourceCalculation());
+on("RESET_IMAGESOURCE", (uuid: string) => void (useSolver.getState().solvers[uuid] as ImageSourceSolver).reset());
+on("CALCULATE_LTP", (uuid: string) => void (useSolver.getState().solvers[uuid] as ImageSourceSolver).calculateLTP(343));
