@@ -12,7 +12,7 @@ interface Props {
   onChange: ({ value }: { value: boolean }) => void;
 }
 
-export const PropertyRowCheckbox = ({ value, onChange }: Props) => (
+export const PropertyRowCheckbox = ({ value, onChange}: Props) => (
   <StyledCheckboxInput
     type="checkbox"
     checked={value}

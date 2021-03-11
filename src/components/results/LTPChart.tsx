@@ -158,7 +158,7 @@ const Chart = ({ uuid, width = 400, height = 200, events = false }: LTPChartProp
         })}
       </Group>
       <AxisBottom {...{scale: xScale, top: scaleHeight, left: scalePadding, label: "Time (s)" }} />
-      <AxisLeft {...{scale: yScale, left: scalePadding, label: "Pressure" }} />
+      <AxisLeft {...{scale: yScale, left: scalePadding, label: "Sound Pressure Level (dB re: 20uPa)" }} />
     </svg>
     )
 
