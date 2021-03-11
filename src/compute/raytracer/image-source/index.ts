@@ -173,9 +173,11 @@ interface intersection{
 class ImageSourcePath{
 
   public path: intersection[]; 
+  public uuid; 
   
   constructor(path: intersection[]){
     this.path = path; 
+    this.uuid = uuid(); 
   }
 
   markup(){
@@ -351,7 +353,7 @@ export class ImageSourceSolver extends Solver {
           info: {
             initialSPL: [100],
             frequency: [1000],
-            maxOrder: this.maxReflectionOrder
+            maxOrder: this.maxReflectionOrder,
           },
           name: `LTP - ${this.name}`,
           uuid: uuid(),
@@ -427,7 +429,8 @@ export class ImageSourceSolver extends Solver {
             time: t,
             pressure: ac.P2Lp(p) as number[],
             arrival: i+1,
-            order: sortedPath[i].order
+            order: sortedPath[i].order,
+            uuid: sortedPath[i].uuid
           })
         }
       }
@@ -507,6 +510,49 @@ export class ImageSourceSolver extends Solver {
       this.clearRayPaths(); 
     }
 
+    // plot functions
+    drawImageSources(){
+      this.clearImageSources(); 
+      for(let i = 0; i<this.plotOrders.length; i++){
+        let is = this.rootImageSource?.getChildrenOfOrder(this.plotOrders[i]) as ImageSource[];   
+        for(let j = 0; j<is?.length; j++){
+          is[j].markup(); 
+        }
+      }
+    }
+
+    clearImageSources(){
+      // placeholder
+      renderer.markup.clearPoints(); 
+    }
+
+    drawRayPaths(orders?:number[]){
+      this.clearRayPaths(); 
+      for(let i = 0; i<this.plotOrders.length; i++){
+        let is_paths = this.getPathsOfOrder(this.plotOrders[i]) as ImageSourcePath[]; 
+        for(let j = 0; j<is_paths.length; j++){
+          is_paths[j].markup(); 
+        }
+      }
+    }
+
+    clearRayPaths(){
+      // placeholder
+      renderer.markup.clearLines(); 
+    }
+
+    toggleRayPathHighlight(rayPathUUID: string){
+      if(this.validRayPaths != undefined){
+        for(let i = 0; i<this.validRayPaths?.length; i++){
+          if(rayPathUUID === this.validRayPaths[i].uuid){
+            //@ts-ignore
+            console.log("WILL HIGHLIGHT RAY PATH WITH ARRIVAL SPL " + ac.P2Lp(this.validRayPaths[i].arrivalPressure([100], [1000]) as number) + " AND ARRIVAL TIME " + this.validRayPaths[i].arrivalTime(343)); 
+          }
+        }
+      }
+
+    }
+
     // getters and setters
     get sources() {
       if (this.sourceIDs.length > 0) {
@@ -548,6 +594,10 @@ export class ImageSourceSolver extends Solver {
     set maxReflectionOrderReset(o: number){
       this.maxReflectionOrder = o; 
       this.reset(); 
+    }
+
+    get maxReflectionOrderReset(){
+      return this.maxReflectionOrder; 
     }
 
     set rayPathsVisible(vis: boolean){
@@ -634,37 +684,7 @@ export class ImageSourceSolver extends Solver {
       this.drawImageSources(); 
     }
 
-    // plot functions
-    drawImageSources(){
-      this.clearImageSources(); 
-      for(let i = 0; i<this.plotOrders.length; i++){
-        let is = this.rootImageSource?.getChildrenOfOrder(this.plotOrders[i]) as ImageSource[];   
-        for(let j = 0; j<is?.length; j++){
-          is[j].markup(); 
-        }
-      }
-    }
-
-    clearImageSources(){
-      // placeholder
-      renderer.markup.clearPoints(); 
-    }
-
-    drawRayPaths(orders?:number[]){
-      this.clearRayPaths(); 
-      for(let i = 0; i<this.plotOrders.length; i++){
-        let is_paths = this.getPathsOfOrder(this.plotOrders[i]) as ImageSourcePath[]; 
-        for(let j = 0; j<is_paths.length; j++){
-          is_paths[j].markup(); 
-        }
-      }
-    }
-
-    clearRayPaths(){
-      // placeholder
-      renderer.markup.clearLines(); 
-    }
-
+  
 }
 
 function computeImageSources(is: ImageSource, maxOrder: number): ImageSource | null {

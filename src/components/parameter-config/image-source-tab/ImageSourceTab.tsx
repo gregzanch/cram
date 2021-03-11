@@ -184,7 +184,7 @@ const Calculation = ({ uuid }: { uuid: string}) => {
   const imagesourcesolver = cram.state.solvers[uuid] as ImageSourceSolver; 
   return (
     <PropertyRowFolder label="Calculation" open={open} onOpenClose={toggle}>
-      <PropertyTextInput uuid={uuid} label="Maximum Order" property="maxReflectionOrder" tooltip="Sets the maximum reflection order"/>
+      <PropertyTextInput uuid={uuid} label="Maximum Order" property="maxReflectionOrderReset" tooltip="Sets the maximum reflection order"/>
       <PropertyButtonDisabled disableCondition={imagesourcesolver.sourceIDs.length!=1 || imagesourcesolver.receiverIDs.length!=1} event="UPDATE_IMAGESOURCE" args={uuid} label="Update" tooltip="Updates Imagesource Calculation" />
       <PropertyButtonDisabled disableCondition={imagesourcesolver.sourceIDs.length!=1 || imagesourcesolver.receiverIDs.length!=1} event="RESET_IMAGESOURCE" args={uuid} label="Clear" tooltip="Clears Imagesource Calculation" />
     </PropertyRowFolder>
