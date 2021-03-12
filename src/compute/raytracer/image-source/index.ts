@@ -39,10 +39,10 @@ import {Line2} from 'three/examples/jsm/lines/Line2';
 import {LineGeometry} from 'three/examples/jsm/lines/LineGeometry';
 import {LineMaterial} from 'three/examples/jsm/lines/LineMaterial';
 
-function createLine2(){
+function createLine3(){
   const geometry = new LineGeometry();
-  geometry.setPositions([0,0,0,1,1,1]);
-  return new Line2(geometry, new LineMaterial({
+  geometry.setPositions([0,0,0,1,1,1,4,5,7]);
+  return new THREE.Line(geometry, new LineMaterial({
     linewidth: .01,
 
     color: 0xff0000,
@@ -183,10 +183,12 @@ class ImageSourcePath{
 
   public path: intersection[]; 
   public uuid; 
+  public highlight; 
   
   constructor(path: intersection[]){
     this.path = path; 
     this.uuid = uuid(); 
+    this.highlight = false; 
   }
 
   markup(){
@@ -343,7 +345,7 @@ export class ImageSourceSolver extends Solver {
     validRayPaths: ImageSourcePath[] | null; 
     allRayPaths: ImageSourcePath[] | null; 
 
-    selectedImageSourcePath: Line2;
+    selectedImageSourcePath: THREE.Line;
 
     constructor(params: ImageSourceSolverParams = defaults){
         super(params);
@@ -381,7 +383,7 @@ export class ImageSourceSolver extends Solver {
         let room: Room = messenger.postMessage("FETCH_ROOMS")[0][0];
         this.roomID = room.uuid; 
 
-        this.selectedImageSourcePath = createLine2();
+        this.selectedImageSourcePath = createLine3();
         this.selectedImageSourcePath.computeLineDistances();
         renderer.markup.add(this.selectedImageSourcePath);
 
@@ -397,6 +399,11 @@ export class ImageSourceSolver extends Solver {
       (this.selectedImageSourcePath.geometry as LineGeometry).setPositions(
         imageSourcePath.path.map(x=>x.point.toArray()).flat()
       );
+      // (this.selectedImageSourcePath.geometry as LineGeometry).setFromPoints(
+      //   imageSourcePath.path.map(x=>x.point)
+      // );
+      // (this.selectedImageSourcePath.geometry as LineGeometry).setDrawRange(0,imageSourcePath.path.length);
+      console.log(imageSourcePath.path.map(x=>x.point.toArray()).flat());
       this.selectedImageSourcePath.computeLineDistances();
     }
 
@@ -440,9 +447,11 @@ export class ImageSourceSolver extends Solver {
       this.validRayPaths = valid_paths; 
       (this._imageSourcesVisible) && (this.drawImageSources());
       (this._rayPathsVisible) && (this.drawRayPaths()); 
+
+      this.calculateLTP(343); 
     }
 
-    calculateLTP(c: number){
+    calculateLTP(c: number, consoleOutput: boolean = false){
 
       let sortedPath: ImageSourcePath[] | null = this.validRayPaths; 
       sortedPath?.sort((a, b) => (a.arrivalTime(c) > b.arrivalTime(c)) ? 1 : -1); 
@@ -452,7 +461,9 @@ export class ImageSourceSolver extends Solver {
         for(let i = 0; i<sortedPath?.length; i++){
           let t = sortedPath[i].arrivalTime(343); 
           let p = sortedPath[i].arrivalPressure(this.levelTimeProgression.info.initialSPL, this.levelTimeProgression.info.frequency); 
-          console.log("Arrival: " + (i+1) + " | Arrival Time: (s) " + t + " | Arrival Pressure(1000Hz): " + p + " | Order " + sortedPath[i].order); 
+          if(consoleOutput){
+            console.log("Arrival: " + (i+1) + " | Arrival Time: (s) " + t + " | Arrival Pressure(1000Hz): " + p + " | Order " + sortedPath[i].order); 
+          }
           this.levelTimeProgression.data.push({
             time: t,
             pressure: ac.P2Lp(p) as number[],
@@ -573,7 +584,7 @@ export class ImageSourceSolver extends Solver {
       if(this.validRayPaths != undefined){
         for(let i = 0; i<this.validRayPaths?.length; i++){
           if(rayPathUUID === this.validRayPaths[i].uuid){
-            this.updateSelectedImageSourcePath(this.validRayPaths[i]);
+            this.updateSelectedImageSourcePath(this.validRayPaths[i])
             //@ts-ignore
             console.log("WILL HIGHLIGHT RAY PATH WITH ARRIVAL SPL " + ac.P2Lp(this.validRayPaths[i].arrivalPressure([100], [1000]) as number) + " AND ARRIVAL TIME " + this.validRayPaths[i].arrivalTime(343)); 
             break;
