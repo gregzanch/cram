@@ -31,15 +31,24 @@ import Container from "../../../objects/container";
 import Renderer from "../../../render/renderer";
 import Source from "../../../objects/source";
 import Receiver from "../../../objects/receiver";
-import { EqualStencilFunc, Vector3 } from "three";
+import { Vector3 } from "three";
 import Surface from "../../../objects/surface";
-import { LensTwoTone, ThreeSixtyOutlined } from "@material-ui/icons";
-import { cloneElement } from "react";
-import { SSL_OP_SSLEAY_080_CLIENT_DH_BUG } from "constants";
 import _, { intersection } from "lodash";
 import { addSolver, removeSolver, Result, ResultKind, ResultTypes, setSolverProperty, useSolver } from "../../../store";
-import { RayPath } from "..";
+import {Line2} from 'three/examples/jsm/lines/Line2';
+import {LineGeometry} from 'three/examples/jsm/lines/LineGeometry';
+import {LineMaterial} from 'three/examples/jsm/lines/LineMaterial';
 
+function createLine2(){
+  const geometry = new LineGeometry();
+  geometry.setPositions([0,0,0,1,1,1]);
+  return new Line2(geometry, new LineMaterial({
+    linewidth: .01,
+
+    color: 0xff0000,
+    dashed: false
+  }))
+}
 
 interface ImageSourceParams {
   baseSource: Source,
@@ -323,7 +332,7 @@ export class ImageSourceSolver extends Solver {
     surfaceIDs: string[];
     containers: KVP<Container>; 
     uuid: string; 
-    levelTimeProgression: Result<ResultKind.LinearTimeProgression>;
+    levelTimeProgression: Result<ResultKind.LevelTimeProgression>;
     maxReflectionOrder: number; 
     
     private _imageSourcesVisible: boolean;
@@ -333,6 +342,8 @@ export class ImageSourceSolver extends Solver {
     rootImageSource: ImageSource | null; 
     validRayPaths: ImageSourcePath[] | null; 
     allRayPaths: ImageSourcePath[] | null; 
+
+    selectedImageSourcePath: Line2;
 
     constructor(params: ImageSourceSolverParams = defaults){
         super(params);
@@ -348,7 +359,7 @@ export class ImageSourceSolver extends Solver {
         this._rayPathsVisible = params.rayPathsVisible; 
         this.plotOrders = params.plotOrders; 
         this.levelTimeProgression = {
-          kind: ResultKind.LinearTimeProgression, 
+          kind: ResultKind.LevelTimeProgression, 
           data: [],
           info: {
             initialSPL: [100],
@@ -370,6 +381,23 @@ export class ImageSourceSolver extends Solver {
         let room: Room = messenger.postMessage("FETCH_ROOMS")[0][0];
         this.roomID = room.uuid; 
 
+        this.selectedImageSourcePath = createLine2();
+        this.selectedImageSourcePath.computeLineDistances();
+        renderer.markup.add(this.selectedImageSourcePath);
+
+    }
+
+    dispose(){
+        renderer.markup.remove(this.selectedImageSourcePath);
+        this.reset();
+        emit("REMOVE_RESULT", this.levelTimeProgression.uuid);
+    }
+
+    updateSelectedImageSourcePath(imageSourcePath: ImageSourcePath){
+      (this.selectedImageSourcePath.geometry as LineGeometry).setPositions(
+        imageSourcePath.path.map(x=>x.point.toArray()).flat()
+      );
+      this.selectedImageSourcePath.computeLineDistances();
     }
 
     updateImageSourceCalculation(){
@@ -419,7 +447,7 @@ export class ImageSourceSolver extends Solver {
       let sortedPath: ImageSourcePath[] | null = this.validRayPaths; 
       sortedPath?.sort((a, b) => (a.arrivalTime(c) > b.arrivalTime(c)) ? 1 : -1); 
       this.levelTimeProgression.info.maxOrder = this.maxReflectionOrder;
-      this.levelTimeProgression.data = [] as ResultTypes[ResultKind.LinearTimeProgression]["data"]
+      this.levelTimeProgression.data = [] as ResultTypes[ResultKind.LevelTimeProgression]["data"]
       if(sortedPath != undefined){
         for(let i = 0; i<sortedPath?.length; i++){
           let t = sortedPath[i].arrivalTime(343); 
@@ -503,12 +531,11 @@ export class ImageSourceSolver extends Solver {
       this.rootImageSource = null;
       this.allRayPaths = null;  
       this.validRayPaths = null; 
-
       this.plotOrders = (this.possibleOrders).map((e)=>e.value); 
-this.levelTimeProgression.data = [];
+      this.levelTimeProgression.data = [];
       this.clearImageSources(); 
       this.clearRayPaths(); 
-            emit("UPDATE_RESULT", { uuid: this.levelTimeProgression.uuid, result: this.levelTimeProgression });
+      emit("UPDATE_RESULT", { uuid: this.levelTimeProgression.uuid, result: this.levelTimeProgression });
     }
 
     // plot functions
@@ -546,8 +573,10 @@ this.levelTimeProgression.data = [];
       if(this.validRayPaths != undefined){
         for(let i = 0; i<this.validRayPaths?.length; i++){
           if(rayPathUUID === this.validRayPaths[i].uuid){
+            this.updateSelectedImageSourcePath(this.validRayPaths[i]);
             //@ts-ignore
             console.log("WILL HIGHLIGHT RAY PATH WITH ARRIVAL SPL " + ac.P2Lp(this.validRayPaths[i].arrivalPressure([100], [1000]) as number) + " AND ARRIVAL TIME " + this.validRayPaths[i].arrivalTime(343)); 
+            break;
           }
         }
       }

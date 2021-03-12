@@ -87,11 +87,19 @@ const useUpdate = () => {
 
 
 const Chart = ({ uuid, width = 400, height = 200, events = false }: LTPChartProps) => {
-    const {info, data, from} = useResult(state=>pickProps(["info", "data", "from"], state.results[uuid] as Result<ResultKind.LinearTimeProgression>));
+    const {info, data: _data, from} = useResult(state=>pickProps(["info", "data", "from"], state.results[uuid] as Result<ResultKind.LevelTimeProgression>));
     
     const [count, update] = useUpdate();
+    const [data, setData] = useState(_data);
 
-    useEffect(() => on("UPDATE_RESULT", (e) => e.uuid === uuid && update()), [uuid])
+
+    useEffect(() => on("UPDATE_RESULT", (e) => {
+      if(e.uuid === uuid){
+        //@ts-ignore
+        setData(e.result.data);
+        // update();
+      }
+    }), [uuid])
 
     const scalePadding = 60;
     const scaleWidth = width-scalePadding;
@@ -102,7 +110,7 @@ const Chart = ({ uuid, width = 400, height = 200, events = false }: LTPChartProp
           range: [0, scaleWidth],
           domain: [0, Math.max(...data.map(getTime))],
         }),
-      [width, count],
+      [width, data],
     );
     
     const scaleHeight = height - scalePadding;
@@ -112,12 +120,12 @@ const Chart = ({ uuid, width = 400, height = 200, events = false }: LTPChartProp
           range: [scaleHeight, 0],
           domain: [0, Math.max(...data.map(getPressure))],
         }),
-      [height, count],
+      [height, data],
     );
 
     const ordinalColorScale = useMemo(
       () => scaleOrdinal(
-      range(1, info.maxOrder+1),
+      range(0, info.maxOrder+1),
       getOrderColors(info.maxOrder+1)
     ),
       [info.maxOrder]
@@ -169,15 +177,28 @@ const Chart = ({ uuid, width = 400, height = 200, events = false }: LTPChartProp
 
 
 export const LTPChart = ({ uuid, width = 400, height = 300, events = false }: LTPChartProps) => {
-  const {name, info} = useResult(state=>pickProps(["name", "info"], state.results[uuid] as Result<ResultKind.LinearTimeProgression>));
+  const {name, info} = useResult(state=>pickProps(["name", "info"], state.results[uuid] as Result<ResultKind.LevelTimeProgression>));
+
+  const [order, setMaxOrder] = useState(info.maxOrder);
+
+  useEffect(()=>on("UPDATE_RESULT", (e)=>{
+    if(e.uuid === uuid){
+      //@ts-ignore
+      setMaxOrder(e.result.info.maxOrder);
+    }
+  }), [uuid]);
+
   const ordinalColorScale = useMemo(
     () => scaleOrdinal(
-    range(1, info.maxOrder+1),
-    getOrderColors(info.maxOrder+1)
+    range(0, order+1),
+    getOrderColors(order+1)
   ),
-    [info.maxOrder]
+    [order]
   );
-
+  // const ordinalColorScale = scaleOrdinal(
+  //   range(1, info.maxOrder+1),
+  //   getOrderColors(info.maxOrder+1)
+  // );
 
 
   return width < 10 ? null : (

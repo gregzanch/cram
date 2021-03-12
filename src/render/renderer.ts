@@ -1,5 +1,8 @@
 import * as THREE from "three";
 import Stats from "./Stats";
+import { Line2 } from "three/examples/jsm/lines/Line2";
+import { LineGeometry } from "three/examples/jsm/lines/LineGeometry";
+import { LineMaterial } from "three/examples/jsm/lines/LineMaterial";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass";
 import { OutlinePass } from "three/examples/jsm/postprocessing/OutlinePass";
@@ -231,6 +234,9 @@ export default class Renderer {
     this.sketches = new Container("sketches");
     this.constructions = new Container("constructions");
     this.markup = new Markup();
+
+
+
 
     this.addDefaultConstructions();
     this.hoveredConstruction = undefined;
