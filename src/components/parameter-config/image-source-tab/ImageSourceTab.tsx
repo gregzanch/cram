@@ -14,7 +14,6 @@ import Select from 'react-select';
 import useToggle from "../../hooks/use-toggle";
 import { createPropertyInputs, useSolverProperty, PropertyButton, PropertyButtonDisabled  } from "../SolverComponents";
 import PropertyRowFolder from "../property-row/PropertyRowFolder";
-import PropertyButton from '../property-row/PropertyButton';
 import PropertyRow from "../property-row/PropertyRow";
 import PropertyRowLabel from "../property-row/PropertyRowLabel";
 import PropertyRowCheckbox from "../property-row/PropertyRowCheckbox";
