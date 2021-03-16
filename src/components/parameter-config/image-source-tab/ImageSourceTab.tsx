@@ -14,7 +14,6 @@ import Select from 'react-select';
 import useToggle from "../../hooks/use-toggle";
 import { createPropertyInputs, useSolverProperty, PropertyButton, PropertyButtonDisabled  } from "../SolverComponents";
 import PropertyRowFolder from "../property-row/PropertyRowFolder";
-import PropertyButton from '../property-row/PropertyButton';
 import PropertyRow from "../property-row/PropertyRow";
 import PropertyRowLabel from "../property-row/PropertyRowLabel";
 import PropertyRowCheckbox from "../property-row/PropertyRowCheckbox";
@@ -95,10 +94,10 @@ export const OrderSelect = ({ uuid }: { uuid: string }) => {
     "sourceIDs",
     "IMAGESOURCE_SET_PROPERTY"
   );
-
+  
+  console.log("update");
   return (
     <>
-      {console.log("update")}
       {allOrders.map((o) => (
         <PropertyRow key={o.value}>
           <PropertyRowLabel label={o.value.toString()} hasToolTip={false} />
@@ -185,7 +184,7 @@ const Calculation = ({ uuid }: { uuid: string}) => {
   const imagesourcesolver = cram.state.solvers[uuid] as ImageSourceSolver; 
   return (
     <PropertyRowFolder label="Calculation" open={open} onOpenClose={toggle}>
-      <PropertyTextInput uuid={uuid} label="Maximum Order" property="maxReflectionOrderReset" tooltip="Sets the maximum reflection order"/>
+      <PropertyNumberInput uuid={uuid} label="Maximum Order" property="maxReflectionOrderReset" tooltip="Sets the maximum reflection order"/>
       <PropertyButtonDisabled disableCondition={imagesourcesolver.sourceIDs.length!=1 || imagesourcesolver.receiverIDs.length!=1} event="UPDATE_IMAGESOURCE" args={uuid} label="Update" tooltip="Updates Imagesource Calculation" />
       <PropertyButtonDisabled disableCondition={imagesourcesolver.sourceIDs.length!=1 || imagesourcesolver.receiverIDs.length!=1} event="RESET_IMAGESOURCE" args={uuid} label="Clear" tooltip="Clears Imagesource Calculation" />
     </PropertyRowFolder>

@@ -16,10 +16,14 @@ export const defaultMarkupProps = {
 export class Markup extends Container{
   linesBufferGeometry: THREE.BufferGeometry;
   pointsBufferGeometry: THREE.BufferGeometry;
+
   maxlines: number;
   maxpoints: number;
+
   linesBufferAttribute: THREE.Float32BufferAttribute;
   pointsBufferAttribute: THREE.Float32BufferAttribute;
+
+
   lines: THREE.LineSegments;
   points: THREE.Points;
   colorBufferAttribute: THREE.Float32BufferAttribute;
@@ -75,7 +79,8 @@ export class Markup extends Container{
         premultipliedAlpha: true,
         blending: THREE.NormalBlending,
         depthFunc: THREE.AlwaysDepth,
-        name: "markup-material"
+        name: "markup-material",
+        linewidth: 5
         // depthTest: false
       })
     );

@@ -701,7 +701,7 @@ class RayTracer extends Solver {
           energy * abs((intersections[0].object.parent as Surface).reflectionFunction(frequency, angle!));
 
         // end condition
-        if (rr && normal && reflectionloss > 1 / 2 ** 16 && iter < order - 1) {
+        if (rr && normal && reflectionloss > 1 / 2 ** 16 && iter < order + 1) {
           // recurse
           return this.traceRay(
             intersections[0].point.clone().addScaledVector(normal.clone(), 0.01),

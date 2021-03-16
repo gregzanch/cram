@@ -79,7 +79,6 @@ expose({ useSolver, useContainer, useResult, produce, on, emit });
 import {CLFViewer} from "./objects/CLFViewer";
 import { ImageSourceTabProps } from "./components/parameter-config/image-source-tab/ImageSourceTab";
 import { ResultKind } from "./store/result-store";
-import LTPTestData from "./components/results/LTPTestData";
 import chroma from 'chroma-js';
 
 const materialsIndex = {} as KeyValuePair<AcousticMaterial>;
@@ -376,7 +375,7 @@ messenger.addMessageHandler("SHOULD_ADD_IMAGE_SOURCE", (acc, ...args) => {
     containers: cram.state.containers,
     receiverIDs: [] as string[],
     maxReflectionOrder: 2,
-    imageSourcesVisible: true,
+    imageSourcesVisible: false,
     rayPathsVisible: true, 
     plotOrders: [0, 1, 2],
   };

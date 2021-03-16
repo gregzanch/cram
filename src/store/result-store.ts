@@ -3,11 +3,13 @@ import produce from "immer";
 import { KeyValuePair } from "../common/key-value-pair";
 import { SetFunction } from ".";
 import { on } from '../messenger';
+import { result } from "lodash";
+import { omit } from "../common/helpers";
 // import { ChartDataSets } from 'chart.js';
 
 
 export enum ResultKind {
-  LinearTimeProgression = "linear-time-progression",
+  LevelTimeProgression = "linear-time-progression",
   Default = "default"
 }
 
@@ -16,7 +18,7 @@ export interface ResultTypes {
     info: {};
     data: number[];
   };
-  [ResultKind.LinearTimeProgression]: {
+  [ResultKind.LevelTimeProgression]: {
     info: {
       initialSPL: number[];
       frequency: number[];
@@ -69,6 +71,7 @@ declare global {
   interface EventTypes {
     ADD_RESULT: Result<ResultKind>;
     UPDATE_RESULT: { uuid: string, result: Result<ResultKind> };
+    REMOVE_RESULT: string;
     RESULT_DATA_CLICKED: ResultEvent<ResultKind>
   }
 }
@@ -79,5 +82,11 @@ on("ADD_RESULT", (result) => {
 
 on("UPDATE_RESULT", ({ uuid, result }) => {
   useResult.getState().set((store) => void (store.results[result.uuid] = result));
+});
+
+on("REMOVE_RESULT", ( uuid ) => {
+  useResult.getState().set((store) => {
+    store.results = omit([uuid], store.results)
+  });
 });
 
