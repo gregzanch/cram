@@ -22,10 +22,12 @@ import {
 } from '@visx/legend';
 import { scaleOrdinal } from 'd3-scale';
 import { pickProps } from '../../common/helpers';
-import { on } from '../../messenger';
+import { emit, on } from '../../messenger';
 import chroma from 'chroma-js';
 import { ImageSourceSolver } from '../../compute/raytracer/image-source';
 import { useSolver } from '../../store';
+import PropertyRowCheckbox from "../parameter-config/property-row/PropertyRowCheckbox";
+import { createPropertyInputs } from '../parameter-config/SolverComponents';
 // accessors
 const getTime = (d) => d.time;
 const getPressure = (d) => d.pressure[0];
@@ -200,6 +202,12 @@ export const LTPChart = ({ uuid, width = 400, height = 300, events = false }: LT
   //   getOrderColors(info.maxOrder+1)
   // );
 
+  const {from} = useResult(state=>pickProps(["from"], state.results[uuid] as Result<ResultKind.LevelTimeProgression>));
+  let imagesourcesolver = useSolver.getState().solvers[from] as ImageSourceSolver;
+
+  const { PropertyTextInput, PropertyNumberInput, PropertyCheckboxInput } = createPropertyInputs<ImageSourceSolver>(
+    "IMAGESOURCE_SET_PROPERTY"
+  );
 
   return width < 10 ? null : (
     <VerticalContainer>
@@ -218,7 +226,7 @@ export const LTPChart = ({ uuid, width = 400, height = 300, events = false }: LT
                   key={`legend-quantile-${i}`}
                   margin="0 5px"
                   onClick={() => {
-                    if (events) alert(`clicked: ${JSON.stringify(label)}`);
+                    //if (events) alert(`clicked: ${JSON.stringify(label)}`);
                   }}
                 >
                   <svg width={legendGlyphSize} height={legendGlyphSize}>
@@ -227,6 +235,18 @@ export const LTPChart = ({ uuid, width = 400, height = 300, events = false }: LT
                   <LegendLabel align="left" margin="0 0 0 4px">
                     {label.text}
                   </LegendLabel>
+                  <PropertyRowCheckbox
+                    value={imagesourcesolver.plotOrders.includes(label.datum)}
+                    onChange={(e) =>
+                      {
+                        emit("IMAGESOURCE_SET_PROPERTY",{uuid: from,property: "toggleOrder",value: label.datum})
+                        if(this != undefined){
+                          //@ts-ignore
+                          console.log(this.refs.complete.state.checked)
+                        }
+                      }
+                    }
+                  />
                 </LegendItem>
               ))}
             </LegendContainer>

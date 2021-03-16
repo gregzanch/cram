@@ -376,7 +376,7 @@ messenger.addMessageHandler("SHOULD_ADD_IMAGE_SOURCE", (acc, ...args) => {
     containers: cram.state.containers,
     receiverIDs: [] as string[],
     maxReflectionOrder: 2,
-    imageSourcesVisible: true,
+    imageSourcesVisible: false,
     rayPathsVisible: true, 
     plotOrders: [0, 1, 2],
   };

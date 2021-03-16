@@ -262,7 +262,7 @@ class ImageSourcePath{
   
   public arrivalPressure(initialSPL: number[], freqs: number[]): number[]{
 
-    let intensity = ac.P2I(ac.Lp2P(initialSPL)); 
+    let intensity = ac.P2I(ac.Lp2P(initialSPL)) as number[];  
     let arrivalPressure = []; 
 
     for(let s = 0; s<this.path.length; s++){
@@ -279,9 +279,7 @@ class ImageSourcePath{
           let reflectionCoefficient = 1-(intersection.reflectingSurface as Surface).absorptionFunction(freqs[findex]); 
           intensity[findex] = intensity[findex]*reflectionCoefficient; 
         }
-
       }
-
     }
 
     // convert back to SPL 
@@ -458,6 +456,7 @@ export class ImageSourceSolver extends Solver {
       sortedPath?.sort((a, b) => (a.arrivalTime(c) > b.arrivalTime(c)) ? 1 : -1); 
       this.levelTimeProgression.info.maxOrder = this.maxReflectionOrder;
       this.levelTimeProgression.data = [] as ResultTypes[ResultKind.LevelTimeProgression]["data"]
+
       if(sortedPath != undefined){
         for(let i = 0; i<sortedPath?.length; i++){
           let t = sortedPath[i].arrivalTime(343); 
@@ -465,6 +464,7 @@ export class ImageSourceSolver extends Solver {
           if(consoleOutput){
             console.log("Arrival: " + (i+1) + " | Arrival Time: (s) " + t + " | Arrival Pressure(1000Hz): " + p + " | Order " + sortedPath[i].order); 
           }
+
           this.levelTimeProgression.data.push({
             time: t,
             pressure: ac.P2Lp(p) as number[],
@@ -531,7 +531,7 @@ export class ImageSourceSolver extends Solver {
               console.log(paths[i].totalLength)
               console.log(paths[i].arrivalTime(343)); 
               console.log(ac.Lp2P(initialSPL));
-              console.log(paths[i].arrivalPressure(initialSPL,f))
+              //console.log(paths[i].arrivalPressure(initialSPL,f))
               validCount++; 
             }
           }
@@ -711,14 +711,11 @@ export class ImageSourceSolver extends Solver {
     }
 
     set toggleOrder(order: number){
-      console.log(this.plotOrders);
       if(order > this.maxReflectionOrder){
         // do nothing
       }else if(this.plotOrders.includes(order)){
-        console.log("hello")
         this.plotOrders.splice(this.plotOrders.indexOf(order), 1);
       }else{
-        console.log("hello2")
         this.plotOrders.push(order); 
       }
       this.clearRayPaths(); 
