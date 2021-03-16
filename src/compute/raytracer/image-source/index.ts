@@ -23,6 +23,7 @@ import Solver from "../../solver";
 import { renderer } from "../../../render/renderer";
 import {uuid} from "uuidv4";
 import * as THREE from "three";
+import { MeshLine, MeshLineMaterial, MeshLineRaycast } from 'three.meshline';
 import * as ac from "../../acoustics";
 import Room from "../../../objects/room";
 import Messenger, { emit, messenger, on } from "../../../messenger";
@@ -39,15 +40,16 @@ import {Line2} from 'three/examples/jsm/lines/Line2';
 import {LineGeometry} from 'three/examples/jsm/lines/LineGeometry';
 import {LineMaterial} from 'three/examples/jsm/lines/LineMaterial';
 
-function createLine3(){
-  const geometry = new LineGeometry();
-  geometry.setPositions([0,0,0,1,1,1,4,5,7]);
-  return new THREE.Line(geometry, new LineMaterial({
-    linewidth: .01,
-
+function createLine(){
+  let points = [];
+  const line = new MeshLine();
+  line.setPoints(points);
+  const material = new MeshLineMaterial({
+    lineWidth: 0.35, 
     color: 0xff0000,
-    dashed: false
-  }))
+    sizeAttenuation: 1, 
+  });
+  return new THREE.Mesh(line, material);
 }
 
 interface ImageSourceParams {
@@ -345,7 +347,7 @@ export class ImageSourceSolver extends Solver {
     validRayPaths: ImageSourcePath[] | null; 
     allRayPaths: ImageSourcePath[] | null; 
 
-    selectedImageSourcePath: THREE.Line;
+    selectedImageSourcePath: MeshLine;
 
     constructor(params: ImageSourceSolverParams = defaults){
         super(params);
@@ -383,8 +385,8 @@ export class ImageSourceSolver extends Solver {
         let room: Room = messenger.postMessage("FETCH_ROOMS")[0][0];
         this.roomID = room.uuid; 
 
-        this.selectedImageSourcePath = createLine3();
-        this.selectedImageSourcePath.computeLineDistances();
+        // //@ts-ignore
+        this.selectedImageSourcePath = createLine();
         renderer.markup.add(this.selectedImageSourcePath);
 
     }
@@ -396,7 +398,7 @@ export class ImageSourceSolver extends Solver {
     }
 
     updateSelectedImageSourcePath(imageSourcePath: ImageSourcePath){
-      (this.selectedImageSourcePath.geometry as LineGeometry).setPositions(
+      (this.selectedImageSourcePath.geometry as MeshLine).setPoints(
         imageSourcePath.path.map(x=>x.point.toArray()).flat()
       );
       // (this.selectedImageSourcePath.geometry as LineGeometry).setFromPoints(
@@ -404,7 +406,6 @@ export class ImageSourceSolver extends Solver {
       // );
       // (this.selectedImageSourcePath.geometry as LineGeometry).setDrawRange(0,imageSourcePath.path.length);
       console.log(imageSourcePath.path.map(x=>x.point.toArray()).flat());
-      this.selectedImageSourcePath.computeLineDistances();
     }
 
     updateImageSourceCalculation(){
@@ -544,6 +545,7 @@ export class ImageSourceSolver extends Solver {
       this.validRayPaths = null; 
       this.plotOrders = (this.possibleOrders).map((e)=>e.value); 
       this.levelTimeProgression.data = [];
+      (this.selectedImageSourcePath.geometry as MeshLine).setPoints([]); 
       this.clearImageSources(); 
       this.clearRayPaths(); 
       emit("UPDATE_RESULT", { uuid: this.levelTimeProgression.uuid, result: this.levelTimeProgression });
