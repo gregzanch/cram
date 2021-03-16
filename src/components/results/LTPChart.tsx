@@ -22,10 +22,12 @@ import {
 } from '@visx/legend';
 import { scaleOrdinal } from 'd3-scale';
 import { pickProps } from '../../common/helpers';
-import { on } from '../../messenger';
+import { emit, on } from '../../messenger';
 import chroma from 'chroma-js';
 import { ImageSourceSolver } from '../../compute/raytracer/image-source';
 import { useSolver } from '../../store';
+import PropertyRowCheckbox from "../parameter-config/property-row/PropertyRowCheckbox";
+import { createPropertyInputs } from '../parameter-config/SolverComponents';
 // accessors
 const getTime = (d) => d.time;
 const getPressure = (d) => d.pressure[0];
@@ -87,11 +89,19 @@ const useUpdate = () => {
 
 
 const Chart = ({ uuid, width = 400, height = 200, events = false }: LTPChartProps) => {
-    const {info, data, from} = useResult(state=>pickProps(["info", "data", "from"], state.results[uuid] as Result<ResultKind.LinearTimeProgression>));
+    const {info, data: _data, from} = useResult(state=>pickProps(["info", "data", "from"], state.results[uuid] as Result<ResultKind.LevelTimeProgression>));
     
     const [count, update] = useUpdate();
+    const [data, setData] = useState(_data);
 
-    useEffect(() => on("UPDATE_RESULT", (e) => e.uuid === uuid && update()), [uuid])
+
+    useEffect(() => on("UPDATE_RESULT", (e) => {
+      if(e.uuid === uuid){
+        //@ts-ignore
+        setData(e.result.data);
+        // update();
+      }
+    }), [uuid])
 
     const scalePadding = 60;
     const scaleWidth = width-scalePadding;
@@ -102,7 +112,7 @@ const Chart = ({ uuid, width = 400, height = 200, events = false }: LTPChartProp
           range: [0, scaleWidth],
           domain: [0, Math.max(...data.map(getTime))],
         }),
-      [width, count],
+      [width, data],
     );
     
     const scaleHeight = height - scalePadding;
@@ -112,12 +122,12 @@ const Chart = ({ uuid, width = 400, height = 200, events = false }: LTPChartProp
           range: [scaleHeight, 0],
           domain: [0, Math.max(...data.map(getPressure))],
         }),
-      [height, count],
+      [height, data],
     );
 
     const ordinalColorScale = useMemo(
       () => scaleOrdinal(
-      range(1, info.maxOrder+1),
+      range(0, info.maxOrder+1),
       getOrderColors(info.maxOrder+1)
     ),
       [info.maxOrder]
@@ -169,16 +179,35 @@ const Chart = ({ uuid, width = 400, height = 200, events = false }: LTPChartProp
 
 
 export const LTPChart = ({ uuid, width = 400, height = 300, events = false }: LTPChartProps) => {
-  const {name, info} = useResult(state=>pickProps(["name", "info"], state.results[uuid] as Result<ResultKind.LinearTimeProgression>));
+  const {name, info} = useResult(state=>pickProps(["name", "info"], state.results[uuid] as Result<ResultKind.LevelTimeProgression>));
+
+  const [order, setMaxOrder] = useState(info.maxOrder);
+
+  useEffect(()=>on("UPDATE_RESULT", (e)=>{
+    if(e.uuid === uuid){
+      //@ts-ignore
+      setMaxOrder(e.result.info.maxOrder);
+    }
+  }), [uuid]);
+
   const ordinalColorScale = useMemo(
     () => scaleOrdinal(
-    range(1, info.maxOrder+1),
-    getOrderColors(info.maxOrder+1)
+    range(0, order+1),
+    getOrderColors(order+1)
   ),
-    [info.maxOrder]
+    [order]
   );
+  // const ordinalColorScale = scaleOrdinal(
+  //   range(1, info.maxOrder+1),
+  //   getOrderColors(info.maxOrder+1)
+  // );
 
+  const {from} = useResult(state=>pickProps(["from"], state.results[uuid] as Result<ResultKind.LevelTimeProgression>));
+  let imagesourcesolver = useSolver.getState().solvers[from] as ImageSourceSolver;
 
+  const { PropertyTextInput, PropertyNumberInput, PropertyCheckboxInput } = createPropertyInputs<ImageSourceSolver>(
+    "IMAGESOURCE_SET_PROPERTY"
+  );
 
   return width < 10 ? null : (
     <VerticalContainer>
@@ -197,7 +226,7 @@ export const LTPChart = ({ uuid, width = 400, height = 300, events = false }: LT
                   key={`legend-quantile-${i}`}
                   margin="0 5px"
                   onClick={() => {
-                    if (events) alert(`clicked: ${JSON.stringify(label)}`);
+                    //if (events) alert(`clicked: ${JSON.stringify(label)}`);
                   }}
                 >
                   <svg width={legendGlyphSize} height={legendGlyphSize}>
@@ -206,6 +235,18 @@ export const LTPChart = ({ uuid, width = 400, height = 300, events = false }: LT
                   <LegendLabel align="left" margin="0 0 0 4px">
                     {label.text}
                   </LegendLabel>
+                  <PropertyRowCheckbox
+                    value={imagesourcesolver.plotOrders.includes(label.datum)}
+                    onChange={(e) =>
+                      {
+                        emit("IMAGESOURCE_SET_PROPERTY",{uuid: from,property: "toggleOrder",value: label.datum})
+                        if(this != undefined){
+                          //@ts-ignore
+                          console.log(this.refs.complete.state.checked)
+                        }
+                      }
+                    }
+                  />
                 </LegendItem>
               ))}
             </LegendContainer>
