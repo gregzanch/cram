@@ -8,3 +8,6 @@ export * from './fft';
 export * from './dbaddition';
 export { airAttenuation } from './air-attenuation';
 export { soundSpeed } from './sound-speed';
+export * from './util/wav';
+export * from './fft/fft';
+export * from './complex';

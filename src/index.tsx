@@ -67,13 +67,13 @@ import FileSaver from "file-saver";
 import { createFileFromData } from "./common/file";
 import produce from "immer";
 
-import { useContainer, useSolver, useResult } from "./store";
+import { useContainer, useSolver, useResult, useAppStore } from "./store";
 
 
 import './objects/events';
 import './compute/events';
 
-expose({ useSolver, useContainer, useResult, produce, on, emit });
+expose({ useSolver, useContainer, useResult, useAppStore, produce, on, emit });
 
 
 import {CLFViewer} from "./objects/CLFViewer";
@@ -706,6 +706,7 @@ messenger.addMessageHandler("IMPORT_FILE", (acc, ...args) => {
             });
             cram.state.containers[room.uuid] = room;
             cram.state.renderer.addRoom(room);
+            emit("ADD_ROOM", room);
             messenger.postMessage("ADDED_ROOM", room);
           }
           break;
@@ -1010,6 +1011,7 @@ messenger.addMessageHandler("RESTORE_CONTAINERS", (acc, ...args) => {
         case "source":
           {
             const src = new Source("new source", { ...saveObj }).restore(saveObj);
+            // emit("ADD_SOURCE", src);
             messenger.postMessage("SHOULD_ADD_SOURCE", src, false);
             // cram.state.containers[src.uuid] = src;
             // cram.state.sources.push(src.uuid);
@@ -1019,6 +1021,7 @@ messenger.addMessageHandler("RESTORE_CONTAINERS", (acc, ...args) => {
         case "receiver":
           {
             const rec = new Receiver("new receiver", { ...saveObj }).restore(saveObj);
+            // emit("ADD_RECEIVER", rec);
             messenger.postMessage("SHOULD_ADD_RECEIVER", rec, false);
             // cram.state.containers[rec.uuid] = rec;
             // cram.state.sources.push(rec.uuid);
@@ -1078,9 +1081,10 @@ messenger.addMessageHandler("RESTORE_CONTAINERS", (acc, ...args) => {
               surfaces
             });
             cram.state.containers[room.uuid] = room;
+            emit("ADD_ROOM", room);
             cram.state.renderer.addRoom(room);
 
-            messenger.postMessage("ADDED_ROOM", room);
+            // messenger.postMessage("ADDED_ROOM", room);
           }
           break;
         default:
@@ -1223,6 +1227,16 @@ window.addEventListener("resize", () => {
   cram.state.renderer.needsToRender = true;
 });
 
+function downloadWav(data: any){
+  const buffer = ac.encode(data, {
+    sampleRate: 44100, 
+    channels: 1, 
+    bitDepth: 16
+  })
+  const blob = new Blob([buffer], {type: "audio/wav"})
+  FileSaver.saveAs(blob, "test.wav");
+}
+
 async function finishedLoading() {
   const filepath = "/res/saves/concord.json";
   const filename = filepath.slice(filepath.lastIndexOf("/") + 1);
@@ -1235,6 +1249,7 @@ async function finishedLoading() {
   expose({
     chroma,
     ac,
+    downloadWav,
     THREE,
   });
 }

@@ -2,7 +2,7 @@ import React from "react";
 import SplitterLayout from "react-splitter-layout";
 import { FocusStyleManager, Position, Drawer, Alert, Intent, Toaster, IToastProps } from "@blueprintjs/core";
 import { ItemListRenderer, IItemListRendererProps } from "@blueprintjs/select";
-import ImportDialog from "./import-dialog/ImportDialog";
+import ImportDialog from "./ImportDialog";
 import ObjectView from "./object-view/ObjectView";
 // import ConstructionsView from "./ConstructionsView";
 import Container from "../objects/container";
@@ -324,11 +324,6 @@ export default class App extends React.Component<AppProps, AppState> {
     this.addMessageHandler("UPDATE_CHART_DATA", (acc, ...args) => {
       return {
         chartData: args[0]
-      };
-    });
-    this.addMessageHandler("SHOW_IMPORT_DIALOG", () => {
-      return {
-        importDialogVisible: !this.state.importDialogVisible
       };
     });
     this.addMessageHandler("SHOW_IMPORT_DIALOG", () => {
@@ -740,23 +735,8 @@ export default class App extends React.Component<AppProps, AppState> {
           />
         </Drawer>
 
-        <ImportDialog
-          onImport={(file) => {
-            messenger.postMessage("IMPORT_FILE", file);
-            this.handleImportDialogClose();
-          }}
-          isOpen={this.state.importDialogVisible}
-          autoFocus={true}
-          canEscapeKeyClose={true}
-          canOutsideClickClose={true}
-          enforceFocus={false}
-          usePortal={true}
-          data={{ themeName: "dark" }}
-          onClose={this.handleImportDialogClose}
-          onDrop={(file) => {
-            messenger.postMessage("IMPORT_FILE", file);
-          }}
-        />
+        <ImportDialog />
+        <SaveDialog />
 
         <SplitterLayout
           secondaryMinSize={5}

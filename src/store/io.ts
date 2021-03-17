@@ -28,6 +28,16 @@ const getSaveState = () => {
   const solvers = useSolver.getState().solvers;
   const containers = useContainer.getState().containers;
   const { projectName, version } = useAppStore.getState();
+  const savedContainers = {};
+  const savedSolvers = {};
+  
+  Object.keys(containers).forEach(uuid=>{
+    savedContainers[uuid]=containers[uuid].save();
+  });
+  
+  Object.keys(solvers).forEach(uuid=>{
+    savedSolvers[uuid]=solvers[uuid].save();
+  });
 
   return {
     meta: {
@@ -35,19 +45,19 @@ const getSaveState = () => {
       name: projectName,
       timestamp: new Date().toISOString()
     },
-    containers,
-    solvers
+    containers: savedContainers,
+    solvers: savedSolvers
   };
 }
 
 on("SAVE", (callback) => {
   const state = getSaveState();
-  const options = { type: "text/plain;charset=utf-8" };
+  const options = { type: "application/json" };
   const blob = new Blob([JSON.stringify(state)], options);
   
   const projectName = state.meta.name;
   FileSaver.saveAs(blob, `${projectName}.json`);
-  callback && callback();
+  if(callback) callback();
 });
 
 const createFileInput = () => {
@@ -85,7 +95,7 @@ on("OPEN", async (callback) => {
     } catch (e) {
       console.warn(e);
     }
-    callback()
+    if(callback) callback();
   })
   
 })
