@@ -8,7 +8,7 @@ import { useContainer, useSolver } from "../../../store";
 import GridRow from "../../grid-row/GridRow";
 import TextInput from "../../text-input/TextInput";
 import NumberInput from "../../number-input/NumberInput";
-import { filteredMapObject, pickProps } from "../../../common/helpers";
+import { filteredMapObject, pickProps, unique } from "../../../common/helpers";
 import GridRowSeperator from "../../grid-row/GridRowSeperator";
 import Select from 'react-select';
 import useToggle from "../../hooks/use-toggle";
@@ -84,34 +84,7 @@ export const SourceSelect = ({ uuid }: { uuid: string }) => {
     </>
   );
 };
-export const OrderSelect = ({ uuid }: { uuid: string }) => {
-  const imagesourcesolver = cram.state.solvers[uuid] as ImageSourceSolver; 
-  let allOrders = imagesourcesolver.possibleOrders;
-  let selectedOrders = imagesourcesolver.plotOrders;  
 
-  const [sourceIDs, setSourceIDs] = useSolverProperty<RayTracer, "sourceIDs">(
-    uuid,
-    "sourceIDs",
-    "IMAGESOURCE_SET_PROPERTY"
-  );
-  
-  console.log("update");
-  return (
-    <>
-      {allOrders.map((o) => (
-        <PropertyRow key={o.value}>
-          <PropertyRowLabel label={o.value.toString()} hasToolTip={false} />
-          <PropertyRowCheckbox
-            value={selectedOrders.includes(o.value)}
-            onChange={(e) =>
-              emit("IMAGESOURCE_SET_PROPERTY",{uuid,property: "toggleOrder",value: o.value})
-            }
-          />
-        </PropertyRow>
-      ))}
-    </>
-  );
-};
 
 const { PropertyTextInput, PropertyNumberInput, PropertyCheckboxInput } = createPropertyInputs<ImageSourceSolver>(
   "IMAGESOURCE_SET_PROPERTY"
@@ -156,6 +129,48 @@ type LabeledInputRowProps<T extends string | number> = {
   value: T,
   onChange: (e: ObjectPropertyInputEvent) => void
 }
+
+export const OrderSelect = ({ uuid }: { uuid: string }) => {
+  // const imagesourcesolver = cram.state.solvers[uuid] as ImageSourceSolver; 
+  // let allOrders = imagesourcesolver.possibleOrders;
+  // let selectedOrders = imagesourcesolver.plotOrders;  
+
+  const [possibleOrders, setPossibleOrders] = useSolverProperty<ImageSourceSolver, "possibleOrders">(
+    uuid,
+    "possibleOrders",
+    "IMAGESOURCE_SET_PROPERTY"
+  );
+
+  const [plotOrders, setPlotOrders] = useSolverProperty<ImageSourceSolver, "plotOrders">(
+    uuid,
+    "plotOrders",
+    "IMAGESOURCE_SET_PROPERTY"
+  );
+
+  useEffect(()=>on("IMAGESOURCE_SET_PROPERTY", (e)=>{
+    if(e.uuid === uuid && e.property === "maxReflectionOrder"){
+      setPlotOrders([...plotOrders])
+    }
+  }), [uuid]);
+  
+  return (
+    <>
+      {possibleOrders.map((o) => (
+        <PropertyRow key={o.value}>
+          <PropertyRowLabel label={o.value.toString()} hasToolTip={false} />
+          <PropertyRowCheckbox
+            value={plotOrders.includes(o.value)}
+            onChange={(e) =>{
+              const newPlotOrders = e.value ? unique([...plotOrders, o.value]) : plotOrders.reduce((acc, curr) => curr === o.value ? acc : [...acc, curr], []);
+              emit("IMAGESOURCE_SET_PROPERTY", { uuid, property: "plotOrders", value: newPlotOrders });
+            }
+            }
+          />
+        </PropertyRow>
+      ))}
+    </>
+  );
+};
 
 const LabeledTextInputRow = ({label, name, value, onChange}: LabeledInputRowProps<string>) => (
   <GridRow label={label}>
@@ -218,20 +233,7 @@ const Graphing = ({ uuid }: { uuid: string}) => {
     <PropertyRowFolder label="Graphing" open={open} onOpenClose={toggle}>
       <PropertyCheckboxInput uuid={uuid} label="Show Sources" property="imageSourcesVisible" tooltip="Shows/Hides Image Sources"/>
       <PropertyCheckboxInput uuid={uuid} label="Show Paths" property="rayPathsVisible" tooltip="Shows/Hides Ray Paths"/>
-      {/* <Select
-            isMulti
-            isClearable
-            value={imagesourcesolver.selectedPlotOrders}
-            onChange={e=>{
-              console.log(e?.map(x => x.value));
-              emit("IMAGESOURCE_SET_PROPERTY", {uuid, property: "plotOrdersControl", value: e ? e.map(x => x.value) : []});
-              (imagesourcesolver.imageSourcesVisible) && (imagesourcesolver.drawImageSources());
-              (imagesourcesolver.rayPathsVisible) && (imagesourcesolver.drawRayPaths()); 
-              console.log(imagesourcesolver.selectedPlotOrders);
-            }}
-            options={imagesourcesolver.possibleOrders.filter(x=>!imagesourcesolver.plotOrders.includes(x.value))}
-        /> */}
-      <OrderSelect uuid={uuid}></OrderSelect>
+      {/* <OrderSelect uuid={uuid} /> */}
     </PropertyRowFolder>
   );
 }

@@ -4,7 +4,7 @@ import { KeyValuePair } from "../common/key-value-pair";
 import { SetFunction } from ".";
 import Container from "../objects/container";
 import { AllowedNames, omit } from '../common/helpers';
-
+import {renderer} from '../render/renderer';
 
 export type ContainerStore = {
   containers: KeyValuePair<Container>;
