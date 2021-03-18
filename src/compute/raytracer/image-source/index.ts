@@ -21,6 +21,7 @@ import {LineMaterial} from 'three/examples/jsm/lines/LineMaterial';
 import {normalize} from '../../acoustics/util/normalize'; 
 import FileSaver from "file-saver";
 import { SSL_OP_SSLEAY_080_CLIENT_DH_BUG } from "constants";
+import { ELEVATION_0 } from "@blueprintjs/core/lib/esm/common/classes";
 
 function createLine(){
   let points = [];
@@ -293,6 +294,7 @@ export interface ImageSourceSolverParams {
   imageSourcesVisible: boolean;
   rayPathsVisible: boolean;
   plotOrders: number[];
+  frequencies: number[]; 
 }
 
 const defaults = {
@@ -305,7 +307,8 @@ const defaults = {
   maxReflectionOrder: 2,
   imageSourcesVisible: true,
   rayPathsVisible: true, 
-  plotOrders: [0, 1, 2] // all paths
+  plotOrders: [0, 1, 2], // all paths
+  frequencies: [125,250,500,1000,2000,4000,8000],
 };
 
 export class ImageSourceSolver extends Solver {
@@ -318,6 +321,7 @@ export class ImageSourceSolver extends Solver {
     uuid: string; 
     levelTimeProgression: Result<ResultKind.LevelTimeProgression>;
     maxReflectionOrder: number; 
+    frequencies: number[]; 
     
     private _imageSourcesVisible: boolean;
     private _rayPathsVisible: boolean;
@@ -340,6 +344,7 @@ export class ImageSourceSolver extends Solver {
         this.receiverIDs = params.receiverIDs; 
         this.containers = params.containers;
         this.maxReflectionOrder = params.maxReflectionOrder; 
+        this.frequencies = params.frequencies; 
         this._imageSourcesVisible = params.imageSourcesVisible; 
         this._rayPathsVisible = params.rayPathsVisible; 
         this._plotOrders = params.plotOrders; 
@@ -583,34 +588,37 @@ export class ImageSourceSolver extends Solver {
       sortedPath?.sort((a, b) => (a.arrivalTime(343) > b.arrivalTime(343)) ? 1 : -1); 
       this.levelTimeProgression.info.maxOrder = this.maxReflectionOrder;
 
-      if(sortedPath != undefined){
-        let endTime = sortedPath[sortedPath.length - 1].arrivalTime(343)+0.05; // end time is latest time of arrival plus 0.1 seconds for safety
-
-        let Fs = 44100; // sample rate 
-        let endSample = Fs*endTime; 
-
-        let samples: number[] = []; 
-        for(let s = 0; s<=endSample; s++){
-          samples[s] = 0; 
-        }
-
-        for(let i = 0; i<sortedPath?.length; i++){
-          let t = sortedPath[i].arrivalTime(343); 
-          let p = sortedPath[i].arrivalPressure(this.levelTimeProgression.info.initialSPL, this.levelTimeProgression.info.frequency); 
-
-          if(Math.random() > 0.5){
-            p[0] = -p[0];
-          }else{
-
+        if(sortedPath != undefined){
+          let endTime = sortedPath[sortedPath.length - 1].arrivalTime(343)+0.05; // end time is latest time of arrival plus 0.1 seconds for safety
+  
+          let Fs = 44100; // sample rate 
+          let endSample = Fs*endTime; 
+  
+          let samples: number[][] = []; 
+          for(let f = 0; f<this.frequencies.length; f++){
+            samples.push(Array<number>(Math.floor(endSample)).fill(0)); 
           }
-
-          let roundedSample = Math.floor(t*Fs);
-          samples[roundedSample] = p[0]; 
-        }
         
-        downloadWav([normalize(samples)]); 
+          for(let i = 0; i<sortedPath?.length; i++){
+            let t = sortedPath[i].arrivalTime(343); 
+            let p = sortedPath[i].arrivalPressure(this.frequencies.map(x => this.levelTimeProgression.info.initialSPL[0]), this.frequencies); 
+  
+            if(Math.random() > 0.5){
+              p=p.map(x=>-x); 
+            }else{
+  
+            }
+  
+            let roundedSample = Math.floor(t*Fs);
 
-      }
+            for(let f = 0; f<this.frequencies.length; f++){
+              samples[f][roundedSample] = p[f]; 
+            }
+          }
+          for(let f = 0; f<this.frequencies.length; f++){
+            downloadWav([normalize(samples[f])], this.frequencies[f].toString()); 
+          }
+        }
     }
 
     // getters and setters
@@ -755,14 +763,14 @@ export class ImageSourceSolver extends Solver {
 
 }
 
-function downloadWav(data: any){
+function downloadWav(data: any, name: string){
   const buffer = ac.encode(data, {
     sampleRate: 44100, 
     channels: 1, 
     bitDepth: 16
   });
   const blob = new Blob([buffer], {type: "audio/wav"});
-  FileSaver.saveAs(blob, "test.wav");
+  FileSaver.saveAs(blob, name+".wav");
 }
 
 function computeImageSources(is: ImageSource, maxOrder: number): ImageSource | null {

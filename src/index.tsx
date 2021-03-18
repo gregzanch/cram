@@ -378,6 +378,7 @@ messenger.addMessageHandler("SHOULD_ADD_IMAGE_SOURCE", (acc, ...args) => {
     imageSourcesVisible: false,
     rayPathsVisible: true, 
     plotOrders: [0, 1, 2],
+    frequencies: [125,250,500,1000,2000,4000,8000],
   };
   const imagesource = new ImageSourceSolver(defaults); 
   cram.state.solvers[imagesource.uuid] = imagesource; 
