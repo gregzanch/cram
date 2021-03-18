@@ -598,6 +598,12 @@ export class ImageSourceSolver extends Solver {
           let t = sortedPath[i].arrivalTime(343); 
           let p = sortedPath[i].arrivalPressure(this.levelTimeProgression.info.initialSPL, this.levelTimeProgression.info.frequency); 
 
+          if(Math.random() > 0.5){
+            p[0] = -p[0];
+          }else{
+
+          }
+
           let roundedSample = Math.floor(t*Fs);
           samples[roundedSample] = p[0]; 
         }
