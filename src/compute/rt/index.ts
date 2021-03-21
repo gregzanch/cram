@@ -7,10 +7,11 @@ import { UNITS } from "../../enums/units";
 import Messenger, { on } from "../../messenger";
 import { transpose } from '../../common/helpers'
 import { Matrix4, Triangle, Vector3 } from "three";
-import { useSolver } from "../../store";
+import { addSolver, removeSolver, setSolverProperty, useSolver } from "../../store";
+import { uuid } from "uuidv4";
 
 export interface RT60Props extends SolverParams{
-  uuid?: string;
+  //uuid?: string;
 }
 
 export type RT60SaveObject = {
@@ -24,11 +25,13 @@ const defaults = {
 };
 
 export class RT60 extends Solver{
-  constructor(props: RT60Props) {
+  public uuid; 
+
+  constructor(props: RT60Props = defaults) {
     super(props);
     this.kind = "rt60";
     this.name = props.name || defaults.name;
-    props.uuid && (this.uuid = props.uuid);
+    this.uuid = uuid(); 
   }
   save() {
      const { name, kind, uuid } = this;
@@ -130,13 +133,18 @@ export default RT60;
 // this allows for nice type checking with 'on' and 'emit' from messenger
 declare global {
   interface EventTypes {
-    ADD_RT60: RT60 | undefined;
+    ADD_RT60: RT60 | undefined,
+    REMOVE_RT60: string,
+    RT60_SET_PROPERTY: {
+      uuid: string;
+      property: keyof RT60;
+      value: RT60[EventTypes["RT60_SET_PROPERTY"]["property"]]; 
+    }
   }
 }
 
 // add event listener 
-on("ADD_RT60", (rt60) => {
-  rt60 = rt60 || new RT60({ name: "new rt60" });
-  useSolver.setState((state) => ({ ...state, [rt60!.uuid]: rt60 }), true);
-});
+on("ADD_RT60", addSolver(RT60)); 
+on("REMOVE_RT60", removeSolver); 
+on("RT60_SET_PROPERTY", setSolverProperty); 
 

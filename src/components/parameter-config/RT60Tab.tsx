@@ -1,81 +1,178 @@
 import React from 'react';
 import { RT60 } from '../../compute/rt';
 import Messenger from "../../messenger";
-import { ObjectPropertyInputEvent } from "../ObjectProperties";
 import RT60Properties from '../ObjectProperties/RT60Properties';
+import {ImageSourceSolver} from "../../compute/raytracer/image-source/index"; 
+import { emit, on } from "../../messenger";
+import { ObjectPropertyInputEvent } from "../ObjectProperties";
+import { useContainer, useSolver } from "../../store";
+import GridRow from "../grid-row/GridRow";
+import TextInput from "../text-input/TextInput";
+import NumberInput from "../number-input/NumberInput";
+import { filteredMapObject, pickProps, unique } from "../../common/helpers";
+import GridRowSeperator from "../grid-row/GridRowSeperator";
+import Select from 'react-select';
+import useToggle from "../hooks/use-toggle";
+import { createPropertyInputs, useSolverProperty, PropertyButton, PropertyButtonDisabled  } from "./SolverComponents";
+import PropertyRowFolder from "./property-row/PropertyRowFolder";
+import PropertyRow from "./property-row/PropertyRow";
+import PropertyRowLabel from "./property-row/PropertyRowLabel";
+import PropertyRowCheckbox from "./property-row/PropertyRowCheckbox";
+import { useState } from 'react';
+import { useEffect } from 'react';
+import { useCallback } from 'react';
 
 export interface RT60TabProps {
-  solver: RT60;
-  messenger: Messenger;
+  uuid: string; 
 }
 
 export interface RT60TabState {
   
 }
 
-export default class RT60Tab extends React.Component<RT60TabProps, RT60TabState> {
-  constructor(props: RT60TabProps) {
-    super(props);
-    this.state = {
-      
-    }
-    this.handleObjectPropertyChange = this.handleObjectPropertyChange.bind(this);
-    this.handleObjectPropertyValueChangeAsNumber = this.handleObjectPropertyValueChangeAsNumber.bind(this);
-    this.handleObjectPropertyValueChangeAsString = this.handleObjectPropertyValueChangeAsString.bind(this);
-    this.handleObjectPropertyButtonClick = this.handleObjectPropertyButtonClick.bind(this);
-  } 
-  handleObjectPropertyChange(e: ObjectPropertyInputEvent) {
-		const prop = e.name;
-		switch (e.type) {
-			case "checkbox":
-				this.props.solver[prop] = e.value;
-				break;
-			case "text":
-				this.props.solver[prop] = e.value;
-				break;
-			case "number":
-				this.props.solver[prop] = Number(e.value);
-				break;
+function useRT60Properties(properties: (keyof RT60)[], rt60solver: RT60, set: any) {
+  const [state, setState] = useState(pickProps(properties, rt60solver));
+  const setFunction = <T extends keyof typeof state>(property: T, value: typeof state[T]) => {
+    setState({ ...state, [property]: value });
+    // set((solvers) => void (solvers.solvers[raytracer.uuid][property] = value));
+  };
+  return [state, setFunction] as [typeof state, typeof setFunction];
+};
+
+const { PropertyTextInput, PropertyNumberInput, PropertyCheckboxInput } = createPropertyInputs<RT60>(
+  "RT60_SET_PROPERTY"
+);
+
+const General = ({ uuid }: { uuid: string }) => {
+  const [open, toggle] = useToggle(true);
+  return (
+    <PropertyRowFolder label="General" open={open} onOpenClose={toggle}>
+      <PropertyTextInput uuid={uuid} label="Name" property="name" tooltip="Sets the name of this solver" />
+    </PropertyRowFolder>
+  );
+};
+
+type DropdownOption = {
+  uuid: string, 
+  name: string
+};
+
+function getSourcesAndReceivers(state) {
+  const sources = [] as DropdownOption[];
+  const receivers = [] as DropdownOption[];
+  Object.keys(state.containers).forEach((uuid) => {
+    switch (state.containers[uuid].kind) {
+      case "source":
+        sources.push({uuid, name: state.containers[uuid].name});
+        break;
+      case "receiver":
+        receivers.push({uuid, name: state.containers[uuid].name});
+        break;
       default:
-				  this.props.solver[prop] = e.value;
-				break;
+        console.log(state.containers)
+        break;
     }
-    this.forceUpdate();
-    this.props.messenger.postMessage("RESULTS_SHOULD_UPDATE");
-    this.props.messenger.postMessage("GUTTER_SHOULD_UPDATE");
-	}
-  handleObjectPropertyValueChangeAsNumber(
-		id: string,
-		prop: string,
-		valueAsNumber: number
-	) {
-    this.props.solver[prop] = valueAsNumber;
-    this.forceUpdate();
-	}
-	handleObjectPropertyValueChangeAsString(
-		id: string,
-		prop: string,
-		valueAsString: string
-	) {
-    this.props.solver[prop] = valueAsString;
-    this.forceUpdate();
-  }
-  handleObjectPropertyButtonClick(e: React.MouseEvent<HTMLInputElement, MouseEvent>) {
-    // switch (e.currentTarget.name) {
-    //   default: break;
-    // }
-    this.forceUpdate();
-  }
-  render() {
-    return (
-      <RT60Properties
-        messenger={this.props.messenger}
-        object={this.props.solver}
-        onPropertyChange={this.handleObjectPropertyChange}
-        onPropertyValueChangeAsNumber={this.handleObjectPropertyValueChangeAsNumber}
-        onPropertyValueChangeAsString={this.handleObjectPropertyValueChangeAsString}
-        onButtonClick={this.handleObjectPropertyButtonClick}
-      />
-    );
-  }
+  });
+  return [sources, receivers] as [DropdownOption[], DropdownOption[]];
 }
+
+
+export const RT60Tab = ({ uuid }: RT60TabProps) => {
+  const [rt60solver, set] = useSolver<[RT60, any]>((state) => [state.solvers[uuid] as RT60, state.set]);
+  const [sources, receivers] = useContainer(getSourcesAndReceivers);
+  const [state, setState] = useRT60Properties(["name"], rt60solver, set);
+
+  useEffect(() => {
+    return on("RT60_SET_PROPERTY", (props) => {
+      if (props.uuid === uuid) setState(props.property, props.value);
+    });
+  }, []);
+
+  const onChangeHandler =  useCallback((e: ObjectPropertyInputEvent) => {
+    emit("RT60_SET_PROPERTY", { uuid, property: e.name as keyof RT60, value: e.value });
+  }, [uuid]);
+
+  return (
+    <div>
+      <General uuid={uuid} />
+    </div>
+  );
+};
+
+export default RT60Tab; 
+
+
+// export default class RT60Tab extends React.Component<RT60TabProps, RT60TabState> {
+//   constructor(props: RT60TabProps) {
+//     super(props);
+//     this.state = {
+      
+//     }
+//     this.handleObjectPropertyChange = this.handleObjectPropertyChange.bind(this);
+//     this.handleObjectPropertyValueChangeAsNumber = this.handleObjectPropertyValueChangeAsNumber.bind(this);
+//     this.handleObjectPropertyValueChangeAsString = this.handleObjectPropertyValueChangeAsString.bind(this);
+//     this.handleObjectPropertyButtonClick = this.handleObjectPropertyButtonClick.bind(this);
+//   } 
+//   handleObjectPropertyChange(e: ObjectPropertyInputEvent) {
+// 		const prop = e.name;
+// 		switch (e.type) {
+// 			case "checkbox":
+// 				this.props.solver[prop] = e.value;
+// 				break;
+// 			case "text":
+// 				this.props.solver[prop] = e.value;
+// 				break;
+// 			case "number":
+// 				this.props.solver[prop] = Number(e.value);
+// 				break;
+//       default:
+// 				  this.props.solver[prop] = e.value;
+// 				break;
+//     }
+//     this.forceUpdate();
+//     this.props.messenger.postMessage("RESULTS_SHOULD_UPDATE");
+//     this.props.messenger.postMessage("GUTTER_SHOULD_UPDATE");
+// 	}
+//   handleObjectPropertyValueChangeAsNumber(
+// 		id: string,
+// 		prop: string,
+// 		valueAsNumber: number
+// 	) {
+//     this.props.solver[prop] = valueAsNumber;
+//     this.forceUpdate();
+// 	}
+// 	handleObjectPropertyValueChangeAsString(
+// 		id: string,
+// 		prop: string,
+// 		valueAsString: string
+// 	) {
+//     this.props.solver[prop] = valueAsString;
+//     this.forceUpdate();
+//   }
+//   handleObjectPropertyButtonClick(e: React.MouseEvent<HTMLInputElement, MouseEvent>) {
+//     // switch (e.currentTarget.name) {
+//     //   default: break;
+//     // }
+//     this.forceUpdate();
+//   }
+//   render() {
+//     return (
+//       <RT60Properties
+//         messenger={this.props.messenger}
+//         object={this.props.solver}
+//         onPropertyChange={this.handleObjectPropertyChange}
+//         onPropertyValueChangeAsNumber={this.handleObjectPropertyValueChangeAsNumber}
+//         onPropertyValueChangeAsString={this.handleObjectPropertyValueChangeAsString}
+//         onButtonClick={this.handleObjectPropertyButtonClick}
+//       />
+//     );
+//   }
+// }
+
+// function getSourcesAndReceivers(getSourcesAndReceivers: any): [any, any] {
+//   throw new Error('Function not implemented.');
+// }
+// function useImageSourceProperties(arg0: string[], imagesourcesolver: any, set: any): [any, any] {
+//   throw new Error('Function not implemented.');
+// }
+

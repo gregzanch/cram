@@ -24,7 +24,7 @@ import Sketch from "./objects/sketch";
 import Solver from "./compute/solver";
 import RayTracer from "./compute/raytracer";
 import {ImageSourceSolver, ImageSourceSolverParams} from "./compute/raytracer/image-source/index"
-import RT60 from "./compute/rt";
+import RT60, { RT60Props } from "./compute/rt";
 import { FDTD_2D, FDTD_2D_Defaults } from "./compute/2d-fdtd";
 import * as ac from "./compute/acoustics";
 
@@ -395,13 +395,11 @@ messenger.addMessageHandler("SHOULD_REMOVE_SOLVER", (acc, id) => {
 });
 
 messenger.addMessageHandler("SHOULD_ADD_RT60", (acc, ...args) => {
-  const props = (args && args[0]) || {};
-  const rt60 = new RT60({
-    ...props
-  });
+  const defaults: RT60Props = {};
+  const rt60 = new RT60(defaults); 
   cram.state.solvers[rt60.uuid] = rt60;
   emit("ADD_RT60", rt60);
-  return cram.state.solvers[rt60.uuid];
+  return rt60; 
 });
 
 messenger.addMessageHandler("SHOULD_ADD_FDTD_2D", (acc, args) => {

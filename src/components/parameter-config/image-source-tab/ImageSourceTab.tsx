@@ -249,6 +249,7 @@ const Developer = ({ uuid }: { uuid: string}) => {
 }
 export const ImageSourceTab = ({ uuid }: ImageSourceTabProps) => {
   const [imagesourcesolver, set] = useSolver<[ImageSourceSolver, any]>((state) => [state.solvers[uuid] as ImageSourceSolver, state.set]);
+  
   const [sources, receivers] = useContainer(getSourcesAndReceivers);
   const [state, setState] = useImageSourceProperties(["name"], imagesourcesolver, set);
 

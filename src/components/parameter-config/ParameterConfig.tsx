@@ -135,7 +135,7 @@ export default class ParameterConfig extends React.Component<ParameterConfigProp
               case "rt60":
                 return (
                   <TabPanel key={"parameter-config-tabpanel-" + i}>
-                    <RT60Tab solver={this.props.solvers[x] as RT60} messenger={this.props.messenger} />
+                    <RT60Tab uuid={this.props.solvers[x].uuid}/>
                   </TabPanel>
                 );
               case "fdtd-2d":
