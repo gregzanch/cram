@@ -1819,6 +1819,11 @@
   dependencies:
     three "*"
 
+"@types/zip.js@^2.0.28":
+  version "2.0.28"
+  resolved "https://registry.yarnpkg.com/@types/zip.js/-/zip.js-2.0.28.tgz#78354682ef76e637b1f445846e4d892ca3dbf344"
+  integrity sha512-OtimzIMnPu5RYleY8Zzp7nBFQqaZYcg7WqZci2gHjoylhaIL1qSur+ABUuuQ9HMP9Eu0ER2mEyI6AkLWWDGXNg==
+
 "@visx/axis@^1.6.1":
   version "1.6.1"
   resolved "https://registry.yarnpkg.com/@visx/axis/-/axis-1.6.1.tgz"
@@ -2120,6 +2125,11 @@
   version "4.2.1"
   resolved "https://registry.yarnpkg.com/@xtuc/long/-/long-4.2.1.tgz"
   integrity sha512-FZdkNBDqBRHKQ2MEbSC17xnPFOhZxeJ2YGSfr2BKf3sujG49Qe3bB+rGCwQfIaA7WHnGeGkSijX4FuBCdrzW/g==
+
+"@zip.js/zip.js@^2.2.23":
+  version "2.2.23"
+  resolved "https://registry.yarnpkg.com/@zip.js/zip.js/-/zip.js-2.2.23.tgz#a3eefb09bac92a455626d2b70ee84e4a77aa6db2"
+  integrity sha512-arbpkFqxlQmyXdbajYvCvbXwszbi8He2ENIKewdU4SIy21AoVlgX/kx7/vTxkNYb0qu3+ztCDTDmzFj7wWGwVA==
 
 a-big-triangle@^1.0.3:
   version "1.0.3"
@@ -7491,6 +7501,11 @@ immer@1.10.0:
   version "1.10.0"
   resolved "https://registry.yarnpkg.com/immer/-/immer-1.10.0.tgz"
   integrity sha512-O3sR1/opvCDGLEVcvrGTMtLac8GJ5IwZC4puPrLuRj3l7ICKvkmA0vGuU9OW8mV9WIBRnaxp5GJh9IEAaNOoYg==
+
+immer@^9.0.0:
+  version "9.0.0"
+  resolved "https://registry.yarnpkg.com/immer/-/immer-9.0.0.tgz#37d0e2beb928b495be48abf98d35cf76c64ee158"
+  integrity sha512-/L68D6hSjuQoeymW42UQLTMHvRZCapuSBBm0CfKbIyoqMDH+p8PHg9Cti3eBQA+tCRAOUOSBgn8Ji70YXWmBkw==
 
 import-cwd@^2.0.0:
   version "2.1.0"

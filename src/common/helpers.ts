@@ -138,6 +138,8 @@ export const at = (obj: any, path: string) => {
   return obj[keys[0]];
 };
 
+export const reach = <T>(obj: T, path: Array<string|number>) => path.reduce((acc, val) => acc && acc[val], obj);
+
 export function derivative(arr: number[]) {
   const temp = [] as number[];
   for (let i = 1; i < arr.length; i++) {
@@ -309,6 +311,13 @@ export function filteredMapObject<T, U>(obj: T, fn: (val: T[keyof T], key: keyof
   }, [] as U[]) as U[];
 }
 
+export function filterObjectToArray<T>(obj: T, fn: (val: T[keyof T], key: keyof T, obj: T) => boolean): T[keyof T][] {
+  return (Object.keys(obj) as (keyof T)[]).reduce((acc, key) => {
+    const include = fn(obj[key], key, obj);
+    return include ? acc.concat(obj[key]) : acc;
+  }, [] as T[keyof T][]) as T[keyof T][];
+}
+
 export async function* mapAsync<T, U>(data: AsyncIterable<T>, fn: (curr: T) => Promise<U>): AsyncIterableIterator<U> {
   for await (const x of data) {
     yield await fn(x);
@@ -414,3 +423,18 @@ export const omit = <T extends Object, K extends keyof T>(props: K[], obj: T) =>
 
 
 export const ensureArray = <T>(value: T|T[]) => value instanceof Array ? value : [value];
+
+
+export const curry = <T extends (...args: any) => any>(func: T) => {
+  return function curried(...args) {
+    if (args.length >= func.length) {
+      return func.apply(this, args);
+    } else {
+      return function(...rest) {
+        return curried.apply(this, args.concat(rest));
+      }
+    }
+  };
+}
+
+

@@ -43,32 +43,16 @@ const StyledButton = styled.button`
 `;
 
 
-export interface PropertyRowButtonProps{
+export interface PropertyRowButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   onClick: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
   label: string;
 }
 export default function PropertyRowButton(props: PropertyRowButtonProps){
   return (
     <PropertyRowButtonContainer>
-      <StyledButton onClick={props.onClick}>
+      <StyledButton {...props}>
         {props.label}
       </StyledButton>
     </PropertyRowButtonContainer>
   );
 }
-
-export interface PropertyRowButtonWithDisableProps{
-  onClick: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
-  label: string;
-  disableCondition: boolean;
-}
-export function PropertyRowButtonWithDisable(props: PropertyRowButtonWithDisableProps){
-  return (
-    <PropertyRowButtonContainer>
-      <StyledButton disabled={props.disableCondition} onClick={props.onClick}>
-        {props.label}
-      </StyledButton>
-    </PropertyRowButtonContainer>
-  );
-}
-

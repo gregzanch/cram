@@ -1,11 +1,12 @@
 import * as THREE from "three";
-import Container, { ContainerProps } from "./container";
+import Container, { ContainerProps, getContainersOfKind } from "./container";
 import chroma from "chroma-js";
 import { MATCAP_PORCELAIN_WHITE, MATCAP_UNDER_SHADOW } from "./asset-store";
 import FileSaver from "file-saver";
 import { EditorModes } from "../constants/editor-modes";
 import { on } from "../messenger";
 import { addContainer, removeContainer, setContainerProperty, useContainer } from "../store";
+import { renderer } from "../render/renderer";
 // import { vs, fs } from '../render/shaders/glow';
 
 export interface ReceiverSaveObject {
@@ -69,6 +70,10 @@ export class Receiver extends Container {
       }
     };
     this.renderCallback = (time?: number) => {};
+    renderer.add(this);
+  }
+  dispose(){
+    renderer.remove(this);
   }
   save() {
     const name = this.name;
@@ -180,6 +185,8 @@ declare global {
 on("ADD_RECEIVER", addContainer(Receiver))
 on("REMOVE_RECEIVER", removeContainer);
 on("RECEIVER_SET_PROPERTY", setContainerProperty);
+
+export const getReceivers = () => getContainersOfKind<Receiver>("receiver");
 
 
 export default Receiver;

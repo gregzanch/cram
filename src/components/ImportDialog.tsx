@@ -8,7 +8,7 @@ import {
 	HTMLTable
 } from "@blueprintjs/core";
 
-import { messenger } from '../messenger';
+import { messenger, emit, on } from '../messenger';
 import { useAppStore } from '../store/app-store';
 import { pickProps } from '../common/helpers';
 import { mmm_dd_yyyy } from "../common/dayt"; 
@@ -194,6 +194,9 @@ export default function ImportDialog() {
 					onClick={() => {
             messenger.postMessage("IMPORT_FILE", filelist);
 						setFilelist([] as File[]);
+						set(store => {
+							store.importDialogVisible = false;
+						});
 					}}
 				></Button>
 			</DialogActions>
@@ -201,6 +204,17 @@ export default function ImportDialog() {
 	);
 }
 
+declare global {
+	interface EventTypes {
+		SHOW_IMPORT_DIALOG: boolean;
+	}
+}
+
+on("SHOW_IMPORT_DIALOG", (visible) => {
+	useAppStore.getState().set(store => {
+		store.importDialogVisible = visible;
+	});
+})
 
 
 // export const SaveDialog = () => {

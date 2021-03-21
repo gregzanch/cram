@@ -1,7 +1,6 @@
 import create from "zustand";
 import produce from "immer";
 import { KeyValuePair } from "../common/key-value-pair";
-import { SetFunction } from ".";
 import { on } from '../messenger';
 import { result } from "lodash";
 import { omit } from "../common/helpers";
@@ -9,9 +8,10 @@ import { omit } from "../common/helpers";
 
 
 export enum ResultKind {
-  LevelTimeProgression = "linear-time-progression",
-  Default = "default"
+  LevelTimeProgression = "LevelTimeProgression",
+  Default = "Default"
 }
+
 
 export interface ResultTypes {
   [ResultKind.Default]: {

@@ -11,6 +11,11 @@ import Container from "../../objects/container";
 import Solver from "../../compute/solver";
 import Messenger from "../../messenger";
 import { SourceTab } from "../parameter-config/SourceTab";
+import { useContainer } from "../../store";
+import { pickProps } from "../../common/helpers";
+import { ReceiverTab } from "../parameter-config/ReceiverTab";
+import { RoomTab } from "../parameter-config/RoomTab";
+import SurfaceTab from "../parameter-config/SurfaceTab";
 
 export interface ObjectPropertyInputEvent {
   name: string;
@@ -20,39 +25,23 @@ export interface ObjectPropertyInputEvent {
   id?: string;
 }
 
-
-export interface ObjectPropertiesProps {
-  object: Container | Solver;
-  messenger?: Messenger;
-  onPropertyChange: (e: ObjectPropertyInputEvent) => void;
-	onPropertyValueChangeAsNumber: (id: string, prop: string, valueAsNumber: number) => void;
-  onPropertyValueChangeAsString: (id: string, prop: string, valueAsString: string) => void;
-  onButtonClick?: (e: React.MouseEvent<HTMLElement, MouseEvent>) => void;
-  showingResults?: boolean;
-}
-
-export interface ObjectPropertiesState{
-}
-
-export default class ObjectProperties extends React.Component<ObjectPropertiesProps, ObjectPropertiesState>{
-  constructor(props: ObjectPropertiesProps) {
-    super(props);
-    this.state = {
-    }
-  }
-  shouldComponentUpdate(nextProps: Readonly<ObjectPropertiesProps>, nextState: Readonly<ObjectPropertiesState>, nextContext: any) {
-    return true
-  }
-  render() {
-    switch (this.props.object.kind) {
-      case "source": return <SourceTab uuid={this.props.object.uuid} />;
-      case "receiver": return <ReceiverProperties {...this.props as ReceiverPropertiesProps} />;
-      case "room": return <RoomProperties {...this.props as RoomPropertiesProps} />;
-      case "surface": return <SurfaceProperties {...this.props as SurfacePropertiesProps} />;
-      case "ray-tracer": return <RayTracerProperties {...this.props as RayTracerPropertiesProps} />;
-      case "rt60": return <RT60Properties {...(this.props as RT60PropertiesProps)} />;
+export const ObjectProperties = () => {
+  const containers = useContainer(state => state.selectedObjects);
   
-      default: return <GenericObjectProperties {...this.props as GenericObjectPropertiesProps} />;
+  if(containers.size == 0) return <div>Nothing Selected</div>
+
+  if(containers.size == 1) {
+    const {uuid, kind} = [...containers.values()][0];
+    switch (kind) {
+      case "source": return <SourceTab uuid={uuid} />
+      case "receiver": return <ReceiverTab uuid={uuid} />
+      case "room": return <RoomTab uuid={uuid} />
+      case "surface": return <SurfaceTab uuid={uuid} />
+      default: return <></>
     }
-  }
+  } 
+
+  else return <div>Multiple Items Selected</div>
 }
+
+export default ObjectProperties;

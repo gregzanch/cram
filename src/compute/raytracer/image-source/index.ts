@@ -4,7 +4,7 @@ import {uuid} from "uuidv4";
 import * as THREE from "three";
 import { MeshLine, MeshLineMaterial, MeshLineRaycast } from 'three.meshline';
 import * as ac from "../../acoustics";
-import Room from "../../../objects/room";
+import Room, { getRooms } from "../../../objects/room";
 import Messenger, { emit, messenger, on } from "../../../messenger";
 import { KVP } from "../../../common/key-value-pair";
 import Container from "../../../objects/container";
@@ -14,10 +14,12 @@ import Receiver from "../../../objects/receiver";
 import { Vector3 } from "three";
 import Surface from "../../../objects/surface";
 import _, { intersection } from "lodash";
-import { addSolver, removeSolver, Result, ResultKind, ResultTypes, setSolverProperty, useSolver } from "../../../store";
+import { addSolver, removeSolver, Result, ResultKind, ResultTypes, setSolverProperty, useResult, useSolver } from "../../../store";
 import {Line2} from 'three/examples/jsm/lines/Line2';
 import {LineGeometry} from 'three/examples/jsm/lines/LineGeometry';
 import {LineMaterial} from 'three/examples/jsm/lines/LineMaterial';
+import {useContainer} from '../../../store';
+import { pickProps } from "../../../common/helpers";
 
 function createLine(){
   let points = [];
@@ -279,12 +281,26 @@ class ImageSourcePath{
   }
 }
 
+export type ImageSourceSaveObject = {
+  name: string;
+  kind: "image-source";
+  uuid: string;
+  roomID: string;
+  sourceIDs: string[];
+  surfaceIDs: string[];
+  receiverIDs: string[];
+  maxReflectionOrder: number;
+  imageSourcesVisible: boolean;
+  rayPathsVisible: boolean;
+  plotOrders: number[];
+}
+
+
 export interface ImageSourceSolverParams {
   name: string;
   roomID: string;
   sourceIDs: string[];
   surfaceIDs: string[];
-  containers: KVP<Container>;
   receiverIDs: string[];
   maxReflectionOrder: number;
   imageSourcesVisible: boolean;
@@ -297,7 +313,6 @@ const defaults = {
   roomID: "",
   sourceIDs: [] as string[],
   surfaceIDs: [] as string[],
-  containers: {} as KVP<Container>,
   receiverIDs: [] as string[],
   maxReflectionOrder: 2,
   imageSourcesVisible: true,
@@ -311,9 +326,8 @@ export class ImageSourceSolver extends Solver {
     receiverIDs: string[];
     roomID: string;
     surfaceIDs: string[];
-    containers: KVP<Container>; 
     uuid: string; 
-    levelTimeProgression: Result<ResultKind.LevelTimeProgression>;
+    levelTimeProgression: string;
     maxReflectionOrder: number; 
     
     private _imageSourcesVisible: boolean;
@@ -334,13 +348,13 @@ export class ImageSourceSolver extends Solver {
         this.name = params.name;
         this.roomID = params.roomID;
         this.sourceIDs = params.sourceIDs;
-        this.receiverIDs = params.receiverIDs; 
-        this.containers = params.containers;
+        this.receiverIDs = params.receiverIDs;
         this.maxReflectionOrder = params.maxReflectionOrder; 
         this._imageSourcesVisible = params.imageSourcesVisible; 
         this._rayPathsVisible = params.rayPathsVisible; 
         this._plotOrders = params.plotOrders; 
-        this.levelTimeProgression = {
+        this.levelTimeProgression = uuid();
+        emit("ADD_RESULT", {
           kind: ResultKind.LevelTimeProgression, 
           data: [],
           info: {
@@ -349,9 +363,9 @@ export class ImageSourceSolver extends Solver {
             maxOrder: this.maxReflectionOrder,
           },
           name: `LTP - ${this.name}`,
-          uuid: uuid(),
+          uuid: this.levelTimeProgression,
           from: this.uuid
-        };
+        } as Result<ResultKind.LevelTimeProgression>);
 
         this.surfaceIDs = []; 
         
@@ -359,9 +373,10 @@ export class ImageSourceSolver extends Solver {
         this.allRayPaths = null;  
         this.validRayPaths = null; 
 
+        const rooms = getRooms();
+
         // get room 
-        let room: Room = messenger.postMessage("FETCH_ROOMS")[0][0];
-        this.roomID = room.uuid; 
+        this.roomID = rooms[0].uuid;
 
         // //@ts-ignore
         this.selectedImageSourcePath = createLine();
@@ -369,10 +384,26 @@ export class ImageSourceSolver extends Solver {
 
     }
 
+    save(){
+      return pickProps([
+        "name",
+        "kind",
+        "uuid",
+        "roomID",
+        "sourceIDs",
+        "surfaceIDs",
+        "receiverIDs",
+        "maxReflectionOrder",
+        "imageSourcesVisible",
+        "rayPathsVisible",
+        "plotOrders",
+      ], this);
+    }
+
     dispose(){
         renderer.markup.remove(this.selectedImageSourcePath);
         this.reset();
-        emit("REMOVE_RESULT", this.levelTimeProgression.uuid);
+        emit("REMOVE_RESULT", this.levelTimeProgression);
     }
 
     updateSelectedImageSourcePath(imageSourcePath: ImageSourcePath){
@@ -395,8 +426,8 @@ export class ImageSourceSolver extends Solver {
       // add in checking to make sure only 1 source and 1 receiver are selected
 
       let is_params: ImageSourceParams = {
-        baseSource: this.containers[this.sourceIDs[0]] as Source,
-        position: (this.containers[this.sourceIDs[0]] as Source).position.clone(), 
+        baseSource: useContainer.getState().containers[this.sourceIDs[0]] as Source,
+        position: (useContainer.getState().containers[this.sourceIDs[0]] as Source).position.clone(), 
         room: this.room, 
         reflector: null,
         parent: null, 
@@ -412,7 +443,7 @@ export class ImageSourceSolver extends Solver {
       let paths: ImageSourcePath[];
       let valid_paths: ImageSourcePath[] = []; 
       if(is_calculated != null){
-        paths = is_calculated.constructPathsForAllDescendents(this.containers[this.receiverIDs[0]] as Receiver);
+        paths = is_calculated.constructPathsForAllDescendents(useContainer.getState().containers[this.receiverIDs[0]] as Receiver);
 
         this.allRayPaths = paths; 
 
@@ -434,18 +465,21 @@ export class ImageSourceSolver extends Solver {
 
       let sortedPath: ImageSourcePath[] | null = this.validRayPaths; 
       sortedPath?.sort((a, b) => (a.arrivalTime(c) > b.arrivalTime(c)) ? 1 : -1); 
-      this.levelTimeProgression.info.maxOrder = this.maxReflectionOrder;
-      this.levelTimeProgression.data = [] as ResultTypes[ResultKind.LevelTimeProgression]["data"]
-
+      const levelTimeProgression = { ...useResult.getState().results[this.levelTimeProgression] as Result<ResultKind.LevelTimeProgression> };
+      levelTimeProgression.data = [] as ResultTypes[ResultKind.LevelTimeProgression]["data"];
+      levelTimeProgression.info = {
+        ...levelTimeProgression.info,
+        maxOrder: this.maxReflectionOrder
+      }
       if(sortedPath != undefined){
         for(let i = 0; i<sortedPath?.length; i++){
           let t = sortedPath[i].arrivalTime(343); 
-          let p = sortedPath[i].arrivalPressure(this.levelTimeProgression.info.initialSPL, this.levelTimeProgression.info.frequency); 
+          let p = sortedPath[i].arrivalPressure(levelTimeProgression.info.initialSPL, levelTimeProgression.info.frequency); 
           if(consoleOutput){
             console.log("Arrival: " + (i+1) + " | Arrival Time: (s) " + t + " | Arrival Pressure(1000Hz): " + p + " | Order " + sortedPath[i].order); 
           }
 
-          this.levelTimeProgression.data.push({
+          levelTimeProgression.data.push({
             time: t,
             pressure: ac.P2Lp(p) as number[],
             arrival: i+1,
@@ -454,7 +488,8 @@ export class ImageSourceSolver extends Solver {
           })
         }
       }
-      emit("UPDATE_RESULT", { uuid: this.levelTimeProgression.uuid, result: this.levelTimeProgression });
+
+      emit("UPDATE_RESULT", { uuid: this.levelTimeProgression, result: levelTimeProgression });
     }
 
     getPathsOfOrder(order: number): ImageSourcePath[]{
@@ -519,16 +554,21 @@ export class ImageSourceSolver extends Solver {
         } 
     }
 
+    clearLevelTimeProgressionData(){
+      const levelTimeProgression = { ...useResult.getState().results[this.levelTimeProgression] };
+      levelTimeProgression.data = [];
+      emit("UPDATE_RESULT", { uuid: this.levelTimeProgression, result: levelTimeProgression });
+    }
+    
     reset(){
       this.rootImageSource = null;
       this.allRayPaths = null;  
       this.validRayPaths = null; 
       this.plotOrders = (this.possibleOrders).map((e)=>e.value); 
-      this.levelTimeProgression.data = [];
       (this.selectedImageSourcePath.geometry as MeshLine).setPoints([]); 
       this.clearImageSources(); 
       this.clearRayPaths(); 
-      emit("UPDATE_RESULT", { uuid: this.levelTimeProgression.uuid, result: this.levelTimeProgression });
+      this.clearLevelTimeProgressionData();
     }
 
     // plot functions
@@ -579,19 +619,19 @@ export class ImageSourceSolver extends Solver {
     // getters and setters
     get sources() {
       if (this.sourceIDs.length > 0) {
-        return this.sourceIDs.map((x) => this.containers[x]);
+        return this.sourceIDs.map((x) => useContainer.getState().containers[x]);
       } else {
         return [];
       }
     }
     get receivers() {
-      if (this.receiverIDs.length > 0 && Object.keys(this.containers).length > 0) {
-        return this.receiverIDs.map((x) => (this.containers[x] as Receiver));
+      if (this.receiverIDs.length > 0 && Object.keys(useContainer.getState().containers).length > 0) {
+        return this.receiverIDs.map((x) => (useContainer.getState().containers[x] as Receiver));
       } else return [];
     }
 
     get room(): Room {
-      return this.containers[this.roomID] as Room;
+      return useContainer.getState().containers[this.roomID] as Room;
     }
     
     get numValidRays(): number {
@@ -718,6 +758,8 @@ export class ImageSourceSolver extends Solver {
 
   
 }
+
+export default ImageSourceSolver;
 
 function computeImageSources(is: ImageSource, maxOrder: number): ImageSource | null {
 
@@ -904,3 +946,5 @@ on("ADD_IMAGESOURCE", addSolver(ImageSourceSolver));
 on("UPDATE_IMAGESOURCE", (uuid: string) => void (useSolver.getState().solvers[uuid] as ImageSourceSolver).updateImageSourceCalculation());
 on("RESET_IMAGESOURCE", (uuid: string) => void (useSolver.getState().solvers[uuid] as ImageSourceSolver).reset());
 on("CALCULATE_LTP", (uuid: string) => void (useSolver.getState().solvers[uuid] as ImageSourceSolver).calculateLTP(343));
+
+

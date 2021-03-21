@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import Container, { ContainerProps } from "./container";
+import Container, { ContainerProps, getContainersOfKind } from "./container";
 import Surface, { SurfaceSaveObject } from "./surface";
 
 import { UNITS } from "../enums/units";
@@ -7,8 +7,10 @@ import { RT_CONSTANTS } from "../constants/rt-constants";
 import { third_octave } from "../compute/acoustics";
 import { KVP } from "../common/key-value-pair";
 import RT60 from "../compute/rt";
-import { on } from "../messenger";
-import { addContainer, removeContainer, setContainerProperty } from "../store";
+import { emit, on } from "../messenger";
+import { addContainer, removeContainer, setContainerProperty, useContainer } from "../store";
+import { renderer } from "../render/renderer";
+import { filterObjectToArray } from "../common/helpers";
 
 export interface RoomProps extends ContainerProps {
   surfaces: Surface[];
@@ -57,6 +59,7 @@ export class Room extends Container {
     this.units = props.units || UNITS.METERS;
     props.surfaces.forEach((surface) => {
       this.surfaces.add(surface);
+      emit("ADD_SURFACE", surface);
     });
     this.add(this.surfaces);
     this.calculateBoundingBox();
@@ -68,8 +71,11 @@ export class Room extends Container {
     this.rt = new RT60({
       name: this.name + "rt60"
     });
+    renderer.add(this);
   }
-
+  dispose(){
+    renderer.remove(this);
+  }
   save() {
     return {
       surfaces: this.surfaces.children.map((surf: Surface) => surf.save()),
@@ -86,12 +92,11 @@ export class Room extends Container {
     } as RoomSaveObject;
   }
   restore(state: RoomSaveObject) {
-    const surfaces = state.surfaces.map((surfaceState) =>
-      new Surface(surfaceState.name, { ...surfaceState }).restore(surfaceState)
-    );
     this.init({
       ...state,
-      surfaces
+      surfaces: state.surfaces.map((surfaceState) =>
+        new Surface(surfaceState.name).restore(surfaceState)
+      )
     });
     this.visible = state.visible;
     this.position.set(state.position[0], state.position[1], state.position[2]);
@@ -204,5 +209,7 @@ on("ADD_ROOM", addContainer(Room))
 on("REMOVE_ROOM", removeContainer);
 on("ROOM_SET_PROPERTY", setContainerProperty);
 
+
+export const getRooms = () => getContainersOfKind<Room>("room")
 
 export default Room;

@@ -7,7 +7,7 @@ import ObjectView from "./object-view/ObjectView";
 // import ConstructionsView from "./ConstructionsView";
 import Container from "../objects/container";
 import PanelContainer from "./panel-container/PanelContainer";
-import ObjectProperties from "./ObjectProperties/index";
+import ObjectProperties from "./ObjectProperties";
 import Messenger, { emit, messenger } from "../messenger";
 import { KeyValuePair } from "../common/key-value-pair";
 import SettingsDrawer from "./settings-drawer/SettingsDrawer";
@@ -20,9 +20,9 @@ import { ToolNames } from "../constants/tool-names";
 import { EditorModes } from "../constants/editor-modes";
 import Solver from "../compute/solver";
 
-import ParameterConfig from "./parameter-config/ParameterConfig";
+import { ParameterConfig } from "./parameter-config/ParameterConfig";
 import { Stat } from "./parameter-config/Stats";
-import { ObjectPropertyInputEvent } from "./ObjectProperties";
+
 import Surface from "../objects/surface";
 import { AcousticMaterial } from "../db/acoustic-material";
 import MaterialDrawer from "./material-drawer/MaterialDrawer";
@@ -38,10 +38,9 @@ import { NavBarComponent } from "./NavBarComponent";
 
 import TreeViewComponent from "../components/TreeViewComponent";
 
-import create from "zustand";
-import App2 from "./App2";
 
 import {ResultsPanel} from './ResultsPanel';
+import { MaterialSearch } from "./MaterialSearch";
 
 const AppToaster = Toaster.create({
   className: "app-toaster",
@@ -168,16 +167,12 @@ export default class App extends React.Component<AppProps, AppState> {
 
     this.showImportDialog = this.showImportDialog.bind(this);
     this.handleImportDialogClose = this.handleImportDialogClose.bind(this);
-    this.handleObjectViewClick = this.handleObjectViewClick.bind(this);
-    this.handleObjectViewDelete = this.handleObjectViewDelete.bind(this);
-    this.handleObjectPropertyChange = this.handleObjectPropertyChange.bind(this);
     this.handleObjectPropertyValueChangeAsNumber = this.handleObjectPropertyValueChangeAsNumber.bind(this);
     this.handleObjectPropertyValueChangeAsString = this.handleObjectPropertyValueChangeAsString.bind(this);
     this.handleSettingsButtonClick = this.handleSettingsButtonClick.bind(this);
     this.handleMaterialDrawerClose = this.handleMaterialDrawerClose.bind(this);
     this.handleMaterialDrawerItemSelect = this.handleMaterialDrawerItemSelect.bind(this);
     this.handleSettingChange = this.handleSettingChange.bind(this);
-    this.handleObjectPropertyButtonClick = this.handleObjectPropertyButtonClick.bind(this);
     this.addMessageHandler = this.addMessageHandler.bind(this);
     this.handleSettingsTabChange = this.handleSettingsTabChange.bind(this);
     this.saveLayout = this.saveLayout.bind(this);
@@ -494,22 +489,8 @@ export default class App extends React.Component<AppProps, AppState> {
     });
   }
 
-  handleObjectViewClick(object, e: React.MouseEvent) {
-    console.log(e.currentTarget);
-    if (object instanceof Container && object["kind"] !== "room") {
-      if (e.shiftKey) {
-        messenger.postMessage("APPEND_SELECTION", [object]);
-      } else {
-        messenger.postMessage("SET_SELECTION", [object]);
-      }
-    }
-  }
-  handleObjectViewDelete(object: Container) {
-    if (object instanceof Container) {
-      messenger.postMessage("SHOULD_REMOVE_CONTAINER", object.uuid);
-    }
-  }
-  handleObjectPropertyButtonClick() {}
+
+
   handleObjectPropertyValueChangeAsNumber(prop: string, valueAsNumber: number) {
     const { selectedObject } = this.state;
     selectedObject[prop] = valueAsNumber;
@@ -527,31 +508,7 @@ export default class App extends React.Component<AppProps, AppState> {
     });
   }
 
-  handleObjectPropertyChange(e: ObjectPropertyInputEvent) {
-    const { selectedObject } = this.state;
-    const prop = e.name;
-    switch (e.type) {
-      case "checkbox":
-        selectedObject[prop] = e.value;
-        break;
-      case "text":
-        selectedObject[prop] = e.value;
-        break;
-      case "number":
-        selectedObject[prop] = Number(e.value);
-        break;
-      case "select":
-        selectedObject[prop] = Number(e.value);
-        break;
-      default:
-        selectedObject[prop] = e.value;
-        break;
-    }
-    this.setState({
-      selectedObject,
-      lastUpdateReason: "handleObjectPropertyChange"
-    });
-  }
+
   handleSettingChange(e: React.ChangeEvent<HTMLInputElement>) {
     const settings = { ...this.state.settings };
     const id = e.currentTarget.id;
@@ -613,13 +570,7 @@ export default class App extends React.Component<AppProps, AppState> {
   render() {
     const ObjectViewPanel = (
       <PanelContainer>
-        <ObjectView
-          containers={this.state.containers}
-          solvers={this.state.solvers}
-          onClick={this.handleObjectViewClick}
-          onDelete={this.handleObjectViewDelete}
-          messenger={messenger}
-        />
+        <ObjectView />
       </PanelContainer>
     );
 
@@ -635,32 +586,28 @@ export default class App extends React.Component<AppProps, AppState> {
       </PanelContainer>
     );
 
-    const ObjectPropertiesPanel = (
-      <PanelContainer>
-        {(() => {
-          if (Object.keys(this.state.selectedObject).length > 0) {
-            return (
-              <ObjectProperties
-                messenger={messenger}
-                object={this.state.selectedObject}
-                onPropertyChange={this.handleObjectPropertyChange}
-                onPropertyValueChangeAsNumber={(id: string, prop: string, value: number) =>
-                  this.handleObjectPropertyValueChangeAsNumber(prop, value)
-                }
-                onPropertyValueChangeAsString={this.handleObjectPropertyValueChangeAsString}
-                onButtonClick={this.handleObjectPropertyButtonClick}
-              />
-            );
-          }
-        })()}
-      </PanelContainer>
-    );
+    // const ObjectPropertiesPanel = (
+    //   <PanelContainer>
+    //     {(() => {
+    //       if (Object.keys(this.state.selectedObject).length > 0) {
+    //         return (
+    //           <ObjectProperties
+    //             messenger={messenger}
+    //             object={this.state.selectedObject}
+    //             onPropertyChange={this.handleObjectPropertyChange}
+    //             onPropertyValueChangeAsNumber={(id: string, prop: string, value: number) =>
+    //               this.handleObjectPropertyValueChangeAsNumber(prop, value)
+    //             }
+    //             onPropertyValueChangeAsString={this.handleObjectPropertyValueChangeAsString}
+    //             onButtonClick={()=>{}}
+    //           />
+    //         );
+    //       }
+    //     })()}
+    //   </PanelContainer>
+    // );
 
-    const ParameterConfigPanel = (
-      <PanelContainer className="panel full parameter-config-panel">
-        <ParameterConfig messenger={messenger} solvers={this.state.solvers} key={"parameter-config-panel"} />
-      </PanelContainer>
-    );
+
 
     const Editor = (
       <div className="webgl-canvas">
@@ -711,29 +658,9 @@ export default class App extends React.Component<AppProps, AppState> {
             })}
           </Tabs>
         </SettingsDrawer>
+        
+        <MaterialSearch />
 
-        <Drawer
-          position={Position.RIGHT}
-          size="100%"
-          autoFocus={true}
-          enforceFocus={true}
-          hasBackdrop={true}
-          onClose={this.handleMaterialDrawerClose}
-          canOutsideClickClose={true}
-          canEscapeKeyClose={true}
-          isCloseButtonShown={true}
-          title="Material Selection"
-          isOpen={this.state.materialDrawerOpen}
-        >
-          <MaterialDrawer
-            messenger={messenger}
-            object={
-              this.state.selectedObject && this.state.selectedObject instanceof Surface
-                ? this.state.selectedObject
-                : undefined
-            }
-          />
-        </Drawer>
 
         <ImportDialog />
         <SaveDialog />
@@ -806,9 +733,13 @@ export default class App extends React.Component<AppProps, AppState> {
                 // this.setState({ rightPanelTopSize: value });
               }}
             >
-              {ObjectPropertiesPanel}
+              <PanelContainer>
+                <ObjectProperties />
+              </PanelContainer>
 
-              {ParameterConfigPanel}
+              <PanelContainer className="panel full parameter-config-panel">
+                <ParameterConfig />
+              </PanelContainer>
             </SplitterLayout>
           </SplitterLayout>
         </SplitterLayout>

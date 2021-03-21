@@ -32,7 +32,7 @@ export default class Model extends Container {
   init(props: ModelProps, fromConstructor: boolean = false) {
     const { bufferGeometry } = props;
     const positionBuffer = bufferGeometry.getAttribute("position") as THREE.BufferAttribute;
-    const normalBuffer = bufferGeometry.getAttribute("normal") as THREE.BufferAttribute;
+    const normalBuffer = bufferGeometry.getAttribute("NORMAL") as THREE.BufferAttribute;
     const vertexMap = new Map<string, number>();
     const indices = [] as number[];
     const edgeindices = [] as number[];
