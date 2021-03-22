@@ -32,7 +32,8 @@ import { addSolver, removeSolver, setSolverProperty, useContainer, useSolver } f
 import { omit } from "lodash";
 
 import {cramangle2threejsangle} from "../../common/dir-angle-conversions";
-import * as zip from "@zip.js/zip.js";
+// import * as zip from "@zip.js/zip.js";
+import { audioEngine } from "../../audio-engine/audio-engine";
 
 
 const {floor, random, abs, asin} = Math;
@@ -1843,17 +1844,36 @@ class RayTracer extends Solver {
       }
     }
 
-    // use a BlobWriter to store with a ZipWriter the zip into a Blob object
-    const blobWriter = new zip.BlobWriter("application/zip");
-    const writer = new zip.ZipWriter(blobWriter);
-
-    for(let f = 0; f<frequencies.length; f++){
-      const blob = ac.wavAsBlob([normalize(samples[f])], {sampleRate, bitDepth: 16});
-      await writer.add(`${frequencies[f]}.wav`, new zip.BlobReader(blob));
+    const sources = samples.map(buffer => audioEngine.createBufferSource(buffer));
+    const filters = frequencies.map(freq => audioEngine.createBandpassFilter(freq, 1.414))
+    const gains = frequencies.map(() => audioEngine.createGainNode(0.75));
+    const merger = audioEngine.createMerger(sources.length);
+    for(let i = 0; i<sources.length; i++){
+      sources[i].connect(filters[i]);
+      filters[i].connect(gains[i]);
+      gains[i].connect(merger, 0, i);
     }
-    await writer.close();
 
-    FileSaver.saveAs(blobWriter.getData(), "ir.zip");
+    merger.connect(audioEngine.context.destination);
+
+    if (audioEngine.context.state === 'suspended') {
+      audioEngine.context.resume();
+    }
+
+    sources.forEach(source=>source.start());
+
+
+    // // use a BlobWriter to store with a ZipWriter the zip into a Blob object
+    // const blobWriter = new zip.BlobWriter("application/zip");
+    // const writer = new zip.ZipWriter(blobWriter);
+
+    // for(let f = 0; f<frequencies.length; f++){
+    //   const blob = ac.wavAsBlob([normalize(samples[f])], {sampleRate, bitDepth: 16});
+    //   await writer.add(`${frequencies[f]}.wav`, new zip.BlobReader(blob));
+    // }
+    // await writer.close();
+
+    // FileSaver.saveAs(blobWriter.getData(), "ir.zip");
 
   }
 
