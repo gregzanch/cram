@@ -65,9 +65,9 @@ export class Room extends Container {
       a[b.uuid] = b as Surface;
       return a;
     }, {} as KVP<Surface>);
-    this.rt = new RT60({
-      name: this.name + "rt60"
-    });
+    // this.rt = new RT60({
+    //   name: this.name + "rt60"
+    // });
   }
 
   save() {

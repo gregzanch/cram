@@ -48,6 +48,7 @@ const General = ({ uuid }: { uuid: string }) => {
   return (
     <PropertyRowFolder label="General" open={open} onOpenClose={toggle}>
       <PropertyTextInput uuid={uuid} label="Name" property="name" tooltip="Sets the name of this solver" />
+      <PropertyButton event="UPDATE_RT60" args={uuid} label="Update" tooltip="Updates RT Calculation"/>
     </PropertyRowFolder>
   );
 };
