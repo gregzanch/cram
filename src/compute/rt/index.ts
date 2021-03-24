@@ -4,10 +4,10 @@ import Surface from "../../objects/surface";
 import { third_octave, whole_octave } from '../acoustics';
 import { RT_CONSTANTS } from '../../constants/rt-constants';
 import { UNITS } from "../../enums/units";
-import Messenger, { messenger, on } from "../../messenger";
+import Messenger, { emit, messenger, on } from "../../messenger";
 import { transpose } from '../../common/helpers'
 import { Matrix4, Triangle, Vector3 } from "three";
-import { addSolver, removeSolver, setSolverProperty, useSolver } from "../../store";
+import { addSolver, removeSolver, Result, ResultKind, setSolverProperty, useSolver } from "../../store";
 import { uuid } from "uuidv4";
 import Container from "../../objects/container";
 import { KVP } from "../../common/key-value-pair";
@@ -41,7 +41,7 @@ export class RT60 extends Solver{
   public receiverIDs: string[]; 
   public roomID: string;
 
-  //room: Room; 
+  public rt60results: Result<ResultKind.StatisticalRT60>;
 
   constructor(props: RT60Props = defaults) {
     super(props);
@@ -60,6 +60,20 @@ export class RT60 extends Solver{
     this.roomID = ''; 
 
     this.frequencies = whole_octave.slice(4,11);   
+
+    this.rt60results = {
+      kind: ResultKind.StatisticalRT60, 
+      data: [],
+      info: {
+        frequency: this.frequencies,
+        airabsorption: false,
+        temperature: 20, 
+        humidity: 40, 
+      },
+      name: `Statistical RT60 Results`,
+      uuid: uuid(),
+      from: this.uuid
+    };
 
     this.findIDs(); 
   }
@@ -88,8 +102,30 @@ export class RT60 extends Solver{
   }
 
   calculate(){
+
+    this.reset(); 
+
     this.sabine_rt = this.sabine();
-    console.log(this.sabine_rt);
+    this.ap_rt = this.arauPuchades(this.room,this.frequencies); 
+
+    for(let i = 0; i<this.frequencies.length; i++){
+      this.rt60results.data.push({
+        frequency: this.frequencies[i], 
+        sabine: this.sabine_rt[i][1],
+        eyring: this.sabine_rt[i][1]*2 
+      })
+    }
+
+    emit("UPDATE_RESULT", { uuid: this.rt60results.uuid, result: this.rt60results });
+
+  }
+
+  reset(){
+    this.sabine_rt = [];
+    this.eyring_rt = []; 
+    this.ap_rt = []; 
+
+    this.rt60results.data = []; 
   }
 
   sabine() {

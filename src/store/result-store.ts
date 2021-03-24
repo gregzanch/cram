@@ -10,7 +10,8 @@ import { omit } from "../common/helpers";
 
 export enum ResultKind {
   LevelTimeProgression = "linear-time-progression",
-  Default = "default"
+  Default = "default",
+  StatisticalRT60 = "statisticalRT60"
 }
 
 export interface ResultTypes {
@@ -30,6 +31,19 @@ export interface ResultTypes {
       order: number, 
       arrival: number 
       uuid: string
+    }[];
+  }
+  [ResultKind.StatisticalRT60]: {
+    info: {
+      frequency: number[];
+      airabsorption: boolean;
+      humidity: number;
+      temperature: number; 
+    };
+    data: {
+      sabine: number; 
+      eyring: number;
+      frequency: number; 
     }[];
   }
 }
