@@ -5,7 +5,6 @@ import { AxisBottom } from '@visx/axis';
 import cityTemperature, { CityTemperature } from '@visx/mock-data/lib/mocks/cityTemperature';
 import { scaleBand, scaleLinear, scaleOrdinal } from '@visx/scale';
 import { timeParse, timeFormat } from 'd3-time-format';
-import { Grid } from '@visx/grid';
 
 export type BarGroupProps = {
   uuid: string; 
@@ -15,53 +14,15 @@ export type BarGroupProps = {
   events?: boolean;
 };
 
-export interface RTData {
-  freq: number;
-  sabine: number;
-  eyring: number; 
-}
+type CityName = 'New York' | 'San Francisco' | 'Austin';
 
-const testrtdata: RTData[] = [
-  {
-  freq: 125,
-  sabine: 0.2,
-  eyring: 0.35,
-  },
-  {
-  freq: 250,
-  sabine: 0.4,
-  eyring: 0.55,
-  },
-  {
-  freq: 500,
-  sabine: 0.2,
-  eyring: 1.0,
-  },
-  {
-  freq: 1000,
-  sabine: 0.3,
-  eyring: 0.45,
-  },
-  {
-  freq: 2000,
-  sabine: 0.2,
-  eyring: 0.45,
-  },
-  {
-  freq: 4000,
-  sabine: 0.2,
-  eyring: 0.25,
-}];
-
-//type CityName = 'New York' | 'San Francisco' | 'Austin';
-
-const black = '#000000';
-const red = '#ff0000';
-const purple = '#000000';
+const blue = '#aeeef8';
+export const green = '#e5fd3d';
+const purple = '#9caff6';
 export const background = '#612efb';
 
-const data = testrtdata; 
-const keys = Object.keys(data[0]).filter(d => d !== 'freq');
+const data = cityTemperature.slice(0, 8);
+const keys = Object.keys(data[0]).filter(d => d !== 'date') as CityName[];
 const defaultMargin = { top: 40, right: 0, bottom: 40, left: 0 };
 
 const parseDate = timeParse('%Y-%m-%d');
@@ -69,23 +30,23 @@ const format = timeFormat('%b %d');
 const formatDate = (date: string) => format(parseDate(date) as Date);
 
 // accessors
-const getFreq = (d: RTData) => d.freq;
+const getDate = (d: CityTemperature) => d.date;
 
 // scales
-const freqScale = scaleBand<number>({
-  domain: data.map(getFreq),
+const dateScale = scaleBand<string>({
+  domain: data.map(getDate),
   padding: 0.2,
 });
- const rtTypeScale = scaleBand<string>({
-   domain: keys,
-   padding: 0.01,
+const cityScale = scaleBand<string>({
+  domain: keys,
+  padding: 0.1,
 });
-const rtScale = scaleLinear<number>({
-  domain: [0, 1],
+const tempScale = scaleLinear<number>({
+  domain: [0, Math.max(...data.map(d => Math.max(...keys.map(key => Number(d[key])))))],
 });
 const colorScale = scaleOrdinal<string, string>({
-   domain: keys,
-   range: [black, red],
+  domain: keys,
+  range: [blue, green, purple],
 });
 
 export const RT60Chart = ({
@@ -100,29 +61,24 @@ export const RT60Chart = ({
   const yMax = height - margin.top - margin.bottom;
 
   // update scale output dimensions
-  freqScale.rangeRound([0, xMax]);
-  rtTypeScale.rangeRound([0, freqScale.bandwidth()]);
-  rtScale.range([yMax, 0]);
+  dateScale.rangeRound([0, xMax]);
+  cityScale.rangeRound([0, dateScale.bandwidth()]);
+  tempScale.range([yMax, 0]);
 
   console.log(data); 
 
   return width < 10 ? null : (
     <svg width={width} height={height}>
-      <Grid
-        xScale={freqScale}
-        yScale={rtScale}
-        width={width}
-        height={height}
-      />
+      <rect x={0} y={0} width={width} height={height} fill={background} rx={14} />
       <Group top={margin.top} left={margin.left}>
         <BarGroup
           data={data}
           keys={keys}
           height={yMax}
-          x0={getFreq}
-          x0Scale={freqScale}
-          x1Scale={rtTypeScale}
-          yScale={rtScale}
+          x0={getDate}
+          x0Scale={dateScale}
+          x1Scale={cityScale}
+          yScale={tempScale}
           color={colorScale}
         >
           {barGroups =>
@@ -133,7 +89,7 @@ export const RT60Chart = ({
                     key={`bar-group-bar-${barGroup.index}-${bar.index}-${bar.value}-${bar.key}`}
                     x={bar.x}
                     y={bar.y}
-                    width={10}
+                    width={bar.width}
                     height={bar.height}
                     fill={bar.color}
                     rx={4}
@@ -151,12 +107,13 @@ export const RT60Chart = ({
       </Group>
       <AxisBottom
         top={yMax + margin.top}
-        scale={freqScale}
-        stroke={black}
-        tickStroke={black}
+        tickFormat={formatDate}
+        scale={dateScale}
+        stroke={green}
+        tickStroke={green}
         hideAxisLine
         tickLabelProps={() => ({
-          fill: black,
+          fill: green,
           fontSize: 11,
           textAnchor: 'middle',
         })}
