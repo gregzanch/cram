@@ -43,6 +43,7 @@ export interface ResultTypes {
     data: {
       sabine: number; 
       eyring: number;
+      ap: number;
       frequency: number; 
     }[];
   }

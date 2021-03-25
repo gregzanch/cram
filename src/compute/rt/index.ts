@@ -112,12 +112,11 @@ export class RT60 extends Solver{
       this.rt60results.data.push({
         frequency: this.frequencies[i], 
         sabine: this.sabine_rt[i][1],
-        eyring: this.sabine_rt[i][1]*2 
+        eyring: this.sabine_rt[i][1]*2,
+        ap: this.ap_rt[i][1]
       })
     }
-
     emit("UPDATE_RESULT", { uuid: this.rt60results.uuid, result: this.rt60results });
-
   }
 
   reset(){

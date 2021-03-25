@@ -86,8 +86,6 @@ const useUpdate = () => {
   return [updateCount, () => setUpdateCount(updateCount + 1)] as  [number, () => void];
 }
 
-
-
 const Chart = ({ uuid, width = 400, height = 200, events = false }: LTPChartProps) => {
     const {info, data: _data, from} = useResult(state=>pickProps(["info", "data", "from"], state.results[uuid] as Result<ResultKind.LevelTimeProgression>));
     

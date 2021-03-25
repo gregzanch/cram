@@ -1,11 +1,14 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Group } from '@visx/group';
 import { BarGroup } from '@visx/shape';
 import { AxisBottom, AxisLeft } from '@visx/axis';
 import cityTemperature, { CityTemperature } from '@visx/mock-data/lib/mocks/cityTemperature';
 import { scaleBand, scaleLinear, scaleOrdinal } from '@visx/scale';
 import { timeParse, timeFormat } from 'd3-time-format';
-import { Grid } from '@visx/grid';
+import { Grid, GridRows } from '@visx/grid';
+import { Result, ResultKind, useResult } from '../../store/result-store';
+import { pickProps } from '../../common/helpers';
+import { on } from '../../messenger';
 
 export type BarGroupProps = {
   uuid: string; 
@@ -16,52 +19,59 @@ export type BarGroupProps = {
 };
 
 export interface RTData {
-  freq: number;
+  frequency: number;
   sabine: number;
   eyring: number; 
+  ap: number; 
 }
 
 const testrtdata: RTData[] = [
   {
-  freq: 125,
+    frequency: 125,
   sabine: 0.2,
   eyring: 0.35,
+  ap: 0.2,
   },
   {
-  freq: 250,
+    frequency: 250,
   sabine: 0.4,
   eyring: 0.55,
+  ap: 0.2,
   },
   {
-  freq: 500,
+    frequency: 500,
   sabine: 0.2,
   eyring: 0.2,
+  ap: 0.2,
   },
   {
-  freq: 1000,
+    frequency: 1000,
   sabine: 0.3,
   eyring: 0.45,
+  ap: 0.2,
   },
   {
-  freq: 2000,
+    frequency: 2000,
   sabine: 0.2,
   eyring: 0.45,
+  ap: 0.2,
   },
   {
-  freq: 4000,
+    frequency: 4000,
   sabine: 0.2,
   eyring: 0.25,
+  ap: 0.2,
 }];
 
 //type CityName = 'New York' | 'San Francisco' | 'Austin';
 
 const black = '#000000';
 const red = '#ff0000';
-const purple = '#000000';
+const green = '#00ff00';
 export const background = '#612efb';
 
-const data = testrtdata; 
-const keys = Object.keys(data[0]).filter(d => d !== 'freq');
+type RtType = 'Sabine' | 'Eyring' | 'AP'; 
+
 const defaultMargin = { top: 0, right: 0, bottom: 40, left: 0 };
 
 const parseDate = timeParse('%Y-%m-%d');
@@ -69,19 +79,15 @@ const format = timeFormat('%b %d');
 const formatDate = (date: string) => format(parseDate(date) as Date);
 
 // accessors
-const getFreq = (d: RTData) => d.freq;
+const getFreq = (d: RTData) => d.frequency;
+const getFreqAsString = (d: RTData) => (d.frequency).toString()
 const getSabine = (d: RTData) => d.sabine; 
 const getEyring = (d: RTData) => d.eyring; 
 
-// scales
-const freqScale = scaleBand<number>({
-  domain: data.map(getFreq),
-  padding: 0.1,
-});
-const rtScale = scaleLinear<number>({
-  domain: [0, 2],
-  range: [300, 0]
-});
+const useUpdate = () => {
+  const [updateCount, setUpdateCount] = useState<number>(0);
+  return [updateCount, () => setUpdateCount(updateCount + 1)] as  [number, () => void];
+}
 
 export const RT60Chart = ({
   uuid, 
@@ -90,56 +96,63 @@ export const RT60Chart = ({
   events = false,
 }: BarGroupProps) => {
 
+  const {info, data: _data, from} = useResult(state=>pickProps(["info", "data", "from"], state.results[uuid] as Result<ResultKind.StatisticalRT60>));
+  const [count, update] = useUpdate();
+  const [data, setData] = useState(_data);
+  const keys = Object.keys(data[0]).filter(d => d !== 'frequency') as RtType[];
+  
+  // scales
+  const xScale = scaleBand<string>({
+    domain: data.map(getFreqAsString),
+    padding: 0.2
+  });
+
+  const rtTypeScale = scaleBand<string>({
+    domain: keys,
+    padding: 0.1,
+  });
+
+  const yScale = scaleLinear<number>({
+    domain: [0, Math.round(Math.max(...data.map(d => Math.max(...keys.map(key => Number(d[key])))))*1.5*10)/10],
+  });
+
+  const colorScale = scaleOrdinal<string, string>({
+    domain: keys,
+    range: [black, red, green],
+  });
+
+  useEffect(() => on("UPDATE_RESULT", (e) => {
+    if(e.uuid === uuid){
+      //@ts-ignore
+      setData(e.result.data);
+    }
+  }), [uuid])
+
   const scalePadding = 60;
-    const scaleWidth = width-scalePadding;
-    // scales, memoize for performance
-    const xScale = useMemo(
-      () =>
-        scaleBand<number>({
-          range: [0, scaleWidth],
-          domain: data.map(getFreq),
-          padding: 2
-        }),
-      [width, data],
-    );
+  const topPadding = 30; 
+  const scaleWidth = width-scalePadding;
+  const scaleHeight = height-topPadding;
 
-    const rtTypeScale = scaleBand<string>({
-      domain: keys,
-      padding: 2,
-    });
+  xScale.rangeRound([0, scaleWidth]);
+  rtTypeScale.rangeRound([0, xScale.bandwidth()]);
+  yScale.range([scaleHeight, 0]);
 
-    rtTypeScale.rangeRound([0, xScale.bandwidth()]);
-
-    const scaleHeight = height - scalePadding;
-    const yScale = useMemo(
-      () =>
-        scaleLinear<number>({
-          range: [scaleHeight, 0],
-          domain: [0, Math.max(...data.map(getSabine))*2],
-        }),
-      [height, data],
-    );
-
-    const colorScale = scaleOrdinal<string, string>({
-      domain: keys,
-      range: [black, red],
-   });
+  console.log(data);
 
   return width < 10 ? null : (
     <svg width={width} height={height}>
-      <Grid
-        xScale={xScale}
-        yScale={yScale}
+    <GridRows
+        scale={yScale}
         width={scaleWidth}
         height={scaleHeight}
         left={scalePadding}
       />
-      <Group>
+      <Group left={scalePadding}>
         <BarGroup
           data={data}
           keys={keys}
           height={scaleHeight}
-          x0={getFreq}
+          x0={getFreqAsString}
           x0Scale={xScale}
           x1Scale={rtTypeScale}
           yScale={yScale}
@@ -153,7 +166,7 @@ export const RT60Chart = ({
                     key={`bar-group-bar-${barGroup.index}-${bar.index}-${bar.value}-${bar.key}`}
                     x={bar.x}
                     y={bar.y}
-                    width={10}
+                    width={15}
                     height={bar.height}
                     fill={bar.color}
                     rx={4}
@@ -171,6 +184,7 @@ export const RT60Chart = ({
       </Group>
       <AxisBottom
         top={scaleHeight}
+        left={scalePadding}
         scale={xScale}
         stroke={black}
         tickStroke={black}
