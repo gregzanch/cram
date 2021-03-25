@@ -70,7 +70,6 @@ const ChartSelect = (uuid) => {
     break
 
     default:
-      console.log("sorry!"); 
       return null;
   }
 

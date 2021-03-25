@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Group } from '@visx/group';
 import { BarGroup } from '@visx/shape';
-import { AxisBottom } from '@visx/axis';
+import { AxisBottom, AxisLeft } from '@visx/axis';
 import cityTemperature, { CityTemperature } from '@visx/mock-data/lib/mocks/cityTemperature';
 import { scaleBand, scaleLinear, scaleOrdinal } from '@visx/scale';
 import { timeParse, timeFormat } from 'd3-time-format';
@@ -35,7 +35,7 @@ const testrtdata: RTData[] = [
   {
   freq: 500,
   sabine: 0.2,
-  eyring: 1.0,
+  eyring: 0.2,
   },
   {
   freq: 1000,
@@ -62,7 +62,7 @@ export const background = '#612efb';
 
 const data = testrtdata; 
 const keys = Object.keys(data[0]).filter(d => d !== 'freq');
-const defaultMargin = { top: 40, right: 0, bottom: 40, left: 0 };
+const defaultMargin = { top: 0, right: 0, bottom: 40, left: 0 };
 
 const parseDate = timeParse('%Y-%m-%d');
 const format = timeFormat('%b %d');
@@ -70,59 +70,79 @@ const formatDate = (date: string) => format(parseDate(date) as Date);
 
 // accessors
 const getFreq = (d: RTData) => d.freq;
+const getSabine = (d: RTData) => d.sabine; 
+const getEyring = (d: RTData) => d.eyring; 
 
 // scales
 const freqScale = scaleBand<number>({
   domain: data.map(getFreq),
-  padding: 0.2,
-});
- const rtTypeScale = scaleBand<string>({
-   domain: keys,
-   padding: 0.01,
+  padding: 0.1,
 });
 const rtScale = scaleLinear<number>({
-  domain: [0, 1],
-});
-const colorScale = scaleOrdinal<string, string>({
-   domain: keys,
-   range: [black, red],
+  domain: [0, 2],
+  range: [300, 0]
 });
 
 export const RT60Chart = ({
   uuid, 
-  width = 400,
+  width = 500,
   height = 300,
   events = false,
-  margin = defaultMargin,
 }: BarGroupProps) => {
-  // bounds
-  const xMax = width - margin.left - margin.right;
-  const yMax = height - margin.top - margin.bottom;
 
-  // update scale output dimensions
-  freqScale.rangeRound([0, xMax]);
-  rtTypeScale.rangeRound([0, freqScale.bandwidth()]);
-  rtScale.range([yMax, 0]);
+  const scalePadding = 60;
+    const scaleWidth = width-scalePadding;
+    // scales, memoize for performance
+    const xScale = useMemo(
+      () =>
+        scaleBand<number>({
+          range: [0, scaleWidth],
+          domain: data.map(getFreq),
+          padding: 2
+        }),
+      [width, data],
+    );
 
-  console.log(data); 
+    const rtTypeScale = scaleBand<string>({
+      domain: keys,
+      padding: 2,
+    });
+
+    rtTypeScale.rangeRound([0, xScale.bandwidth()]);
+
+    const scaleHeight = height - scalePadding;
+    const yScale = useMemo(
+      () =>
+        scaleLinear<number>({
+          range: [scaleHeight, 0],
+          domain: [0, Math.max(...data.map(getSabine))*2],
+        }),
+      [height, data],
+    );
+
+    const colorScale = scaleOrdinal<string, string>({
+      domain: keys,
+      range: [black, red],
+   });
 
   return width < 10 ? null : (
     <svg width={width} height={height}>
       <Grid
-        xScale={freqScale}
-        yScale={rtScale}
-        width={width}
-        height={height}
+        xScale={xScale}
+        yScale={yScale}
+        width={scaleWidth}
+        height={scaleHeight}
+        left={scalePadding}
       />
-      <Group top={margin.top} left={margin.left}>
+      <Group>
         <BarGroup
           data={data}
           keys={keys}
-          height={yMax}
+          height={scaleHeight}
           x0={getFreq}
-          x0Scale={freqScale}
+          x0Scale={xScale}
           x1Scale={rtTypeScale}
-          yScale={rtScale}
+          yScale={yScale}
           color={colorScale}
         >
           {barGroups =>
@@ -150,16 +170,28 @@ export const RT60Chart = ({
         </BarGroup>
       </Group>
       <AxisBottom
-        top={yMax + margin.top}
-        scale={freqScale}
+        top={scaleHeight}
+        scale={xScale}
         stroke={black}
         tickStroke={black}
-        hideAxisLine
+        label={"Octave Band (Hz)"}
         tickLabelProps={() => ({
           fill: black,
           fontSize: 11,
           textAnchor: 'middle',
         })}
+      />
+      <AxisLeft 
+        scale={yScale}
+        stroke={black}
+        left={scalePadding}
+        tickStroke={black}
+        label={"Reverberation Time (s)"}
+        tickLabelProps={() => ({
+          fill: black,
+          fontSize: 11,
+          textAnchor: "end",
+      })}
       />
     </svg>
   );
