@@ -146,7 +146,7 @@ const ImpulseResponse = ({uuid}: { uuid: string}) => {
 
   return (
     <PropertyRowFolder label="Impulse Response" open={open} onOpenClose={toggle}>
-      <PropertyButton event="RAYTRACER_PLAY_IR" args={uuid} label="Play" tooltip="Plays the calculated impulse response" disabled={impulseResponsePlaying} />
+      <PropertyButton event="RAYTRACER_PLAY_IR" args={uuid} label="Play" tooltip="Plays the calculated impulse response" disabled={false} />
       <PropertyButton event="RAYTRACER_DOWNLOAD_IR" args={uuid} label="Download" tooltip="Plays the calculated impulse response" />
     </PropertyRowFolder>
   )
