@@ -68,13 +68,13 @@ import { createFileFromData } from "./common/file";
 import produce, { enableMapSet } from "immer";
 
 import { useContainer, useSolver, useResult, useAppStore, useMaterial } from "./store";
-
+import { audioEngine } from './audio-engine/audio-engine';
 enableMapSet();
 
 import './objects/events';
 import './compute/events';
 
-expose({ useSolver, useContainer, useResult, useAppStore, useMaterial, produce, on, emit });
+expose({ audioEngine, useSolver, useContainer, useResult, useAppStore, useMaterial, produce, on, emit });
 
 
 import {CLFViewer} from "./objects/CLFViewer";
@@ -1159,7 +1159,7 @@ window.addEventListener("resize", () => {
 
 
 async function finishedLoading() {
-  const filepath = "/res/saves/concord.json";
+  const filepath = "/res/saves/concord2.json";
   const filename = filepath.slice(filepath.lastIndexOf("/") + 1);
   const filedata = await(await fetch(filepath)).text();
   const json = JSON.parse(filedata);

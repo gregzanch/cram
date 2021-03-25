@@ -177,6 +177,17 @@ const SolverControls = ({ uuid }: { uuid: string }) => {
   );
 };
 
+const Output = ({uuid}: {uuid: string}) => {
+  const [open, toggle] = useToggle(true);
+  const [impulseResponsePlaying, setImpulseResponsePlaying] = useSolverProperty<RayTracer, "impulseResponsePlaying">(uuid, "impulseResponsePlaying", "RAYTRACER_SET_PROPERTY");
+  return (
+    <PropertyRowFolder label="Impulse Response" open={open} onOpenClose={toggle}>
+      <PropertyButton event="RAYTRACER_PLAY_IR" args={uuid} label="Play" tooltip="Plays the calculated impulse response" disabled={impulseResponsePlaying} />
+      <PropertyButton event="RAYTRACER_DOWNLOAD_IR" args={uuid} label="Download" tooltip="Plays the calculated impulse response" />
+    </PropertyRowFolder>
+  );
+}
+
 export const RayTracerTab = ({ uuid }: { uuid: string }) => {
   return (
     <div>
@@ -186,6 +197,7 @@ export const RayTracerTab = ({ uuid }: { uuid: string }) => {
       <RecieverConfiguration uuid={uuid} />
       <StyleProperties uuid={uuid} />
       <SolverControls uuid={uuid} />
+      <Output uuid={uuid} />
     </div>
   );
 };

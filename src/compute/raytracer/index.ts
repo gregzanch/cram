@@ -3,38 +3,29 @@ import * as THREE from "three";
 import Room from "../../objects/room";
 import { KVP } from "../../common/key-value-pair";
 import Container from "../../objects/container";
-import enumerable from "../../common/enumerable";
 import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast } from "three-mesh-bvh";
 import Source from "../../objects/source";
-import DirectivityHandler from "../../objects/source";
-import Renderer from "../../render/renderer";
 import Surface from "../../objects/surface";
 import Receiver from "../../objects/receiver";
 import { Stat } from "../../components/parameter-config/Stats";
-import Messenger, { emit, messenger, on } from "../../messenger";
+import { emit, messenger, on } from "../../messenger";
 import sort from "fast-sort";
 import FileSaver from "file-saver";
 import Plotly, { PlotData } from "plotly.js";
 import { scatteredEnergy } from "./scattered-energy";
 import PointShader from "./shaders/points";
 import * as ac from "../acoustics";
-import { clamp } from "../../common/clamp";
 import { lerp } from "../../common/lerp";
 import { movingAverage } from "../../common/moving-average";
 import linearRegression, { LinearRegressionResult } from "../../common/linear-regression";
 import { BVHBuilderAsync, BVHVector3, BVHNode } from "./bvh";
 import { BVH } from "./bvh/BVH";
 import { renderer } from "../../render/renderer";
-
-import expose from "../../common/expose";
 import { reverseTraverse } from "../../common/reverse-traverse";
 import { addSolver, removeSolver, setSolverProperty, useContainer, useSolver } from "../../store";
-import { omit } from "lodash";
 
 import {cramangle2threejsangle} from "../../common/dir-angle-conversions";
-// import * as zip from "@zip.js/zip.js";
 import { audioEngine } from "../../audio-engine/audio-engine";
-
 
 const {floor, random, abs, asin} = Math;
 const coinFlip = () => random() > 0.5;
@@ -255,6 +246,7 @@ class RayTracer extends Solver {
   validRayCount: number;
   plotStyle: Partial<PlotData>;
   bvh!: BVH;
+  
   constructor(params?: RayTracerParams) {
     super(params);
     this.kind = "ray-tracer";
@@ -1013,6 +1005,7 @@ class RayTracer extends Solver {
       });
     });
     this.mapIntersectableObjects();
+    this.calculateImpulseResponse().catch(console.error);
   }
   clearRays() {
     if (this.room) {
@@ -1819,18 +1812,20 @@ class RayTracer extends Solver {
     // convert back to pressure
     return ac.Lp2P(arrivalLp) as number[]; 
   }
+  async calculateImpulseResponse(initialSPL = 100, frequencies = ac.Octave(125, 20000), sampleRate = 44100) {
+    if(this.receiverIDs.length == 0) throw Error("No receivers have been assigned to the raytracer");
+    if(this.sourceIDs.length == 0) throw Error("No sources have been assigned to the raytracer");
+    if(this.paths[this.receiverIDs[0]].length == 0) throw Error("No rays have been traced yet");
 
-  async downloadImpulseResponse(initialSPL = 100, frequencies = ac.whole_octave, sampleRate = 44100){
     const sorted = this.paths[this.receiverIDs[0]].sort((a,b)=>a.time - b.time) as RayPath[];
-    const endTime = sorted[sorted.length - 1].time + 0.05; // end time is latest time of arrival plus 0.1 seconds for safety
+    const totalTime = sorted[sorted.length - 1].time + 0.05; // end time is latest time of arrival plus 0.1 seconds for safety
 
     const spls = Array(frequencies.length).fill(initialSPL);
-
-    const endSample = floor(sampleRate * endTime); 
+    const numberOfSamples = floor(sampleRate * totalTime);
 
     const samples: Array<Float32Array> = []; 
     for(let f = 0; f<frequencies.length; f++){
-      samples.push(new Float32Array(endSample));
+      samples.push(new Float32Array(numberOfSamples));
     }
   
     for(let i = 0; i<sorted.length; i++){
@@ -1843,42 +1838,55 @@ class RayTracer extends Solver {
         samples[f][roundedSample] = p[f]; 
       }
     }
+    console.log(samples);
 
-    const sources = samples.map(buffer => audioEngine.createBufferSource(buffer));
-    const filters = frequencies.map(freq => audioEngine.createBandpassFilter(freq, 1.414))
-    const gains = frequencies.map(() => audioEngine.createGainNode(0.75));
-    const merger = audioEngine.createMerger(sources.length);
+    const offlineContext = audioEngine.createOfflineContext(1, numberOfSamples, sampleRate);
+    const sources = audioEngine.createFilteredSources(samples, frequencies, offlineContext);
+    const merger = audioEngine.createMerger(sources.length, offlineContext);
+    
     for(let i = 0; i<sources.length; i++){
-      sources[i].connect(filters[i]);
-      filters[i].connect(gains[i]);
-      gains[i].connect(merger, 0, i);
+      sources[i].gain.connect(merger, 0, i);
     }
 
-    merger.connect(audioEngine.context.destination);
+    merger.connect(offlineContext.destination);
+    sources.forEach(source=>source.source.start());
 
+    // this.impulseResponse = audioEngine.context.createBufferSource();
+    this.impulseResponse = await offlineContext.startRendering();
+    return this.impulseResponse;
+  }
+
+  impulseResponse!: AudioBuffer;
+  impulseResponsePlaying = false;
+
+
+  async playImpulseResponse(){
+    if(!this.impulseResponse){
+      await this.calculateImpulseResponse().catch(console.error);
+    }
     if (audioEngine.context.state === 'suspended') {
       audioEngine.context.resume();
     }
-
-    sources.forEach(source=>source.start());
-
-
-    // // use a BlobWriter to store with a ZipWriter the zip into a Blob object
-    // const blobWriter = new zip.BlobWriter("application/zip");
-    // const writer = new zip.ZipWriter(blobWriter);
-
-    // for(let f = 0; f<frequencies.length; f++){
-    //   const blob = ac.wavAsBlob([normalize(samples[f])], {sampleRate, bitDepth: 16});
-    //   await writer.add(`${frequencies[f]}.wav`, new zip.BlobReader(blob));
-    // }
-    // await writer.close();
-
-    // FileSaver.saveAs(blobWriter.getData(), "ir.zip");
-
+    console.log(this.impulseResponse);
+    const impulseResponse = audioEngine.context.createBufferSource();
+    impulseResponse.buffer = this.impulseResponse;
+    impulseResponse.connect(audioEngine.context.destination);
+    impulseResponse.start();
+    emit("RAYTRACER_SET_PROPERTY", { uuid: this.uuid, property: "impulseResponsePlaying", value: true });
+    impulseResponse.onended = () => {
+      impulseResponse.stop();
+      impulseResponse.disconnect(audioEngine.context.destination);
+      emit("RAYTRACER_SET_PROPERTY", { uuid: this.uuid, property: "impulseResponsePlaying", value: false });
+    };
   }
-
-
-
+  async downloadImpulseResponse(filename: string, sampleRate = 44100){
+    if(!this.impulseResponse){
+      await this.calculateImpulseResponse().catch(console.error);
+    }
+    const blob = ac.wavAsBlob([normalize(this.impulseResponse.getChannelData(0))], { sampleRate, bitDepth: 32 });
+    const extension = !filename.endsWith(".wav") ? ".wav" : "";
+    FileSaver.saveAs(blob, filename + extension);
+  }
 
   get sources() {
     if (this.sourceIDs.length > 0) {
@@ -1913,7 +1921,6 @@ class RayTracer extends Solver {
     }
     return paths;
   }
-
   get isRunning() {
     return this.running;
   }
@@ -1925,7 +1932,6 @@ class RayTracer extends Solver {
       this.stop();
     }
   }
-
   get raysVisible() {
     return this._raysVisible;
   }
@@ -1936,7 +1942,6 @@ class RayTracer extends Solver {
     }
     renderer.needsToRender = true;
   }
-
   get pointsVisible() {
     return this._pointsVisible;
   }
@@ -1947,7 +1952,6 @@ class RayTracer extends Solver {
     }
     renderer.needsToRender = true;
   }
-
   get invertedDrawStyle() {
     return this._invertedDrawStyle;
   }
@@ -1959,14 +1963,9 @@ class RayTracer extends Solver {
     }
     renderer.needsToRender = true;
   }
-
-
-  
-
   get pointSize() {
     return this._pointSize;
   }
-
   set pointSize(size: number) {
     if (Number.isFinite(size) && size > 0) {
       this._pointSize = size;
@@ -1975,16 +1974,13 @@ class RayTracer extends Solver {
     }
     renderer.needsToRender = true;
   }
-
   get runningWithoutReceivers() {
     return this._runningWithoutReceivers;
   }
-
   set runningWithoutReceivers(runningWithoutReceivers: boolean) {
     this.mapIntersectableObjects();
     this._runningWithoutReceivers = runningWithoutReceivers;
   }
-
 }
 
 
@@ -2002,7 +1998,8 @@ declare global {
     REMOVE_RAYTRACER: string;
     RAYTRACER_CLEAR_RAYS: string;
     RAYTRACER_SET_PROPERTY: SetPropertyPayload<RayTracer>
-    
+    RAYTRACER_PLAY_IR: string;
+    RAYTRACER_DOWNLOAD_IR: string;
   }
 }
 
@@ -2011,4 +2008,6 @@ on("RAYTRACER_SET_PROPERTY", setSolverProperty);
 on("REMOVE_RAYTRACER", removeSolver);
 on("ADD_RAYTRACER", addSolver(RayTracer))
 on("RAYTRACER_CLEAR_RAYS", (uuid: string) => void (useSolver.getState().solvers[uuid] as RayTracer).clearRays());
+on("RAYTRACER_PLAY_IR", (uuid: string) => void (useSolver.getState().solvers[uuid] as RayTracer).playImpulseResponse().catch(console.error));
+on("RAYTRACER_DOWNLOAD_IR", (uuid: string) => void (useSolver.getState().solvers[uuid] as RayTracer).downloadImpulseResponse(`ir-${uuid}`).catch(console.error));
 

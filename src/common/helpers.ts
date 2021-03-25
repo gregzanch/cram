@@ -304,6 +304,8 @@ export function mapObject<T, U>(obj: T, fn: (val: T[keyof T], key: keyof T, obj:
   return (Object.keys(obj) as (keyof T)[]).map(key => fn(obj[key], key, obj)) as U[];
 }
 
+
+
 export function filteredMapObject<T, U>(obj: T, fn: (val: T[keyof T], key: keyof T, obj: T) => U): U[] {
   return (Object.keys(obj) as (keyof T)[]).reduce((acc, key) => {
     const result = fn(obj[key], key, obj);
