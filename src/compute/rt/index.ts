@@ -106,13 +106,14 @@ export class RT60 extends Solver{
     this.reset(); 
 
     this.sabine_rt = this.sabine();
+    this.eyring_rt = this.eyring(); 
     this.ap_rt = this.arauPuchades(this.room,this.frequencies); 
 
     for(let i = 0; i<this.frequencies.length; i++){
       this.rt60results.data.push({
         frequency: this.frequencies[i], 
         sabine: this.sabine_rt[i][1],
-        eyring: this.sabine_rt[i][1]*2,
+        eyring: this.eyring_rt[i][1],
         ap: this.ap_rt[i][1]
       })
     }
@@ -137,10 +138,30 @@ export class RT60 extends Solver{
       room.surfaces.children.forEach((surface: Surface) => {
         sum += surface.getArea() * surface.absorptionFunction(frequency);
       });
-      response.push((unitsConstant * v) / sum);
+      response.push((unitsConstant*v)/(sum)); 
     });
     return transpose([this.frequencies, response]);
   }
+  
+  eyring(){
+    let room = this.room; 
+    const unitsConstant = RT_CONSTANTS[room.units] || RT_CONSTANTS[UNITS.METERS]; 
+    const v = room.volumeOfMesh(); 
+    const response = [] as number[]; 
+    this.frequencies.forEach((frequency) => {
+      let sum = 0; 
+      let totalSurfaceArea = 0; 
+      room.surfaces.children.forEach((surface: Surface) => {
+        totalSurfaceArea += surface.getArea(); 
+        sum += surface.getArea() * surface.absorptionFunction(frequency);
+      });
+      let avg_abs = sum / totalSurfaceArea; 
+      response.push((unitsConstant * v) / (-totalSurfaceArea*Math.log(1-avg_abs)));
+    });
+    return transpose([this.frequencies, response]); 
+  }
+
+
   arauPuchades(room: Room, frequencies: number[] = third_octave) {
 
     
