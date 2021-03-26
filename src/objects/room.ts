@@ -42,7 +42,6 @@ export class Room extends Container {
   originalFileName!: string;
   originalFileData!: string;
   surfaceMap!: KVP<Surface>;
-  rt!: RT60;
   constructor(name?: string, props?: RoomProps) {
     super(name || "new room");
     this.kind = "room";
@@ -68,13 +67,7 @@ export class Room extends Container {
       a[b.uuid] = b as Surface;
       return a;
     }, {} as KVP<Surface>);
-    this.rt = new RT60({
-      name: this.name + "rt60"
-    });
-    renderer.add(this);
-  }
-  dispose(){
-    renderer.remove(this);
+
   }
   save() {
     return {

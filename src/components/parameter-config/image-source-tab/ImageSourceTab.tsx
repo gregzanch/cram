@@ -141,6 +141,17 @@ const Graphing = ({ uuid }: { uuid: string}) => {
   );
 }
 
+const ImpulseResponse = ({uuid}: { uuid: string}) => {
+  const [open, toggle] = useToggle(true);
+
+  return (
+    <PropertyRowFolder label="Impulse Response" open={open} onOpenClose={toggle}>
+      <PropertyButton event="RAYTRACER_PLAY_IR" args={uuid} label="Play" tooltip="Plays the calculated impulse response" disabled={false} />
+      <PropertyButton event="RAYTRACER_DOWNLOAD_IR" args={uuid} label="Download" tooltip="Plays the calculated impulse response" />
+    </PropertyRowFolder>
+  )
+}
+
 const Developer = ({ uuid }: { uuid: string}) => {
   const [open, toggle] = useToggle(true);
   return (
@@ -150,6 +161,7 @@ const Developer = ({ uuid }: { uuid: string}) => {
   );
 }
 export const ImageSourceTab = ({ uuid }: ImageSourceTabProps) => {
+
   return (
     <div>
       <General uuid={uuid} />

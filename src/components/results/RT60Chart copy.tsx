@@ -29,22 +29,20 @@ import { useSolver } from '../../store';
 import PropertyRowCheckbox from "../parameter-config/property-row/PropertyRowCheckbox";
 import { createPropertyInputs } from '../parameter-config/SolverComponents';
 // accessors
-const getTime = (d) => d.time;
-const getPressure = (d) => d.pressure[0];
-const getOrder = (d) => d.order;
+const getSabine = (d) => d.sabine;
+const getEyring = (d) => d.eyring;
+const getFreq = (d) => d.frequency;
 
-export type LTPChartProps = {
+export type RT60ChartProps = {
   uuid: string;
   width?: number;
   height?: number;
   events?: boolean;
 };
 
-
-
-const range = (start: number, stop: number) => [...Array(stop-start)].map((x,i) => start + i)
-const colorScale = chroma.scale(['#ff8a0b', '#000080']).mode('lch');
-const getOrderColors = (n: number) => colorScale.colors(n);
+//const range = (start: number, stop: number) => [...Array(stop-start)].map((x,i) => start + i)
+//const colorScale = chroma.scale(['#ff8a0b', '#000080']).mode('lch');
+//const getOrderColors = (n: number) => colorScale.colors(n);
 
 
 
@@ -86,8 +84,8 @@ const useUpdate = () => {
   return [updateCount, () => setUpdateCount(updateCount + 1)] as  [number, () => void];
 }
 
-const Chart = ({ uuid, width = 400, height = 200, events = false }: LTPChartProps) => {
-    const {info, data: _data, from} = useResult(state=>pickProps(["info", "data", "from"], state.results[uuid] as Result<ResultKind.LevelTimeProgression>));
+const Chart = ({ uuid, width = 400, height = 200, events = false }: RT60ChartProps) => {
+    const {info, data: _data, from} = useResult(state=>pickProps(["info", "data", "from"], state.results[uuid] as Result<ResultKind.StatisticalRT60>));
     
     const [count, update] = useUpdate();
     const [data, setData] = useState(_data);
@@ -108,7 +106,7 @@ const Chart = ({ uuid, width = 400, height = 200, events = false }: LTPChartProp
       () =>
         scaleLinear<number>({
           range: [0, scaleWidth],
-          domain: [0, Math.max(...data.map(getTime))],
+          domain: [0, Math.max(...data.map(getFreq))],
         }),
       [width, data],
     );
@@ -118,17 +116,9 @@ const Chart = ({ uuid, width = 400, height = 200, events = false }: LTPChartProp
       () =>
         scaleLinear<number>({
           range: [scaleHeight, 0],
-          domain: [0, Math.max(...data.map(getPressure))],
+          domain: [0, Math.max(...data.map(getEyring))],
         }),
       [height, data],
-    );
-
-    const ordinalColorScale = useMemo(
-      () => scaleOrdinal(
-      range(0, info.maxOrder+1),
-      getOrderColors(info.maxOrder+1)
-    ),
-      [info.maxOrder]
     );
 
     return (
@@ -145,77 +135,45 @@ const Chart = ({ uuid, width = 400, height = 200, events = false }: LTPChartProp
       />
       <Group>
         {data.map(d => {
-          const time = getTime(d);
-          const barHeight = scaleHeight - yScale(getPressure(d));
-          const barX = xScale(time) + scalePadding;
+          const freq = getFreq(d);
+          const barHeight = scaleHeight - yScale(getSabine(d));
+          const barX = xScale(freq) + scalePadding;
           const barY = scaleHeight - barHeight;
           return (
             <Bar
-              key={`bar-${d.arrival}`}
+              key={`bar-${d.frequency}`}
               x={barX}
               y={barY}
               width={4}
               height={barHeight}
-              fill={ordinalColorScale(d.order)}
               className="test-bar-class"
-              // stroke={"#ffff00"}
-              // strokeWidth={1}
               onMouseOver={()=>{
                 
               }}  
               onClick={() => {
-                let imagesourcesolver = useSolver.getState().solvers[from] as ImageSourceSolver;
-                if (events) imagesourcesolver.toggleRayPathHighlight(d.uuid);
+                console.log(d.frequency); 
               }}
             />
           );
         })}
       </Group>
-      <AxisBottom {...{scale: xScale, top: scaleHeight, left: scalePadding, label: "Time (s)" }} />
-      <AxisLeft {...{scale: yScale, left: scalePadding, label: "Sound Pressure Level (dB re: 20uPa)" }} />
+      <AxisBottom {...{scale: xScale, top: scaleHeight, left: scalePadding, label: "Octave Band (Hz)" }} />
+      <AxisLeft {...{scale: yScale, left: scalePadding, label: "RT60 (s)" }} />
     </svg>
     )
 
 }
 
 
-export const LTPChart = ({ uuid, width = 400, height = 300, events = false }: LTPChartProps) => {
-  const {name, info, from} = useResult(state=>pickProps(["name", "info", "from"], state.results[uuid] as Result<ResultKind.LevelTimeProgression>));
-
-  const initialPlotOrders = useSolver(state=>(state.solvers[from] as ImageSourceSolver).plotOrders);
-  const [plotOrders, setPlotOrders] = useState(initialPlotOrders);
-  const [order, setMaxOrder] = useState(info.maxOrder);
+export const RT60Chart = ({ uuid, width = 400, height = 300, events = false }: RT60ChartProps) => {
+  const {name, info, from} = useResult(state=>pickProps(["name", "info", "from"], state.results[uuid] as Result<ResultKind.StatisticalRT60>));
 
   useEffect(() => on("UPDATE_RESULT", (e)=>{
     if(e.uuid === uuid){
       //@ts-ignore
-      setMaxOrder(e.result.info.maxOrder);
+      //setMaxOrder(e.result.info.maxOrder);
     }
   }), [uuid]);  
-
-  useEffect(() => on("IMAGESOURCE_SET_PROPERTY", (e)=>{
-    if(e.uuid === from && e.property === "plotOrders"){
-        setPlotOrders(e.value);
-    }
-  }), [uuid]);  
-
-
-
-  const ordinalColorScale = useMemo(
-    () => scaleOrdinal(
-    range(0, order+1),
-    getOrderColors(order+1)
-  ),
-    [order]
-  );
-
-
-  // const {from} = useResult(state=>pickProps(["from"], state.results[uuid] as Result<ResultKind.LevelTimeProgression>));
-  // let imagesourcesolver = useSolver.getState().solvers[from] as ImageSourceSolver;
-
-  // const { PropertyTextInput, PropertyNumberInput, PropertyCheckboxInput } = createPropertyInputs<ImageSourceSolver>(
-    // "IMAGESOURCE_SET_PROPERTY"
-  // );
 
   return width < 10 ? null : (
     <VerticalContainer>
@@ -226,7 +184,7 @@ export const LTPChart = ({ uuid, width = 400, height = 300, events = false }: LT
           {({ width })=><Chart {...{ width, height, uuid, events }} />}
         </ParentSize>
       </GraphContainer>
-      <LegendOrdinal scale={ordinalColorScale} labelFormat={label => `Order ${label}`}>
+      {/* <LegendOrdinal labelFormat={label => `Order ${label}`}>
           {labels => (
             <LegendContainer>
               {labels.map((label, i) => (
@@ -260,10 +218,10 @@ export const LTPChart = ({ uuid, width = 400, height = 300, events = false }: LT
               ))}
             </LegendContainer>
           )}
-        </LegendOrdinal>
+        </LegendOrdinal> */}
       </HorizontalContainer>
     </VerticalContainer>
   );
 }
 
-export default LTPChart
+export default RT60Chart
