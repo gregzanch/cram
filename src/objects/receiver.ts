@@ -4,6 +4,8 @@ import chroma from "chroma-js";
 import { MATCAP_PORCELAIN_WHITE, MATCAP_UNDER_SHADOW } from "./asset-store";
 import FileSaver from "file-saver";
 import { EditorModes } from "../constants/editor-modes";
+import { on } from "../messenger";
+import { addContainer, removeContainer, setContainerProperty, useContainer } from "../store";
 // import { vs, fs } from '../render/shaders/glow';
 
 export interface ReceiverSaveObject {
@@ -24,13 +26,13 @@ const defaults = {
   selectedColor: 0x9fcbff
 };
 
-export default class Receiver extends Container {
+export class Receiver extends Container {
   mesh: THREE.Mesh;
   selectedMaterial: THREE.MeshMatcapMaterial;
   normalMaterial: THREE.MeshMatcapMaterial;
   fdtdSamples: number[];
-  constructor(name: string, props?: ReceiverProps) {
-    super(name);
+  constructor(name?: string, props?: ReceiverProps) {
+    super(name||"new receiver");
     this.kind = "receiver";
     this.fdtdSamples = [] as number[];
 
@@ -163,3 +165,21 @@ export default class Receiver extends Container {
     };
   }
 }
+
+
+
+// this allows for nice type checking with 'on' and 'emit' from messenger
+declare global {
+  interface EventTypes {
+    ADD_RECEIVER: Receiver | undefined;
+    RECEIVER_SET_PROPERTY: SetPropertyPayload<Receiver>;
+    REMOVE_RECEIVER: string;
+  }
+}
+
+on("ADD_RECEIVER", addContainer(Receiver))
+on("REMOVE_RECEIVER", removeContainer);
+on("RECEIVER_SET_PROPERTY", setContainerProperty);
+
+
+export default Receiver;

@@ -1,15 +1,20 @@
+export type FilterFlags<Base, Condition> = {
+  [Key in keyof Base]: Base[Key] extends Condition ? Key : never;
+};
+export type AllowedNames<Base, Condition> = FilterFlags<Base, Condition>[keyof Base];
+
+export type SubType<Base, Condition> = Pick<Base, AllowedNames<Base, Condition>>;
+
+
 export function intersection<T>(set1: Set<T>, set2: Set<T>): Set<T> {
-  // intersect can be simulated via
   return new Set([...set1].filter((x) => set2.has(x)));
 }
 
 export function difference<T>(set1: Set<T>, set2: Set<T>): Set<T> {
-  // difference can be simulated via
   return new Set([...set1].filter((x) => !set2.has(x)));
 }
 
 export function union<T>(set1: Set<T>, set2: Set<T>): Set<T> {
-  // union can be simulated via
   return new Set([...set1, ...set2]);
 }
 
@@ -82,11 +87,11 @@ export const diff = (A: any[], B: any[]) => {
   return [A, B].map((x, i, a) => x.filter((y) => !a[(i + 1) % 2].includes(y)));
 };
 
-const transpose = <T>(array: T[][]) => array[0].map((_, colIndex) => array.map((row) => row[colIndex]));
-const flipHor = <T>(array: T[][]) => array.map((x) => x.reverse());
-const flipVer = <T>(array: T[][]) => array.map((x) => [...x]).reverse();
-const rotate = <T>(array: T[][]) => flipVer(transpose(array));
-const derotate = <T>(array: T[][]) => transpose(flipVer(array));
+export const transpose = <T>(array: T[][]) => array[0].map((_, colIndex) => array.map((row) => row[colIndex]));
+export const flipHor = <T>(array: T[][]) => array.map((x) => x.reverse());
+export const flipVer = <T>(array: T[][]) => array.map((x) => [...x]).reverse();
+export const rotate = <T>(array: T[][]) => flipVer(transpose(array));
+export const derotate = <T>(array: T[][]) => transpose(flipVer(array));
 
 export const clamp = (a: number, b: number) => (v: number): number => {
   return v < a ? a : v > b ? b : v;
@@ -293,6 +298,17 @@ export function* map<T, U>(data: Iterable<T>, fn: (curr: T) => U): Iterable<U> {
   }
 }
 
+export function mapObject<T, U>(obj: T, fn: (val: T[keyof T], key: keyof T, obj: T) => U): U[] {
+  return (Object.keys(obj) as (keyof T)[]).map(key => fn(obj[key], key, obj)) as U[];
+}
+
+export function filteredMapObject<T, U>(obj: T, fn: (val: T[keyof T], key: keyof T, obj: T) => U): U[] {
+  return (Object.keys(obj) as (keyof T)[]).reduce((acc, key) => {
+    const result = fn(obj[key], key, obj);
+    return typeof result !== "undefined" && result !== null ? acc.concat(result) : acc;
+  }, [] as U[]) as U[];
+}
+
 export async function* mapAsync<T, U>(data: AsyncIterable<T>, fn: (curr: T) => Promise<U>): AsyncIterableIterator<U> {
   for await (const x of data) {
     yield await fn(x);
@@ -372,3 +388,29 @@ export const fromEntries = <T extends [PropertyKey, any]>(entries: Iterable<T>):
  * @param item the item that will be added if it is unique
  */
 export const addIfUnique = <T>(set: Set<T>) => (item: T) => !set.has(item) && set.add(item);
+
+
+export type Values<T> = T extends unknown[] ? T[number] : T[keyof T];
+
+export const pickProps = <T extends Object, K extends keyof T>(props: K[], obj: T) => {
+  return props.reduce(
+    (acc, prop) => ({ ...acc, [prop]: obj[prop] }),
+    {} as {
+      [key in Values<typeof props>]: T[key];
+    }
+  );
+};
+
+export const omit = <T extends Object, K extends keyof T>(props: K[], obj: T) => {
+  const keys =  Object.keys(obj) as K[];
+  return keys.filter(key => !props.includes(key)).reduce(
+    (acc, prop) => ({ ...acc, [prop]: obj[prop] }),
+    {} as {
+      [key in Values<typeof props>]: T[key];
+    }
+  );
+};
+
+
+
+export const ensureArray = <T>(value: T|T[]) => value instanceof Array ? value : [value];

@@ -1,14 +1,15 @@
 import React, { useState, useContext } from "react";
-import { GlobalContext } from "../";
-import Messenger from '../messenger';
-import { Popover, Position, Button, Menu, MenuItem, MenuDivider, Colors, Navbar, ButtonGroup } from '@blueprintjs/core';
-import NavbarMenuItemLabel from './NavbarMenuItemLabel';
-import MenuItemText from './menu-item-text/MenuItemText';
-import { Characters } from '../constants';
-
+import Messenger, { emit, postMessage } from "../messenger";
+import { Position, Button, Menu, MenuItem, MenuDivider, Colors, Navbar, ButtonGroup } from "@blueprintjs/core";
+import { Popover2 , Classes} from "@blueprintjs/popover2";
+import NavbarMenuItemLabel from "./NavbarMenuItemLabel";
+import MenuItemText from "./menu-item-text/MenuItemText";
+import { Characters } from "../constants";
+import create from "zustand";
 import "./NavBarComponent.css";
+import { useAppStore } from "../store";
 
-interface MenuItemWithMessengerProps{
+interface MenuItemWithMessengerProps {
   label: string;
   hotkey?: string[];
   disabled?: boolean;
@@ -16,129 +17,240 @@ interface MenuItemWithMessengerProps{
 }
 
 function MenuItemWithMessenger(props: MenuItemWithMessengerProps) {
-  const { messenger } = useContext(GlobalContext);
   return (
     <MenuItem
-      text={<MenuItemText text={props.label} hotkey={props.hotkey||[""]} />}
-      onClick={(e) => messenger.postMessage(props.message)}
+      className={Classes.POPOVER2_DISMISS}
+      text={<MenuItemText text={props.label} hotkey={props.hotkey || [""]} />}
+      onClick={(e) => postMessage(props.message)}
       disabled={props.disabled}
     />
   );
 }
 
+type InteractionKind = "click" | "click-target" | "hover" | "hover-target" | undefined;
 
-export function FileMenu(props) {
+type MenuProps = {
+  isOpen: boolean;
+  onInteraction: (nextOpenState: boolean) => void;
+}
+
+export function FileMenu(props: MenuProps) {
   return (
-    <Popover minimal={true} transitionDuration={0} position={Position.BOTTOM_LEFT}>
-      <Button text="File" />
-      <Menu>
-        <MenuItemWithMessenger label="New" message="SHOW_NEW_WARNING" hotkey={[Characters.SHIFT,"N"]} />
-        <MenuItemWithMessenger label="Open" message="SHOW_OPEN_WARNING" hotkey={[Characters.COMMAND,"O"]} />
-        <MenuItemWithMessenger label="Save" message="SHOW_SAVE_DIALOG" hotkey={[Characters.COMMAND,"S"]} />
-        <MenuDivider />
-        <MenuItemWithMessenger label="Import" message="SHOW_IMPORT_DIALOG" hotkey={[Characters.COMMAND,"I"]} />
-      </Menu>
-    </Popover>
+    <Popover2
+      minimal={true}
+      transitionDuration={0}
+
+      isOpen={props.isOpen}
+      hoverOpenDelay={0}
+      hoverCloseDelay={0}
+      renderTarget={({ isOpen, ref, ...p }) => (
+        <Button {...p} active={isOpen} elementRef={ref as React.RefObject<HTMLButtonElement>} text="File" />
+      )}
+      onInteraction={(e)=>props.onInteraction(e)}
+      content={
+        <Menu>
+          <MenuItemWithMessenger label="New" message="SHOW_NEW_WARNING" hotkey={[Characters.SHIFT, "N"]} />
+          <MenuItemWithMessenger label="Open" message="SHOW_OPEN_WARNING" hotkey={[Characters.COMMAND, "O"]} />
+          <MenuItemWithMessenger label="Save" message="SHOW_SAVE_DIALOG" hotkey={[Characters.COMMAND, "S"]} />
+          <MenuDivider />
+          <MenuItemWithMessenger label="Import" message="SHOW_IMPORT_DIALOG" hotkey={[Characters.COMMAND, "I"]} />
+        </Menu>
+      }
+      placement="bottom-start"
+    />
   );
 }
 
-export function EditMenu(props) {
-  const { messenger } = useContext(GlobalContext);
-  
-  const canUndo = messenger.postMessage("CAN_UNDO")[0];
-  const canRedo = messenger.postMessage("CAN_REDO")[0];
-  const canDuplicate = messenger.postMessage("CAN_DUPLICATE")[0];
+export function EditMenu(props: MenuProps) {
+  const canUndo = postMessage("CAN_UNDO")[0];
+  const canRedo = postMessage("CAN_REDO")[0];
+  const canDuplicate = postMessage("CAN_DUPLICATE")[0];
 
-  
+
   return (
-    <Popover minimal={true} transitionDuration={0} position={Position.BOTTOM_LEFT}>
-      <Button text="Edit" />
-      <Menu>
-        <MenuItemWithMessenger label="Undo" message="UNDO" hotkey={[Characters.COMMAND,"Z"]} disabled={!canUndo} />
-        <MenuItemWithMessenger label="Redo" message="REDO" hotkey={[Characters.SHIFT,Characters.COMMAND,"Z"]} disabled={!canRedo} />
+
+    <Popover2
+      minimal={true}
+      onInteraction={(e)=>props.onInteraction(e)}
+      transitionDuration={0}
+      isOpen={props.isOpen}
+      renderTarget={({ isOpen, ref, ...p }) => (
+        <Button {...p} active={isOpen} elementRef={ref as React.RefObject<HTMLButtonElement>} text="Edit" />
+      )}
+      content={
+        <Menu>
+        <MenuItemWithMessenger label="Undo" message="UNDO" hotkey={[Characters.COMMAND, "Z"]} disabled={!canUndo} />
+        <MenuItemWithMessenger
+          label="Redo"
+          message="REDO"
+          hotkey={[Characters.SHIFT, Characters.COMMAND, "Z"]}
+          disabled={!canRedo}
+        />
         <MenuDivider />
-        <MenuItemWithMessenger label="Duplicate" message="SHOULD_DUPLICATE_SELECTED_OBJECTS" hotkey={[Characters.SHIFT,"D"]} disabled={!canDuplicate}/>
+        <MenuItemWithMessenger
+          label="Duplicate"
+          message="SHOULD_DUPLICATE_SELECTED_OBJECTS"
+          hotkey={[Characters.SHIFT, "D"]}
+          disabled={!canDuplicate}
+        />
         <MenuDivider />
-        <MenuItemWithMessenger label="Cut" message="CUT" hotkey={[Characters.COMMAND,"X"]} disabled />
-        <MenuItemWithMessenger label="Copy" message="COPY" hotkey={[Characters.COMMAND,"C"]} disabled />
-        <MenuItemWithMessenger label="Paste" message="PASTE" hotkey={[Characters.COMMAND,"V"]} disabled />
+        <MenuItemWithMessenger label="Cut" message="CUT" hotkey={[Characters.COMMAND, "X"]} disabled />
+        <MenuItemWithMessenger label="Copy" message="COPY" hotkey={[Characters.COMMAND, "C"]} disabled />
+        <MenuItemWithMessenger label="Paste" message="PASTE" hotkey={[Characters.COMMAND, "V"]} disabled />
       </Menu>
-    </Popover>
+      }
+      placement="bottom-start"
+    />
   );
 }
 
-
-export function AddMenu(props) {
+export function AddMenu(props: MenuProps) {
   return (
-    <Popover minimal={true} transitionDuration={0} position={Position.BOTTOM_LEFT}>
-      <Button text="Add" />
+    <Popover2
+    minimal={true}
+
+    transitionDuration={0}
+    isOpen={props.isOpen}
+    renderTarget={({ isOpen, ref, ...p }) => (
+      <Button {...p} active={isOpen} elementRef={ref as React.RefObject<HTMLButtonElement>} text="Add" />
+    )}
+    onInteraction={(e)=>props.onInteraction(e)}
+    content={
       <Menu>
-        <MenuItemWithMessenger label="Source" message="SHOULD_ADD_SOURCE" />
-        <MenuItemWithMessenger label="Receiver" message="SHOULD_ADD_RECEIVER" />
-        <MenuDivider />
-        <MenuItemWithMessenger label="Sketch" message="SHOULD_ADD_SKETCH" disabled />
-        <MenuDivider />
-        <MenuItemWithMessenger label="Ray Tracer" message="SHOULD_ADD_RAYTRACER" />
-        <MenuItemWithMessenger label="2D-FDTD" message="SHOULD_ADD_FDTD_2D" />
-        <MenuItemWithMessenger label="RT60" message="SHOULD_ADD_RT60" />
-      </Menu>
-    </Popover>
+      <MenuItemWithMessenger label="Source" message="SHOULD_ADD_SOURCE" />
+      <MenuItemWithMessenger label="Receiver" message="SHOULD_ADD_RECEIVER" />
+      <MenuDivider />
+      <MenuItemWithMessenger label="Sketch" message="SHOULD_ADD_SKETCH" disabled />
+      <MenuDivider />
+      <MenuItemWithMessenger label="Ray Tracer" message="SHOULD_ADD_RAYTRACER" />
+      <MenuItemWithMessenger label="Image Source" message="SHOULD_ADD_IMAGE_SOURCE"/>
+      <MenuItemWithMessenger label="2D-FDTD" message="SHOULD_ADD_FDTD_2D" />
+      <MenuItemWithMessenger label="RT60" message="SHOULD_ADD_RT60" />
+    </Menu>
+    }
+    placement="bottom-start"
+  />
   );
 }
 
-export function ViewMenu(props) {
+export function ViewMenu(props: MenuProps) {
   return (
-    <Popover minimal={true} transitionDuration={0} position={Position.BOTTOM_LEFT}>
-      <Button text="View" />
+    <Popover2
+    minimal={true}
+    onInteraction={(e)=>props.onInteraction(e)}
+    isOpen={props.isOpen}
+    transitionDuration={0}
+    renderTarget={({ isOpen, ref, ...p }) => (
+      <Button {...p} active={isOpen} elementRef={ref as React.RefObject<HTMLButtonElement>} text="View" />
+    )}
+    content={
       <Menu>
         <MenuItemWithMessenger label="Clear Local Storage" message="CLEAR_LOCAL_STORAGE" />
         <MenuItemWithMessenger label="Toggle Renderer Stats" message="TOGGLE_RENDERER_STATS_VISIBLE" />
       </Menu>
-    </Popover>
+    }
+    placement="bottom-start"
+  />
+  );
+}
+
+export function ToolMenu(props: MenuProps) {
+  return (
+    <Popover2
+    minimal={true}
+    onInteraction={(e)=>props.onInteraction(e)}
+    isOpen={props.isOpen}
+    transitionDuration={0}
+    renderTarget={({ isOpen, ref, ...p }) => (
+      <Button {...p} active={isOpen} elementRef={ref as React.RefObject<HTMLButtonElement>} text="Tools" />
+    )}
+    content={
+      <Menu>
+        <MenuItemWithMessenger label="CLF Viewer" message="OPEN_CLF_VIEWER" />
+        <MenuItemWithMessenger label="Image Source Test" message="SHOULD_ADD_IMAGE_SOURCE" />
+      </Menu>
+    }
+    placement="bottom-start"
+    />
+
+  );
+}
+
+export function ExamplesMenu(props: MenuProps) {
+  return (
+    <Popover2
+    minimal={true}
+    onInteraction={(e)=>props.onInteraction(e)}
+    isOpen={props.isOpen}
+    transitionDuration={0}
+    renderTarget={({ isOpen, ref, ...p }) => (
+      <Button {...p} active={isOpen} elementRef={ref as React.RefObject<HTMLButtonElement>} text="Examples" />
+    )}
+    content={
+      <Menu>
+        <MenuItemWithMessenger label="Shoebox" message="OPEN_EXAMPLE_SHOEBOX" />
+      </Menu>
+    }
+    placement="bottom-start"
+  />
   );
 }
 
 
-export interface NavBarComponentProps {
-  canUndo: boolean;
-  canRedo: boolean;
-  canDuplicate: boolean;
-  rendererStatsVisible: boolean;
-  projectName: string;
+
+
+const ProjectName = () => {
+  const projectName = useAppStore(state=>state.projectName);
+  return (
+    <Navbar.Group className="main-nav_bar-left_group main-nav_bar-projectname_text">{projectName}</Navbar.Group>
+  )
 }
 
-export function NavBarComponent(props: NavBarComponentProps) {
-  const { messenger } = useContext(GlobalContext);
-  
+
+
+
+
+type NavBarStore = {
+  openMenu: number|null;
+  setOpenMenu: (openMenu: number|null) => void;
+}
+
+export const useNavBarStore = create<NavBarStore>((set) => ({
+  openMenu: null,
+  setOpenMenu: (openMenu: number|null) => set({openMenu})
+}));
+
+export default useAppStore;
+
+
+export function NavBarComponent() {
+  const {openMenu, setOpenMenu} = useNavBarStore();
+
   return (
-    <Navbar className="main-nav_bar" >
+    <Navbar className="main-nav_bar">
       <Navbar.Group className="main-nav_bar-left_group">
         <Navbar.Group className="main-nav_bar-logo_text">cram</Navbar.Group>
         <Navbar.Divider />
         <Menu className="main-nav_bar-left_menu">
           <ButtonGroup minimal={true}>
-
-
-            <FileMenu />
-            <EditMenu />
-            <AddMenu />
-            <ViewMenu />
-
-
-            
+            <FileMenu onInteraction={(e)=>e ? setOpenMenu(1) : setOpenMenu(null)} isOpen={openMenu === 1}/>
+            <EditMenu onInteraction={(e)=>e ? setOpenMenu(2): setOpenMenu(null)} isOpen={openMenu === 2}/>
+            <AddMenu  onInteraction={(e)=>e ? setOpenMenu(3): setOpenMenu(null)} isOpen={openMenu === 3}/>
+            <ViewMenu onInteraction={(e)=>e ? setOpenMenu(4): setOpenMenu(null)} isOpen={openMenu === 4}/>
+            <ToolMenu onInteraction={(e)=>e ? setOpenMenu(5): setOpenMenu(null)} isOpen={openMenu === 5}/>
+            <ExamplesMenu onInteraction={(e)=>e ? setOpenMenu(6): setOpenMenu(null)} isOpen={openMenu === 6}/>
           </ButtonGroup>
         </Menu>
       </Navbar.Group>
-      <Navbar.Group className="main-nav_bar-left_group main-nav_bar-projectname_text">{props.projectName}</Navbar.Group>
+      <ProjectName />
       <Navbar.Group className="main-nav_bar-right_group">
         <Button
           icon="cog"
           minimal={true}
           className={"main-nav_bar-right_menu-button"}
-          onClick={(e) => messenger.postMessage("SHOW_SETTINGS_DRAWER")}
+          onClick={(e) => postMessage("SHOW_SETTINGS_DRAWER")}
         ></Button>
       </Navbar.Group>
     </Navbar>
   );
 }
-

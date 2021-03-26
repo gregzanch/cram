@@ -7,6 +7,8 @@ import { RT_CONSTANTS } from "../constants/rt-constants";
 import { third_octave } from "../compute/acoustics";
 import { KVP } from "../common/key-value-pair";
 import RT60 from "../compute/rt";
+import { on } from "../messenger";
+import { addContainer, removeContainer, setContainerProperty } from "../store";
 
 export interface RoomProps extends ContainerProps {
   surfaces: Surface[];
@@ -30,7 +32,7 @@ export interface RoomSaveObject {
   scale: number[];
 }
 
-export default class Room extends Container {
+export class Room extends Container {
   boundingBox!: THREE.Box3;
   surfaces!: Container;
   volume!: number;
@@ -39,20 +41,20 @@ export default class Room extends Container {
   originalFileData!: string;
   surfaceMap!: KVP<Surface>;
   rt!: RT60;
-  constructor(name: string, props: RoomProps) {
-    super(name);
+  constructor(name?: string, props?: RoomProps) {
+    super(name || "new room");
     this.kind = "room";
-    this.init(props, true);
+    props && this.init(props, true);
   }
   init(props: RoomProps, fromConstructor: boolean = false) {
     if (!fromConstructor) {
       this.remove(this.surfaces);
     }
-
+    
+    this.surfaces = new Container("surfaces");
     this.originalFileName = props.originalFileName || "";
     this.originalFileData = props.originalFileData || "";
     this.units = props.units || UNITS.METERS;
-    this.surfaces = new Container("surfaces");
     props.surfaces.forEach((surface) => {
       this.surfaces.add(surface);
     });
@@ -63,9 +65,9 @@ export default class Room extends Container {
       a[b.uuid] = b as Surface;
       return a;
     }, {} as KVP<Surface>);
-    this.rt = new RT60({
-      name: this.name + "rt60"
-    });
+    // this.rt = new RT60({
+    //   name: this.name + "rt60"
+    // });
   }
 
   save() {
@@ -97,6 +99,11 @@ export default class Room extends Container {
     this.scale.set(state.scale[0], state.scale[1], state.scale[2]);
     this.uuid = state.uuid;
     return this;
+  }
+
+  static from(saveObject: RoomSaveObject) {
+    const room = new Room(saveObject.name).restore(saveObject);
+    return room;
   }
 
   select() {
@@ -181,3 +188,21 @@ export default class Room extends Container {
     };
   }
 }
+
+
+
+// this allows for nice type checking with 'on' and 'emit' from messenger
+declare global {
+  interface EventTypes {
+    ADD_ROOM: Room | undefined;
+    ROOM_SET_PROPERTY: SetPropertyPayload<Room>;
+    REMOVE_ROOM: string;
+  }
+}
+
+on("ADD_ROOM", addContainer(Room))
+on("REMOVE_ROOM", removeContainer);
+on("ROOM_SET_PROPERTY", setContainerProperty);
+
+
+export default Room;

@@ -16,13 +16,18 @@ export const defaultMarkupProps = {
 export class Markup extends Container{
   linesBufferGeometry: THREE.BufferGeometry;
   pointsBufferGeometry: THREE.BufferGeometry;
+
   maxlines: number;
   maxpoints: number;
+
   linesBufferAttribute: THREE.Float32BufferAttribute;
   pointsBufferAttribute: THREE.Float32BufferAttribute;
+
+
   lines: THREE.LineSegments;
   points: THREE.Points;
   colorBufferAttribute: THREE.Float32BufferAttribute;
+  lineColorBufferAttribute: THREE.Float32BufferAttribute;
   linePositionIndex: number;
   pointsPositionIndex: number;
   pointScale: number;
@@ -44,7 +49,7 @@ export class Markup extends Container{
     this.pointsBufferGeometry.name = "markup-linesBufferGeometry";
     
     this.linesBufferAttribute = new THREE.Float32BufferAttribute(new Float32Array(this.maxlines), 3);
-    this.pointsBufferAttribute = new THREE.Float32BufferAttribute(new Float32Array(this.maxlines), 3);
+    this.pointsBufferAttribute = new THREE.Float32BufferAttribute(new Float32Array(this.maxpoints), 3);
     
     this.linesBufferAttribute.setUsage(THREE.DynamicDrawUsage);
     this.pointsBufferAttribute.setUsage(THREE.DynamicDrawUsage);
@@ -58,20 +63,24 @@ export class Markup extends Container{
     this.colorBufferAttribute = new THREE.Float32BufferAttribute(new Float32Array(this.maxpoints), 3);
     this.colorBufferAttribute.setUsage(THREE.DynamicDrawUsage);
     
-    // this.linesBufferGeometry.setAttribute("color", this.colorBufferAttribute);
+    this.lineColorBufferAttribute = new THREE.Float32BufferAttribute(new Float32Array(this.maxlines), 3);
+    this.lineColorBufferAttribute.setUsage(THREE.DynamicDrawUsage);
+    
+    this.linesBufferGeometry.setAttribute("color", this.lineColorBufferAttribute);
     this.pointsBufferGeometry.setAttribute("color", this.colorBufferAttribute);
     
     this.lines = new THREE.LineSegments(
       this.linesBufferGeometry,
       new THREE.LineBasicMaterial({
         fog: false,
-        color: 0x282929,
+        vertexColors: THREE.VertexColors,
         transparent: true,
         opacity: 0.2,
         premultipliedAlpha: true,
         blending: THREE.NormalBlending,
         depthFunc: THREE.AlwaysDepth,
-        name: "markup-material"
+        name: "markup-material",
+        linewidth: 5
         // depthTest: false
       })
     );
@@ -101,18 +110,18 @@ export class Markup extends Container{
     this.add(this.boxes);
     
   }
-  addLine(p1: [number, number, number], p2: [number, number, number], c1: number=0, c2: number=0) {
+  addLine(p1: [number, number, number], p2: [number, number, number], c1: [number, number, number] = [0.16, 0.16, 0.16], c2: [number, number, number] = [0.16,0.16,0.16]) {
     // set p1
     this.linesBufferAttribute.setXYZ(this.linePositionIndex++, p1[0], p1[1], p1[2]);
 
     // set the color
-    this.colorBufferAttribute.setXY(this.linePositionIndex, c1, c2);
+    this.lineColorBufferAttribute.setXYZ(this.linePositionIndex, ...c1);
 
     // set p2
     this.linesBufferAttribute.setXYZ(this.linePositionIndex++, p2[0], p2[1], p2[2]);
 
     // set the color
-    this.colorBufferAttribute.setXY(this.linePositionIndex, c1, c2);
+    this.lineColorBufferAttribute.setXYZ(this.linePositionIndex, ...c2);
 
     //update the draw range
     this.linesBufferGeometry.setDrawRange(0, this.linePositionIndex);
@@ -124,10 +133,10 @@ export class Markup extends Container{
     this.linesBufferAttribute.version++;
 
     // update three.js
-    this.colorBufferAttribute.needsUpdate = true;
+    this.lineColorBufferAttribute.needsUpdate = true;
 
     //update version
-    this.colorBufferAttribute.version++;
+    this.lineColorBufferAttribute.version++;
   }
   addPoint(p1: [number, number, number], color: [number, number, number]) {
     // set p1
@@ -150,6 +159,20 @@ export class Markup extends Container{
 
     //update version
     this.colorBufferAttribute.version++;
+  }
+  clearPoints(){
+    this.pointsBufferGeometry.dispose(); 
+    this.pointsBufferAttribute.needsUpdate = true; 
+    this.colorBufferAttribute.needsUpdate = true; 
+    this.pointsPositionIndex = 0;
+    this.pointsBufferGeometry.setDrawRange(0,this.pointsPositionIndex);
+  }
+  clearLines(){
+    this.linesBufferGeometry.dispose();
+    this.linesBufferAttribute.needsUpdate = true;
+    this.lineColorBufferAttribute.needsUpdate = true;
+    this.linePositionIndex = 0; 
+    this.linesBufferGeometry.setDrawRange(0,this.linePositionIndex);
   }
   addBox(min: [number, number, number], max: [number, number, number], color: [number, number, number]=[Math.random(), Math.random(), Math.random()]) {
     // const box = new THREE.Box3(new THREE.Vector3().fromArray(min), new THREE.Vector3().fromArray(max));

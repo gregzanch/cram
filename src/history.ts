@@ -31,14 +31,9 @@ export class Moment {
 export class History {
   timeline: Moment[];
   currentIndex: number;
-  DIRECTIONS: Directions;
   constructor() {
     this.timeline = [] as Moment[];
     this.currentIndex = 0;
-    this.DIRECTIONS = {
-      UNDO: "UNDO",
-      REDO: "REDO"
-    };
   }
   addMoment(params: MomentProps) {
     const { objectId, category, recallFunction } = params;
@@ -53,7 +48,7 @@ export class History {
   }
   undo() {
     if (this.currentIndex >= 0) {
-      this.recall(this.DIRECTIONS.UNDO);
+      this.recall("UNDO");
       this.currentIndex -= 1;
     }
   }
@@ -61,7 +56,7 @@ export class History {
   redo() {
     if (this.currentIndex < this.timeline.length - 1) {
       this.currentIndex += 1;
-      this.recall(this.DIRECTIONS.REDO);
+      this.recall("REDO");
     }
   }
   recall(direction: keyof Directions) {
@@ -80,3 +75,7 @@ export class History {
     return this.currentIndex < this.timeline.length - 1;
   }
 }
+
+export const history = new History();
+
+export const addMoment = history.addMoment.bind(history);

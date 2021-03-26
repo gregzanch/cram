@@ -363,6 +363,7 @@ export function encode(channelData: any, opts: encodeParams) {
     channels,
     samples
   );
-
-  return new Buffer(buffer);
+  
+  return Buffer.from(buffer);
 }
+

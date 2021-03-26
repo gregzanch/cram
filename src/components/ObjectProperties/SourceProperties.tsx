@@ -3,18 +3,20 @@ import TextInput from "../text-input/TextInput";
 import NumberInput from "../number-input/NumberInput";
 import CheckboxInput from "../checkbox-input/CheckboxInput";
 import Source, { SignalSource } from "../../objects/source";
+import {DirectivityHandler} from "../../objects/source"; 
 import GridRow from "../grid-row/GridRow";
-import Messenger from "../../messenger";
+import Messenger, { emit } from "../../messenger";
 import ColorInput from "../color-input/ColorInput";
 import Slider, { SliderChangeEvent } from "../slider/Slider";
 import PropertyRow from "../parameter-config/property-row/PropertyRow";
 import Label from "../label/Label";
-import PropertyRowLabel from "../parameter-config/property-row/property-row-label/PropertyRowLabel";
-import PropertyRowButton from "../parameter-config/property-row/property-row-button/PropertyRowButton";
-import PropertyRowCheckbox from "../parameter-config/property-row/property-row-checkbox/PropertyRowCheckbox";
+import PropertyRowLabel from "../parameter-config/property-row/PropertyRowLabel";
+import PropertyRowButton from "../parameter-config/property-row/PropertyRowButton";
+import PropertyRowCheckbox from "../parameter-config/property-row/PropertyRowCheckbox";
 import { ObjectPropertyInputEvent } from ".";
 import { IToastProps } from "@blueprintjs/core/lib/esm/components/toast/toast";
 import decimalPrecision from "../../common/decimal-precision";
+import {CLFParser} from "../../import-handlers/CLFParser";
 
 export interface SourcePropertiesProps {
   object: Source;
@@ -61,7 +63,7 @@ export default function SourceProperties(props: SourcePropertiesProps) {
             <NumberInput name="y" value={props.object.position.y} {...XYZProps} />
             <NumberInput name="z" value={props.object.position.z} {...XYZProps} />
           </GridRow>
-        )}
+        )} 
 
         {props.object.hasOwnProperty("scale") && (
           <GridRow label={"scale"}>
@@ -72,23 +74,25 @@ export default function SourceProperties(props: SourcePropertiesProps) {
         )}
 
         {props.object.hasOwnProperty("rotation") && (
-          <GridRow label={"rotation"}>
+          <GridRow label={"rotation (degrees)"}>
             <NumberInput name="rotationx" value={props.object.rotation.x} {...XYZProps} />
             <NumberInput name="rotationy" value={props.object.rotation.y} {...XYZProps} />
             <NumberInput name="rotationz" value={props.object.rotation.z} {...XYZProps} />
           </GridRow>
         )}
 
-        {/* {props.object.hasOwnProperty("theta") && (
+        {props.object.hasOwnProperty("theta") && (
           <GridRow label={"theta"}>
             <NumberInput name="theta" value={props.object.theta} {...XYZProps} />
           </GridRow>
         )}
+
         {props.object.hasOwnProperty("phi") && (
           <GridRow label={"phi"}>
             <NumberInput name="phi" value={props.object.phi} {...XYZProps} />
           </GridRow>
-        )} */}
+        )}
+
         {props.object.hasOwnProperty("mesh") && (
           <GridRow label={"color"}>
             <ColorInput
@@ -144,6 +148,41 @@ export default function SourceProperties(props: SourcePropertiesProps) {
           });
         }}
       />
+
+      <Slider
+        id="phi"
+        label="Phi MAX"
+        labelPosition="left"
+        tooltipText="Changes the source's phi"
+        min={0}
+        max={360}
+        step={0.05}
+        value={props.object.phi}
+        onChange={(e: SliderChangeEvent) => {
+          props.onPropertyChange({
+            name: "phi",
+            type: "number",
+            value: e.value
+          });
+        }}
+      />
+      <Slider
+        id="theta"
+        label="Theta MAX"
+        labelPosition="left"
+        tooltipText="Changes the source's theta"
+        min={0}
+        max={180}
+        step={0.05}
+        value={props.object.theta}
+        onChange={(e: SliderChangeEvent) => {
+          props.onPropertyChange({
+            name: "theta",
+            type: "number",
+            value: e.value
+          });
+        }}
+      /> 
       <Slider
         id="amplitude"
         label="Amplitude"
@@ -178,6 +217,38 @@ export default function SourceProperties(props: SourcePropertiesProps) {
               }
             }}
             label="Download"
+          />
+        </div>
+      </PropertyRow>
+      <PropertyRow>
+        <PropertyRowLabel label="CLF Data" tooltip="Import CLF directivity text files"/>
+        <div>
+          <input
+          type = "file"
+          id = "clfinput"
+          accept = ".tab"
+          onChange={(e) => {
+              console.log(e.target.files);
+              const reader = new FileReader();
+              
+              reader.addEventListener('loadend', (loadEndEvent) => {
+                  let filecontents:string = reader.result as string; 
+                  let clf = new CLFParser(filecontents);
+                  let clf_results = clf.parse();
+                  let dh = new DirectivityHandler(1,clf_results); 
+
+                  props.object.directivityHandler = dh; 
+
+                  // display CLF parser object (debugging)
+                  console.log(clf);
+                  // display CLF parser results (debugging)
+                  console.log(clf_results);
+              });
+
+              reader.readAsText(e.target!.files![0]);
+              
+            }
+          }
           />
         </div>
       </PropertyRow>

@@ -1,17 +1,23 @@
 import * as THREE from "three";
-import Container, { ContainerProps } from "./container";
+import * as ac from "../compute/acoustics"
+import Container, { ContainerProps, ContainerSaveObject } from "./container";
 import chroma from "chroma-js";
 import map from "../common/map";
 import { MATCAP_PORCELAIN_WHITE, MATCAP_UNDER_SHADOW } from "./asset-store";
 import { EditorModes } from "../constants/editor-modes";
 import { P2I, Lp2P } from "../compute/acoustics";
 import FileSaver from "file-saver";
+import { on } from "../messenger";
+import { addContainer, callContainerMethod, removeContainer, setContainerProperty, useContainer } from "../store";
+import {CLFResult} from "../import-handlers/CLFParser";
+import {dirinterp, dirDataPoint} from "../common/dir-interpolation";
+import { AllowedNames, FilterFlags } from "../common/helpers";
 
 const defaults = {
   color: 0xa2c982
 };
 
-export interface SourceSaveObject {
+export interface SourceSaveObject extends ContainerSaveObject {
   name: string;
   visible: boolean;
   position: number[];
@@ -40,10 +46,29 @@ export enum SignalSource {
   PULSE = 4
 }
 
-export default class Source extends Container {
+export const SignalSourceOptions = [{
+  value: `${SignalSource.NONE}`,
+  label: "None",
+},{
+  value: `${SignalSource.OSCILLATOR}`,
+  label: "Oscillator",
+},{
+  value: `${SignalSource.PINK_NOISE}`,
+  label: "Pink Noise",
+},{
+  value: `${SignalSource.WHITE_NOISE}`,
+  label: "White Noise",
+},{
+  value: `${SignalSource.PULSE}`,
+  label: "Pulse",
+}];
+
+export class Source extends Container {
   f: (t: number) => number;
-  theta: number;
-  phi: number;
+  
+  public theta: number;
+  public phi: number;
+  
   numRays: number;
   mesh: THREE.Mesh;
   selectedMaterial: THREE.MeshMatcapMaterial;
@@ -60,13 +85,14 @@ export default class Source extends Container {
   previousZ: number;
   shouldClearPreviousPosition: boolean;
   pinkNoiseSamples: Float32Array;
-  signalSource: SignalSource;
-  _initialSPL: number;
-  _initialIntensity: number;
+  public signalSource: SignalSource;
+  private _initialSPL: number;
+  private _initialIntensity: number;
   fdtdSamples: number[];
+  public directivityHandler: DirectivityHandler; 
 
-  constructor(name: string, props?: SourceProps) {
-    super(name);
+  constructor(name?: string, props?: SourceProps) {
+    super(name||"new source");
     this.kind = "source";
     this.signalSource = SignalSource.OSCILLATOR;
     this.previousX = this.position.x;
@@ -83,6 +109,7 @@ export default class Source extends Container {
     this.velocity = 0;
     this.rgba = [0, 0, 0, 1];
     this.fdtdSamples = [] as number[];
+    this.directivityHandler = new DirectivityHandler(0); // assume omni source 
 
     this.selectedMaterial = new THREE.MeshMatcapMaterial({
       fog: false,
@@ -107,8 +134,8 @@ export default class Source extends Container {
     this.add(this.mesh);
 
     this.f = (props && props.f) || ((t) => Math.sin(t));
-    this.theta = (props && props.theta) || Math.PI / 4;
-    this.phi = (props && props.phi) || Math.PI / 2;
+    this.theta = (props && props.theta) || 180;
+    this.phi = (props && props.phi) || 360;
     this.numRays = 0;
     this.select = () => {
       if (!this.selected) {
@@ -298,6 +325,7 @@ export default class Source extends Container {
         break;
     }
   }
+
   get color() {
     return String.fromCharCode(35) + (this.mesh.material as THREE.MeshBasicMaterial).color.getHexString();
   }
@@ -331,3 +359,186 @@ export default class Source extends Container {
     };
   }
 }
+
+
+// this allows for nice type checking with 'on' and 'emit' from messenger
+declare global {
+  interface EventTypes {
+    ADD_SOURCE: Source | undefined;
+    SOURCE_SET_PROPERTY: SetPropertyPayload<Source>;
+    REMOVE_SOURCE: string;
+    SOURCE_CALL_METHOD: CallContainerMethod<Source>;
+  }
+}
+
+
+on("ADD_SOURCE", addContainer(Source));
+on("REMOVE_SOURCE", removeContainer);
+on("SOURCE_SET_PROPERTY", setContainerProperty);
+on("SOURCE_CALL_METHOD", callContainerMethod);
+
+
+export default Source;
+
+
+/**
+ * Directivity Handler
+ **/
+
+export class DirectivityHandler {
+  private dirDataList: directivityData[];
+  public frequencies: number[]; 
+  public sensitivity: number[];
+  public sourceDirType: number; 
+  public phi: number[]; 
+  public theta: number[]; 
+  public clfData; 
+
+  constructor(sourceType: number, importData?: CLFResult){ 
+    // if we add more input types, make corresponding result types acceptable as importData type
+
+    this.sourceDirType = sourceType; 
+
+    switch (sourceType){
+      case 0: // omni source
+        this.frequencies = [0]; // any frequency 
+        this.dirDataList = []; 
+        this.phi = []; 
+        this.theta = []; 
+        this.sensitivity = [90]; // placeholder (90 dBSPL on-axis 1m away at all frequencies)
+
+        break; 
+      
+      case 1: // user defined CLF
+      
+        if (importData){
+          this.frequencies = importData.frequencies; 
+          this.dirDataList = importData.directivity; 
+          this.phi = importData.phi;
+          this.theta = importData.theta; 
+          this.sensitivity = importData.sensitivity; 
+          this.clfData = importData; 
+        }else{
+          console.error("DH CLF Import Type specified but no CLFResult data was provided")
+          this.frequencies = [0]; // any frequency 
+          this.dirDataList = []; 
+          this.phi = []; 
+          this.theta = []; 
+          this.sensitivity = []; 
+          this.clfData = importData; 
+        }
+
+        break;
+      
+      default: // other (behave as omni)
+        this.frequencies = [0]; 
+        this.dirDataList = []; 
+        this.phi = []; 
+        this.theta = []; 
+        this.sensitivity = []; 
+        
+        console.error("Unknown Source Directivity Type");
+        break; 
+    }
+
+  } 
+
+  getPressureAtPosition(gain: number,frequency:number,phi:number,theta:number){
+    // returns relative Pa of source at a position w.r.t on-axis value 
+
+    switch(this.sourceDirType){
+
+      case 0: // omni
+        return ac.Lp2P(this.sensitivity[0]+gain); 
+
+      case 1: // CLF defined
+
+        let angularRes= this.clfData.angleres; 
+        let nearestPhi = Math.round(phi / angularRes) * angularRes; 
+
+        let upperPhi: number; 
+        let lowerPhi: number; 
+
+        if(nearestPhi > phi){
+          upperPhi = nearestPhi; 
+          lowerPhi = upperPhi - angularRes; 
+        }else{
+          lowerPhi = nearestPhi;
+          upperPhi = lowerPhi + angularRes; 
+        }
+
+        if(upperPhi==360){
+          upperPhi = 0; 
+        }
+
+        let nearestTheta = Math.round(theta/angularRes)*angularRes; 
+
+        let upperTheta: number; 
+        let lowerTheta: number; 
+
+        if(nearestTheta > theta){
+          upperTheta = nearestTheta; 
+          lowerTheta = upperTheta - angularRes; 
+        }else{
+          lowerTheta = nearestTheta;
+          upperTheta = lowerTheta + angularRes; 
+        }
+
+        let f_index = this.frequencies.indexOf(frequency); 
+        (f_index == -1) && (console.error("invalid frequency")); 
+
+        let p1: dirDataPoint = {
+          phi: lowerPhi, 
+          theta: lowerTheta, 
+          directivity: this.dirDataList[f_index].directivity[lowerPhi/angularRes][lowerTheta/angularRes]
+        };
+
+        let p2: dirDataPoint = {
+          phi: lowerPhi, 
+          theta: upperTheta, 
+          directivity: this.dirDataList[f_index].directivity[lowerPhi/angularRes][upperTheta/angularRes]
+        };
+
+        let p3: dirDataPoint = {
+          phi: upperPhi, 
+          theta: lowerTheta, 
+          directivity: this.dirDataList[f_index].directivity[upperPhi/angularRes][lowerTheta/angularRes]
+        };
+
+        let p4: dirDataPoint = {
+          phi: upperPhi, 
+          theta: upperTheta, 
+          directivity: this.dirDataList[f_index].directivity[upperPhi/angularRes][upperTheta/angularRes]
+        };
+
+        console.log(p1);
+        console.log(p2);
+        console.log(p3);
+        console.log(p4);
+
+        let interp_pressure = ac.Lp2P(dirinterp(phi,theta,p1,p2,p3,p4)+this.sensitivity[f_index]+gain)
+        return interp_pressure;
+
+      default: // behave as omni
+        return ac.Lp2P(this.sensitivity[0]+gain);;
+    
+    }
+
+  }
+
+}
+
+enum sourceDirTypes {
+  Omni = 0,
+  UserDefinedCLF
+}
+
+export interface directivityData{
+  frequency: number;
+  directivity: number[][]; 
+}
+
+function containerCallMethod(arg0: string, containerCallMethod: any) {
+  throw new Error("Function not implemented.");
+}
+

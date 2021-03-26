@@ -2,13 +2,13 @@ import React from "react";
 import SplitterLayout from "react-splitter-layout";
 import { FocusStyleManager, Position, Drawer, Alert, Intent, Toaster, IToastProps } from "@blueprintjs/core";
 import { ItemListRenderer, IItemListRendererProps } from "@blueprintjs/select";
-import ImportDialog from "./import-dialog/ImportDialog";
+import ImportDialog from "./ImportDialog";
 import ObjectView from "./object-view/ObjectView";
 // import ConstructionsView from "./ConstructionsView";
 import Container from "../objects/container";
 import PanelContainer from "./panel-container/PanelContainer";
 import ObjectProperties from "./ObjectProperties/index";
-import Messenger from "../messenger";
+import Messenger, { emit, messenger } from "../messenger";
 import { KeyValuePair } from "../common/key-value-pair";
 import SettingsDrawer from "./settings-drawer/SettingsDrawer";
 import { Report } from "../common/browser-report";
@@ -38,6 +38,11 @@ import { NavBarComponent } from "./NavBarComponent";
 
 import TreeViewComponent from "../components/TreeViewComponent";
 
+import create from "zustand";
+import App2 from "./App2";
+
+import {ResultsPanel} from './ResultsPanel';
+
 const AppToaster = Toaster.create({
   className: "app-toaster",
   position: Position.TOP,
@@ -47,7 +52,6 @@ const AppToaster = Toaster.create({
 FocusStyleManager.onlyShowFocusOnTabs();
 
 export interface AppProps {
-  messenger: Messenger;
   containers: KeyValuePair<Container>;
   settings: ApplicationSettings;
   browser: Report;
@@ -57,14 +61,8 @@ export interface AppProps {
   leftPanelInitialSize: number;
 }
 
-interface AppState {
-  rightPanelTopSize: number;
-  bottomPanelSize: number;
-  rightPanelSize: number;
-  leftPanelSize: number;
-
+type AppState = {
   rendererStatsVisible: boolean;
-
   importDialogVisible: boolean;
   containers: KeyValuePair<Container>;
   selectedObject: Container;
@@ -98,9 +96,7 @@ interface AppState {
   canRedo: boolean;
   canDuplicate: boolean;
   selectedSettingsDrawerTab: number;
-
-  constructions: KeyValuePair<Container>;
-}
+};
 
 type treeitem = {
   id: string | number;
@@ -116,20 +112,20 @@ export default class App extends React.Component<AppProps, AppState> {
   canvasOverlay: React.RefObject<HTMLDivElement>;
   orientationOverlay: React.RefObject<HTMLDivElement>;
   responseOverlay: React.RefObject<HTMLDivElement>;
+  //clfViewerOverlay: React.RefObject<HTMLDivElement>;
   statsCanvas: React.RefObject<HTMLCanvasElement>;
   prog: any;
+  rightPanelTopSize = this.props.rightPanelTopInitialSize;
+  bottomPanelSize = this.props.bottomPanelInitialSize;
+  rightPanelSize = this.props.rightPanelInitialSize;
+  leftPanelSize = this.props.leftPanelInitialSize;
   constructor(props: AppProps) {
     super(props);
     this.state = {
       canDuplicate: false,
-      rightPanelTopSize: this.props.rightPanelTopInitialSize,
-      bottomPanelSize: this.props.bottomPanelInitialSize,
-      rightPanelSize: this.props.rightPanelInitialSize,
-      leftPanelSize: this.props.leftPanelInitialSize,
       rendererStatsVisible: true,
       saveDialogVisible: false,
-      projectName: this.props.messenger.postMessage("GET_PROJECT_NAME")[0],
-      constructions: this.props.messenger.postMessage("GET_CONSTRUCTIONS")[0],
+      projectName: messenger.postMessage("GET_PROJECT_NAME")[0],
       openWarningVisible: false,
       terminalOpen: false,
       newWarningVisible: false,
@@ -165,6 +161,7 @@ export default class App extends React.Component<AppProps, AppState> {
 
     this.canvas = React.createRef<HTMLCanvasElement>();
     this.responseOverlay = React.createRef<HTMLDivElement>();
+    //this.clfViewerOverlay = React.createRef<HTMLDivElement>();
     this.canvasOverlay = React.createRef<HTMLDivElement>();
     this.orientationOverlay = React.createRef<HTMLDivElement>();
     this.statsCanvas = React.createRef<HTMLCanvasElement>();
@@ -186,7 +183,7 @@ export default class App extends React.Component<AppProps, AppState> {
     this.saveLayout = this.saveLayout.bind(this);
   }
   addMessageHandler(message: string, handler: (acc, ...args) => KeyValuePair<any>, cb?: () => void) {
-    this.props.messenger.addMessageHandler(message, (acc, ...args) => {
+    messenger.addMessageHandler(message, (acc, ...args) => {
       const nextState = handler(acc, ...args);
       this.setState(
         {
@@ -198,7 +195,7 @@ export default class App extends React.Component<AppProps, AppState> {
     });
   }
   setupMessageHandlers() {
-    this.props.messenger.addMessageHandler("CAN_DUPLICATE", () => {
+    messenger.addMessageHandler("CAN_DUPLICATE", () => {
       return this.state.canDuplicate;
     });
 
@@ -302,7 +299,7 @@ export default class App extends React.Component<AppProps, AppState> {
     // this.addMessageHandler("ASSIGN_MATERIAL",
     //   (acc, material, id) => {
     //     if (id) {
-    //       const surface = this.props.messenger.postMessage("FETCH_SURFACE", id)[0] as Surface;
+    //       const surface = messenger.postMessage("FETCH_SURFACE", id)[0] as Surface;
     //       surface.acousticMaterial = material;
     //     }
     //     else if ((this.state.selectedObject) && (this.state.selectedObject instanceof Surface)) {
@@ -334,11 +331,6 @@ export default class App extends React.Component<AppProps, AppState> {
         importDialogVisible: !this.state.importDialogVisible
       };
     });
-    this.addMessageHandler("SHOW_IMPORT_DIALOG", () => {
-      return {
-        importDialogVisible: !this.state.importDialogVisible
-      };
-    });
 
     this.addMessageHandler("SHOULD_REMOVE_CONTAINER", (acc, ...args) => {
       if (args[0] && this.state.containers[args[0]]) {
@@ -355,7 +347,7 @@ export default class App extends React.Component<AppProps, AppState> {
       }
     });
     this.addMessageHandler("SHOULD_ADD_SOURCE", () => {
-      const containers = this.props.messenger.postMessage("GET_CONTAINERS")[0];
+      const containers = messenger.postMessage("GET_CONTAINERS")[0];
       // containers[acc[0].uuid] = acc[0];
       return {
         containers,
@@ -363,7 +355,7 @@ export default class App extends React.Component<AppProps, AppState> {
       };
     });
     this.addMessageHandler("SHOULD_ADD_RECEIVER", () => {
-      const containers = this.props.messenger.postMessage("GET_CONTAINERS")[0];
+      const containers = messenger.postMessage("GET_CONTAINERS")[0];
       // containers[acc[0].uuid] = acc[0];
       return {
         containers,
@@ -371,6 +363,16 @@ export default class App extends React.Component<AppProps, AppState> {
       };
     });
     this.addMessageHandler("SHOULD_ADD_RAYTRACER", (acc) => {
+      const solvers = { ...this.state.solvers };
+      solvers[acc[0].uuid] = acc[0];
+      return { solvers };
+    });
+    this.addMessageHandler("SHOULD_ADD_IMAGE_SOURCE", (acc) => {
+      const solvers = { ...this.state.solvers };
+      solvers[acc[0].uuid] = acc[0];
+      return { solvers };
+    });
+    this.addMessageHandler("SHOULD_ADD_RT60", (acc) => {
       const solvers = { ...this.state.solvers };
       solvers[acc[0].uuid] = acc[0];
       return { solvers };
@@ -463,19 +465,19 @@ export default class App extends React.Component<AppProps, AppState> {
 
     this.addMessageHandler("ADD_CONSTRUCTION", () => {
       return {
-        constructions: this.props.messenger.postMessage("GET_CONSTRUCTIONS")[0]
+        constructions: messenger.postMessage("GET_CONSTRUCTIONS")[0]
       };
     });
 
     this.addMessageHandler("REMOVE_CONSTRUCTION", () => {
       return {
-        constructions: this.props.messenger.postMessage("GET_CONSTRUCTIONS")[0]
+        constructions: messenger.postMessage("GET_CONSTRUCTIONS")[0]
       };
     });
   }
 
   componentDidMount() {
-    this.canvas.current && this.props.messenger.postMessage("APP_MOUNTED", this.canvas.current);
+    this.canvas.current && messenger.postMessage("APP_MOUNTED", this.canvas.current);
   }
 
   showImportDialog() {
@@ -501,15 +503,15 @@ export default class App extends React.Component<AppProps, AppState> {
     console.log(e.currentTarget);
     if (object instanceof Container && object["kind"] !== "room") {
       if (e.shiftKey) {
-        this.props.messenger.postMessage("APPEND_SELECTION", [object]);
+        messenger.postMessage("APPEND_SELECTION", [object]);
       } else {
-        this.props.messenger.postMessage("SET_SELECTION", [object]);
+        messenger.postMessage("SET_SELECTION", [object]);
       }
     }
   }
   handleObjectViewDelete(object: Container) {
     if (object instanceof Container) {
-      this.props.messenger.postMessage("SHOULD_REMOVE_CONTAINER", object.uuid);
+      messenger.postMessage("SHOULD_REMOVE_CONTAINER", object.uuid);
     }
   }
   handleObjectPropertyButtonClick() {}
@@ -565,7 +567,7 @@ export default class App extends React.Component<AppProps, AppState> {
         lastUpdateReason: "handleSettingChange"
       },
       () => {
-        this.props.messenger.postMessage("SETTING_CHANGE", {
+        messenger.postMessage("SETTING_CHANGE", {
           setting: id,
           value: settings[id].value
         });
@@ -605,10 +607,10 @@ export default class App extends React.Component<AppProps, AppState> {
 
   saveLayout() {
     const layout = {
-      bottomPanelInitialSize: this.state.bottomPanelSize,
-      rightPanelInitialSize: this.state.rightPanelSize,
-      leftPanelInitialSize: this.state.leftPanelSize,
-      rightPanelTopInitialSize: this.state.rightPanelTopSize
+      bottomPanelInitialSize: this.bottomPanelSize,
+      rightPanelInitialSize: this.rightPanelSize,
+      leftPanelInitialSize: this.leftPanelSize,
+      rightPanelTopInitialSize: this.rightPanelTopSize
     };
     localStorage.setItem("layout", JSON.stringify(layout));
   }
@@ -621,7 +623,7 @@ export default class App extends React.Component<AppProps, AppState> {
           solvers={this.state.solvers}
           onClick={this.handleObjectViewClick}
           onDelete={this.handleObjectViewDelete}
-          messenger={this.props.messenger}
+          messenger={messenger}
         />
       </PanelContainer>
     );
@@ -644,7 +646,7 @@ export default class App extends React.Component<AppProps, AppState> {
           if (Object.keys(this.state.selectedObject).length > 0) {
             return (
               <ObjectProperties
-                messenger={this.props.messenger}
+                messenger={messenger}
                 object={this.state.selectedObject}
                 onPropertyChange={this.handleObjectPropertyChange}
                 onPropertyValueChangeAsNumber={(id: string, prop: string, value: number) =>
@@ -661,104 +663,39 @@ export default class App extends React.Component<AppProps, AppState> {
 
     const ParameterConfigPanel = (
       <PanelContainer className="panel full parameter-config-panel">
-        <ParameterConfig messenger={this.props.messenger} solvers={this.state.solvers} key={"parameter-config-panel"} />
+        <ParameterConfig messenger={messenger} solvers={this.state.solvers} key={"parameter-config-panel"} />
       </PanelContainer>
     );
 
+    const Editor = (
+      <div className="webgl-canvas">
+              <div
+                id="response-overlay"
+                className={"response_overlay response_overlay-hidden"}
+                ref={this.responseOverlay}
+              ></div>
+              {/* {<div
+                id="clf_viewer_overaly"
+                className={"clf_viewer_overlay clv_viewer_overlay-hidden"}
+                ref={this.clfViewerOverlay}
+              ></div>} */}
+              <div id="canvas_overlay" ref={this.canvasOverlay}></div>
+              <div id="orientation-overlay" ref={this.orientationOverlay}></div>
+              <canvas id="renderer-canvas" ref={this.canvas} />
+            </div>
+    )
+
     return (
       <div>
-        <NavBarComponent
-          canUndo={this.state.canUndo}
-          canRedo={this.state.canRedo}
-          canDuplicate={this.state.canDuplicate}
-          projectName={this.state.projectName}
-          rendererStatsVisible={this.state.rendererStatsVisible}
-        />
-        <Alert
-          isOpen={this.state.newWarningVisible}
-          transitionDuration={100}
-          canOutsideClickCancel
-          canEscapeKeyCancel
-          cancelButtonText="No, cancel"
-          confirmButtonText="Yes, start over"
-          intent={Intent.DANGER}
-          onConfirm={() => {
-            this.props.messenger.postMessage("NEW");
-            this.setState({
-              newWarningVisible: false
-            });
-          }}
-          onCancel={() => {
-            this.setState({
-              newWarningVisible: false
-            });
-          }}
-        >
-          Are you sure you want to start over?
-        </Alert>
-        <OpenWarning
-          isOpen={this.state.openWarningVisible}
-          onDiscard={() => {
-            this.setState(
-              {
-                openWarningVisible: false
-              },
-              () => this.props.messenger.postMessage("OPEN")
-            );
-          }}
-          onSave={() => {
-            this.setState(
-              {
-                openWarningVisible: false
-              },
-              () => {
-                this.props.messenger.postMessage("SHOW_SAVE_DIALOG_THEN_OPEN");
-              }
-            );
-          }}
-          onCancel={() => {
-            this.setState({
-              openWarningVisible: false
-            });
-          }}
-        />
-        <SaveDialog
-          messenger={this.props.messenger}
-          isOpen={this.state.saveDialogVisible}
-          filename={this.props.messenger.postMessage("GET_PROJECT_NAME")[0]}
-          onCancel={() => this.setState({ saveDialogVisible: false })}
-          onSave={(e) => {
-            let openAfterSaveCallback = () => {
-              this.setState(
-                {
-                  openAfterSave: false
-                },
-                () => this.props.messenger.postMessage("OPEN")
-              );
-            };
-            openAfterSaveCallback = openAfterSaveCallback.bind(this);
-            const callback = this.state.openAfterSave ? openAfterSaveCallback : () => {};
-            this.setState(
-              {
-                projectName: e.filename,
-                saveDialogVisible: false
-              },
-              () => {
-                this.props.messenger.postMessage("SAVE", {
-                  filename: this.state.projectName,
-                  callback
-                });
-              }
-            );
-          }}
-        />
+        <NavBarComponent />
+
         <SettingsDrawer
           size={"55%"}
           onClose={this.handleSettingsButtonClick}
           isOpen={this.state.settingsDrawerVisible}
           onSubmit={() => {
             this.setState({
-              settings: this.props.messenger.postMessage("SUBMIT_ALL_SETTINGS")[0]
+              settings: messenger.postMessage("SUBMIT_ALL_SETTINGS")[0]
             });
           }}
         >
@@ -773,7 +710,7 @@ export default class App extends React.Component<AppProps, AppState> {
             {Object.keys(this.state.settings).map((key) => {
               return (
                 <TabPanel key={"settings-tabpanel-" + key}>
-                  <SettingsPanel messenger={this.props.messenger} category={key} />
+                  <SettingsPanel messenger={messenger} category={key} />
                 </TabPanel>
               );
             })}
@@ -794,7 +731,7 @@ export default class App extends React.Component<AppProps, AppState> {
           isOpen={this.state.materialDrawerOpen}
         >
           <MaterialDrawer
-            messenger={this.props.messenger}
+            messenger={messenger}
             object={
               this.state.selectedObject && this.state.selectedObject instanceof Surface
                 ? this.state.selectedObject
@@ -803,23 +740,8 @@ export default class App extends React.Component<AppProps, AppState> {
           />
         </Drawer>
 
-        <ImportDialog
-          onImport={(file) => {
-            this.props.messenger.postMessage("IMPORT_FILE", file);
-            this.handleImportDialogClose();
-          }}
-          isOpen={this.state.importDialogVisible}
-          autoFocus={true}
-          canEscapeKeyClose={true}
-          canOutsideClickClose={true}
-          enforceFocus={false}
-          usePortal={true}
-          data={{ themeName: "dark" }}
-          onClose={this.handleImportDialogClose}
-          onDrop={(file) => {
-            this.props.messenger.postMessage("IMPORT_FILE", file);
-          }}
-        />
+        <ImportDialog />
+        <SaveDialog />
 
         <SplitterLayout
           secondaryMinSize={5}
@@ -828,24 +750,23 @@ export default class App extends React.Component<AppProps, AppState> {
           primaryIndex={1}
           customClassName="modified-splitter-layout"
           onDragStart={() => {
-            this.props.messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", true);
+            messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", true);
           }}
           onDragEnd={() => {
-            this.props.messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", false);
+            messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", false);
             this.saveLayout();
           }}
           onSecondaryPaneSizeChange={(value: number) => {
-            this.setState({ leftPanelSize: value });
+            this.leftPanelSize = value;
+            // this.setState({ leftPanelSize: value });
           }}
         >
           {
             <>
               {ObjectViewPanel}
-              {ObjectViewPanel2}
+              {/* {ObjectViewPanel2} */}
             </>
           }
-
-
 
           {/* center and right */}
           <SplitterLayout
@@ -854,29 +775,30 @@ export default class App extends React.Component<AppProps, AppState> {
             secondaryInitialSize={this.props.rightPanelInitialSize}
             primaryIndex={0}
             onDragStart={() => {
-              this.props.messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", true);
+              emit("RENDERER_SHOULD_ANIMATE", true);
             }}
             onDragEnd={() => {
-              this.props.messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", false);
+              emit("RENDERER_SHOULD_ANIMATE", false);
               this.saveLayout();
             }}
             onSecondaryPaneSizeChange={(value: number) => {
-              this.setState({ rightPanelSize: value });
+              this.rightPanelSize = value;
+              // this.setState({ rightPanelSize: value });
             }}
           >
-            <div className="webgl-canvas">
-              <div
-                id="response-overlay"
-                className={"response_overlay response_overlay-hidden"}
-                ref={this.responseOverlay}
-              ></div>
-              <div id="canvas_overlay" ref={this.canvasOverlay}></div>
-              <div id="orientation-overlay" ref={this.orientationOverlay}></div>
-              <canvas id="renderer-canvas" ref={this.canvas} />
-            </div>
+            <SplitterLayout 
+              vertical 
+              onDragStart={() => {emit("RENDERER_SHOULD_ANIMATE", true);}}
+              onDragEnd={() => {emit("RENDERER_SHOULD_ANIMATE", false);}}
+            >
+              {Editor}
+              <PanelContainer>
+                <ResultsPanel />
+              </PanelContainer>
+            </SplitterLayout>
 
             <SplitterLayout
-              vertical={true}
+              vertical
               primaryMinSize={40}
               secondaryMinSize={1}
               secondaryInitialSize={this.props.rightPanelTopInitialSize}
@@ -885,7 +807,8 @@ export default class App extends React.Component<AppProps, AppState> {
                 this.saveLayout();
               }}
               onSecondaryPaneSizeChange={(value: number) => {
-                this.setState({ rightPanelTopSize: value });
+                this.rightPanelTopSize = value;
+                // this.setState({ rightPanelTopSize: value });
               }}
             >
               {ObjectPropertiesPanel}

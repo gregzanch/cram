@@ -20,7 +20,7 @@ export function NumberInput(props: NumberInputProps) {
   const _props = {
     onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
       props.onChange({
-        value: e.currentTarget.value,
+        value: Number(e.currentTarget.value),
         name: props.name,
         id: props.id,
         type: "number"

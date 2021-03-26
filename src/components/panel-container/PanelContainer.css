@@ -19,6 +19,8 @@
   height: calc(100% - 1em);
 } */
 
+
+
 .modified-splitter-layout {
     height: calc(100% - var(--main-nav_bar__height));
 }
