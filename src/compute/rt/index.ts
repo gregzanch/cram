@@ -7,14 +7,14 @@ import { UNITS } from "../../enums/units";
 import Messenger, { emit, messenger, on } from "../../messenger";
 import { transpose } from '../../common/helpers'
 import { Matrix4, Triangle, Vector3 } from "three";
-import { addSolver, removeSolver, Result, ResultKind, setSolverProperty, useSolver } from "../../store";
+import { addSolver, removeSolver, Result, ResultKind, setSolverProperty, useAppStore, useContainer, useSolver } from "../../store";
 import { uuid } from "uuidv4";
 import Container from "../../objects/container";
 import { KVP } from "../../common/key-value-pair";
 
 export interface RT60Props extends SolverParams{
   //uuid?: string;
-  containers: KVP<Container>; 
+  // containers: KVP<Container>; 
 }
 
 export type RT60SaveObject = {
@@ -25,7 +25,6 @@ export type RT60SaveObject = {
 
 const defaults = {
   name: "RT60",
-  containers: {} as KVP<Container>,
 };
 
 export class RT60 extends Solver{
@@ -36,9 +35,6 @@ export class RT60 extends Solver{
 
   public frequencies: number[];
 
-  public containers: KVP<Container>; 
-  public sourceIDs: string[]; 
-  public receiverIDs: string[]; 
   public roomID: string;
 
   public rt60results: Result<ResultKind.StatisticalRT60>;
@@ -49,15 +45,13 @@ export class RT60 extends Solver{
     this.name = props.name || defaults.name;
     this.uuid = uuid(); 
 
-    this.containers = props.containers; 
 
     this.sabine_rt = [];
     this.eyring_rt = []; 
     this.ap_rt = [];
-
-    this.sourceIDs = [];
-    this.receiverIDs = []; 
-    this.roomID = ''; 
+ 
+    const rooms = useContainer.getState().getRooms();
+    this.roomID = rooms.length > 0 ? rooms[0].uuid : ''; 
 
     this.frequencies = whole_octave.slice(4,11);   
 
@@ -75,21 +69,6 @@ export class RT60 extends Solver{
       from: this.uuid
     };
 
-    this.findIDs(); 
-  }
-
-  findIDs() {
-    this.sourceIDs = [];
-    this.receiverIDs = [];
-    for (const key in this.containers) {
-      if (this.containers[key].kind === "room") {
-        this.roomID = key;
-      } else if (this.containers[key].kind === "source") {
-        this.sourceIDs.push(key);
-      } else if (this.containers[key].kind === "receiver") {
-        this.receiverIDs.push(key);
-      } 
-    }
   }
 
   save() {
@@ -130,7 +109,7 @@ export class RT60 extends Solver{
 
   sabine() {
     let room = this.room; 
-    const unitsConstant = RT_CONSTANTS[room.units] || RT_CONSTANTS[UNITS.METERS];
+    const unitsConstant = this.unitsConstant;
     const v = room.volumeOfMesh();
     const response = [] as number[];
     this.frequencies.forEach((frequency) => {
@@ -145,7 +124,7 @@ export class RT60 extends Solver{
   
   eyring(){
     let room = this.room; 
-    const unitsConstant = RT_CONSTANTS[room.units] || RT_CONSTANTS[UNITS.METERS]; 
+    const unitsConstant = this.unitsConstant;
     const v = room.volumeOfMesh(); 
     const response = [] as number[]; 
     this.frequencies.forEach((frequency) => {
@@ -171,7 +150,7 @@ export class RT60 extends Solver{
     
 
     const v = room.volumeOfMesh();
-    const unitsConstant = RT_CONSTANTS[room.units] || RT_CONSTANTS[UNITS.METERS];
+    const unitsConstant = this.unitsConstant;
     // prettier-ignore
     const Px = new Matrix4().fromArray([
       [0, 0, 0, 0],
@@ -235,9 +214,11 @@ export class RT60 extends Solver{
 
 
   // setters and getters
-
+  get unitsConstant(){
+    return RT_CONSTANTS[useAppStore.getState().units];
+  }
   get room(){
-    return (this.containers[this.roomID] as Room); 
+    return useContainer.getState().containers[this.roomID] as Room; 
   }
 }
 

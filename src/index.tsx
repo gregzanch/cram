@@ -397,10 +397,7 @@ messenger.addMessageHandler("SHOULD_REMOVE_SOLVER", (acc, id) => {
 });
 
 messenger.addMessageHandler("SHOULD_ADD_RT60", (acc, ...args) => {
-  const defaults: RT60Props = {
-    containers: cram.state.containers
-  };
-  const rt60 = new RT60(defaults); 
+  const rt60 = new RT60(); 
   cram.state.solvers[rt60.uuid] = rt60;
   emit("ADD_RT60", rt60);
   return rt60; 

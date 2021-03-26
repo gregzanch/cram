@@ -2,10 +2,12 @@ import create from "zustand";
 import produce from "immer";
 import { on } from "../messenger";
 import { Surface } from "../objects/surface";
+import { UNITS } from "../enums/units";
 
 type Version = `${number}.${number}.${number}`;
 
 export type AppStore = {
+  units: UNITS,
   version: Version,
   canDuplicate: boolean,
   rendererStatsVisible: boolean,
@@ -25,6 +27,7 @@ export type AppStore = {
 
 
 export const useAppStore = create<AppStore>((set) => ({
+  units: UNITS.METERS,
   version: "0.2.1",
   canDuplicate: false,
   rendererStatsVisible: false,

@@ -4,12 +4,14 @@ import { KeyValuePair } from "../common/key-value-pair";
 import Container from "../objects/container";
 import { AllowedNames, omit, filterObjectToArray, reach } from '../common/helpers';
 import {renderer} from '../render/renderer';
+import { Room } from "../objects";
 
 export type ContainerStore = {
   containers: KeyValuePair<Container>;
   selectedObjects: Set<Container>;
   set: SetFunction<ContainerStore>;
   getWorkspace: () => THREE.Object3D | null;
+  getRooms: () => Room[];
 };
 
 const getWorkspace = (containers: KeyValuePair<Container>) => {
@@ -24,11 +26,20 @@ const getWorkspace = (containers: KeyValuePair<Container>) => {
   return null;
 }
 
+const getRoomKeys = (containers: KeyValuePair<Container>) => {
+  return Object.keys(containers).filter(key=>containers[key].kind === "room")
+}
+
+const getRooms = (containers: KeyValuePair<Container>) => {
+  return getRoomKeys(containers).map(key=>containers[key] as Room);
+} 
+
 export const useContainer = create<ContainerStore>((set, get) => ({
   containers: {},
   selectedObjects: new Set(),
   set: (fn) => set(produce(fn)),
-  getWorkspace: () => getWorkspace(get().containers)
+  getWorkspace: () => getWorkspace(get().containers),
+  getRooms: () => getRooms(get().containers),
 }));
 
 export const addContainer = <T extends Container>(ContainerClass: new(...args) => T) => (container: T|undefined) => {
