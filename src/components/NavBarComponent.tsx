@@ -27,6 +27,25 @@ function MenuItemWithMessenger(props: MenuItemWithMessengerProps) {
   );
 }
 
+type MenuItemWithEmitterProps = {
+  label: string;
+  hotkey?: string[];
+  disabled?: boolean;
+  event: keyof EventTypes;
+  args?: EventTypes[MenuItemWithEmitterProps["event"]];
+}
+
+const MenuItemWithEmitter = ({ label, hotkey, disabled, event, args }: MenuItemWithEmitterProps) => {
+  return (
+    <MenuItem
+      className={Classes.POPOVER2_DISMISS}
+      text={<MenuItemText text={label} hotkey={hotkey || [""]} />}
+      onClick={(e) => emit(event, args)}
+      disabled={disabled}
+    />
+  );
+}
+
 type InteractionKind = "click" | "click-target" | "hover" | "hover-target" | undefined;
 
 type MenuProps = {
@@ -53,7 +72,7 @@ export function FileMenu(props: MenuProps) {
           <MenuItemWithMessenger label="Open" message="SHOW_OPEN_WARNING" hotkey={[Characters.COMMAND, "O"]} />
           <MenuItemWithMessenger label="Save" message="SHOW_SAVE_DIALOG" hotkey={[Characters.COMMAND, "S"]} />
           <MenuDivider />
-          <MenuItemWithMessenger label="Import" message="SHOW_IMPORT_DIALOG" hotkey={[Characters.COMMAND, "I"]} />
+          <MenuItemWithEmitter label="Import" event="SHOW_IMPORT_DIALOG" args={true} hotkey={[Characters.COMMAND, "I"]} />
         </Menu>
       }
       placement="bottom-start"

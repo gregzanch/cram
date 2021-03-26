@@ -84,7 +84,7 @@ export default class Messenger{
             this.events[event].delete(callback);
         }).bind(this) as () => void;
     }
-    emit<T extends keyof EventTypes>(event: T, payload: EventTypes[T]) {
+    emit<T extends keyof EventTypes>(event: T, payload?: EventTypes[T]) {
         if(!this.events[event]) return;
         
         for(const handler of this.events[event]){

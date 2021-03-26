@@ -3,7 +3,7 @@ import { emit, on } from "../../messenger";
 import { useSolver } from "../../store";
 import PropertyRow from "./property-row/PropertyRow";
 import PropertyRowLabel from "./property-row/PropertyRowLabel";
-import PropertyRowButton, { PropertyRowButtonWithDisable } from "./property-row/PropertyRowButton";
+import PropertyRowButton from "./property-row/PropertyRowButton";
 import { PropertyRowCheckbox } from "./property-row/PropertyRowCheckbox";
 import { PropertyRowTextInput } from "./property-row/PropertyRowTextInput";
 import { PropertyRowNumberInput } from "./property-row/PropertyRowNumberInput";
@@ -12,13 +12,15 @@ import RayTracer from "../../compute/raytracer";
 import FDTD_2D from "../../compute/2d-fdtd"
 import {AllowedNames } from '../../common/helpers';
 import { ImageSourceSolver } from "../../compute/raytracer/image-source";
+import RT60 from "../../compute/rt";
 
 type SetPropertyEventTypes =
   | AllowedNames<EventTypes, SetPropertyPayload<FDTD_2D>>
   | AllowedNames<EventTypes, SetPropertyPayload<RayTracer>>
-  | AllowedNames<EventTypes, SetPropertyPayload<ImageSourceSolver>>;
+  | AllowedNames<EventTypes, SetPropertyPayload<ImageSourceSolver>>
+  | AllowedNames<EventTypes, SetPropertyPayload<RT60>>
 
-export function useSolverProperty<T extends RayTracer | FDTD_2D|ImageSourceSolver, K extends keyof T>(
+export function useSolverProperty<T extends RayTracer | FDTD_2D|ImageSourceSolver|RT60, K extends keyof T>(
   uuid: string,
   property: K,
   event: SetPropertyEventTypes
@@ -29,7 +31,6 @@ export function useSolverProperty<T extends RayTracer | FDTD_2D|ImageSourceSolve
   const [state, setState] = useState<T[K]>(defaultValue);
   useEffect(
     () => on(event, (props) => {
-      //@ts-ignore
       if(props.uuid === uuid && props.property === property) setState(props.value) 
     }),
     [uuid]
@@ -41,14 +42,14 @@ export function useSolverProperty<T extends RayTracer | FDTD_2D|ImageSourceSolve
 }
 
 type PropertyRowInputElement = ({ value, onChange }) => JSX.Element;
-type Props<T extends RayTracer | FDTD_2D|ImageSourceSolver, K extends keyof T> = {
+type Props<T extends RayTracer | FDTD_2D|ImageSourceSolver|RT60, K extends keyof T> = {
   uuid: string;
   property: K;
   label: string;
   tooltip: string;
 };
 
-export const createPropertyInput = <T extends RayTracer | FDTD_2D|ImageSourceSolver>(
+export const createPropertyInput = <T extends RayTracer | FDTD_2D|ImageSourceSolver|RT60>(
   event: SetPropertyEventTypes,
   Element: PropertyRowInputElement
 ) => <K extends keyof T>({ uuid, property, label, tooltip }: Props<T, K>) => {
@@ -61,7 +62,7 @@ export const createPropertyInput = <T extends RayTracer | FDTD_2D|ImageSourceSol
   );
 };
 
-export const createPropertyInputs = <T extends RayTracer|FDTD_2D|ImageSourceSolver>(event: SetPropertyEventTypes) => ({
+export const createPropertyInputs = <T extends RayTracer|FDTD_2D|ImageSourceSolver|RT60>(event: SetPropertyEventTypes) => ({
   PropertyTextInput: createPropertyInput<T>(event, PropertyRowTextInput),
   PropertyNumberInput: createPropertyInput<T>(event, PropertyRowNumberInput),
   PropertyCheckboxInput: createPropertyInput<T>(event, PropertyRowCheckbox),
@@ -72,39 +73,19 @@ export const PropertyButton = <T extends keyof EventTypes>({
   args,
   event,
   label,
-  tooltip
-}: {
-  args: EventTypes[T];
-  event: T;
-  label: string;
-  tooltip: string;
-}) => {
-  return (
-    <PropertyRow>
-      <PropertyRowLabel label={label} hasToolTip tooltip={tooltip} />
-      <PropertyRowButton onClick={(e) => emit(event, args)} label={label} />
-    </PropertyRow>
-  );
-};
-
-export const PropertyButtonDisabled = <T extends keyof EventTypes>({
-  args,
-  event,
-  label,
   tooltip,
-  disableCondition
+  disabled,
 }: {
   args: EventTypes[T];
   event: T;
   label: string;
   tooltip: string;
-  disableCondition;
+  disabled?: boolean;
 }) => {
   return (
     <PropertyRow>
       <PropertyRowLabel label={label} hasToolTip tooltip={tooltip} />
-      <PropertyRowButtonWithDisable disableCondition={disableCondition} onClick={(e) => emit(event, args)} label={label} />
+      <PropertyRowButton onClick={(e) => emit(event, args)} label={label} disabled={disabled} />
     </PropertyRow>
   );
 };
-

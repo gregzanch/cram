@@ -1,5 +1,7 @@
 import create from "zustand";
 import produce from "immer";
+import { on } from "../messenger";
+import { Surface } from "../objects/surface";
 
 type Version = `${number}.${number}.${number}`;
 
@@ -39,6 +41,23 @@ export const useAppStore = create<AppStore>((set) => ({
   set: (fn: (draft: AppStore) => void) => set(produce(fn))
 }));
 
+declare global {
+  interface EventTypes {
+    OPEN_MATERIAL_DRAWER: Surface | undefined;
+    TOGGLE_MATERIAL_SEARCH: undefined;
+  }
+}
 
+on("OPEN_MATERIAL_DRAWER", (surface) => {
+  useAppStore.getState().set(draft => {
+    draft.materialDrawerOpen = true;
+  })
+})
+
+on("TOGGLE_MATERIAL_SEARCH", () => {
+  useAppStore.getState().set(draft => {
+    draft.materialDrawerOpen = true;
+  })
+})
 
 export default useAppStore;

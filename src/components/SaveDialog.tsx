@@ -1,72 +1,42 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Dialog, Classes, Button, AnchorButton, Intent } from '@blueprintjs/core';
-import Messenger from '../messenger';
+import { messenger, emit } from '../messenger';
+import { useAppStore } from '../store/app-store';
+import { pickProps } from '../common/helpers';
 
-export interface SaveEvent {
-  filename: string;
-}
 
-export interface SaveDialogProps { 
-  messenger: Messenger;
-  filename: string;
-  isOpen: boolean;
-  onCancel: (e?: React.MouseEvent<HTMLElement, MouseEvent>) => void;
-  onSave: (e: SaveEvent) => void;
-}
-export interface SaveDialogState {
-  filename: string;
-}
 
-class SaveDialog extends React.Component<SaveDialogProps, SaveDialogState>{
-  constructor(props: SaveDialogProps) {
-    super(props);
-    this.state = {
-      filename: props.filename,
-    }
-  }
-  render() {
-    return (
-      <Dialog
-        isOpen={this.props.isOpen}
-        transitionDuration={100}
-        title="Save Project"
-        onOpened={(e) => {
-          this.setState({
-            filename: this.props.messenger.postMessage("GET_PROJECT_NAME")[0]
-          })
-        }}
-        // icon="floppy-disk"
-      >
-        <div className={Classes.DIALOG_BODY}>
-          <input
-            type="text"
-            value={this.state.filename}
-            onChange={(e) => {
-              this.setState({ filename: e.currentTarget.value });
-            }}
-          ></input>
+
+export const SaveDialog = () => {
+  const { projectName, saveDialogVisible, set } = useAppStore(store => pickProps(["projectName", "saveDialogVisible", "set"], store));
+  const [fileName, setFileName] = useState(projectName);
+
+  return (
+    <Dialog
+      isOpen={saveDialogVisible}
+      transitionDuration={100}
+      title="Save Project"
+    >
+      <div className={Classes.DIALOG_BODY}>
+        <input
+          type="text"
+          value={fileName}
+          onChange={e=>setFileName(e.currentTarget.value)}
+        ></input>
+      </div>
+      <div className={Classes.DIALOG_FOOTER}>
+        <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+          <Button onClick={() => set(store => { store.saveDialogVisible = false; }) }>
+            Cancel
+          </Button>
+          <AnchorButton intent={Intent.SUCCESS} onClick={() => emit("SAVE", () => set(store => { store.saveDialogVisible = false; }) )}>
+            Save
+          </AnchorButton>
         </div>
-        <div className={Classes.DIALOG_FOOTER}>
-          <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-            <Button
-              onClick={(e) => {
-                this.setState({ filename: this.props.filename }, this.props.onCancel);
-              }}
-            >
-              Cancel
-            </Button>
-            <AnchorButton intent={Intent.SUCCESS} onClick={() => this.props.onSave({ filename: this.state.filename })}>
-              Save
-            </AnchorButton>
-          </div>
-        </div>
-      </Dialog>
-    );
-  }
-}
+      </div>
+    </Dialog>
+  );
 
-export {
-  SaveDialog
-};
+}
 
 export default SaveDialog;

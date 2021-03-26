@@ -18,4 +18,3 @@ export interface AcousticMaterial {
   description: string;
   uuid: string;
 }
-

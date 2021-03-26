@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import * as ac from "../compute/acoustics"
-import Container, { ContainerProps, ContainerSaveObject } from "./container";
+import Container, { ContainerProps, ContainerSaveObject, getContainersOfKind } from "./container";
 import chroma from "chroma-js";
 import map from "../common/map";
 import { MATCAP_PORCELAIN_WHITE, MATCAP_UNDER_SHADOW } from "./asset-store";
@@ -11,7 +11,8 @@ import { on } from "../messenger";
 import { addContainer, callContainerMethod, removeContainer, setContainerProperty, useContainer } from "../store";
 import {CLFResult} from "../import-handlers/CLFParser";
 import {dirinterp, dirDataPoint} from "../common/dir-interpolation";
-import { AllowedNames, FilterFlags } from "../common/helpers";
+import { AllowedNames, FilterFlags, filterObjectToArray } from "../common/helpers";
+import { renderer } from "../render/renderer";
 
 const defaults = {
   color: 0xa2c982
@@ -164,6 +165,11 @@ export class Source extends Container {
 
     this.pinkNoiseSamples = new Float32Array(1024);
     this.generatePinkNoiseSamples();
+    renderer.add(this);
+  }
+
+  dispose(){
+    renderer.remove(this);
   }
 
   save() {
@@ -377,6 +383,7 @@ on("REMOVE_SOURCE", removeContainer);
 on("SOURCE_SET_PROPERTY", setContainerProperty);
 on("SOURCE_CALL_METHOD", callContainerMethod);
 
+export const getSources = () => getContainersOfKind<Source>("source");
 
 export default Source;
 

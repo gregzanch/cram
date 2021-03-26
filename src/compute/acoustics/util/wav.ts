@@ -363,6 +363,14 @@ export function encode(channelData: any, opts: encodeParams) {
     channels,
     samples
   );
+  
+  return Buffer.from(buffer);
+}
 
-  return new Buffer(buffer);
+export function wavAsBlob(data: Float32Array[], {sampleRate = 44100, bitDepth = 16 }: { sampleRate: number, bitDepth: number }){
+  return new Blob([encode(data, {
+    channels: data.length, 
+    sampleRate,
+    bitDepth
+  })], {type: "audio/wav"})
 }

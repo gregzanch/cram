@@ -8,6 +8,7 @@ import { useState } from "react";
 
 
 import LTPChart from "./results/LTPChart";
+import RT60Chart from "./results/RT60Chart"; 
 import { ParentSize } from "@visx/responsive";
 
 const TabTitle = ({ uuid }) => {
@@ -21,6 +22,8 @@ const resultKeys = (state: ResultStore) => Object.keys(state.results);
 export const ResultsPanel = () => {
   const keys = useResult(resultKeys);
   const [index, setIndex] = useState(0);
+
+  console.log(keys); 
 
   return keys.length > 0 ? (
     <div
@@ -44,10 +47,30 @@ export const ResultsPanel = () => {
           ))}
         </TabList>
         {keys.map((key) => (
-          <TabPanel key={key}><LTPChart uuid={key} events />
+          <TabPanel key={key}><ChartSelect uuid={key}/>
           </TabPanel>
         ))}
       </Tabs>
     </div>
   ) : <div>No Results Yet!</div>;
+};
+
+const ChartSelect = (uuid) => {
+
+  useResult((state) => console.log(state.results[uuid.uuid])); 
+
+  switch (useResult((state) => state.results[uuid.uuid].kind)){
+
+    case "linear-time-progression":
+      return <LTPChart uuid={uuid.uuid} events />
+    break
+
+    case "statisticalRT60":
+      return <RT60Chart uuid={uuid.uuid} events />
+    break
+
+    default:
+      return null;
+  }
+
 };

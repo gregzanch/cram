@@ -1,11 +1,6 @@
-import { Characters } from './characters'
-import { ToolNames } from './tool-names'
-import { EditorModes } from './editor-modes'
+export * from './characters'
+export * from './tool-names'
+export * from './editor-modes'
+export * from "./scopes";
 
 export const FRAME_RATE = 60;
-
-export {
-  ToolNames,
-  EditorModes,
-  Characters
-}
