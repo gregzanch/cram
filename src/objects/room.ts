@@ -67,7 +67,10 @@ export class Room extends Container {
       a[b.uuid] = b as Surface;
       return a;
     }, {} as KVP<Surface>);
-
+    renderer.add(this);
+  }
+  dispose(){
+    renderer.remove(this);
   }
   save() {
     return {

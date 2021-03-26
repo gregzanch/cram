@@ -13,7 +13,7 @@ import { filteredMapObject, pickProps, unique } from "../../common/helpers";
 import GridRowSeperator from "../grid-row/GridRowSeperator";
 import Select from 'react-select';
 import useToggle from "../hooks/use-toggle";
-import { createPropertyInputs, useSolverProperty, PropertyButton, PropertyButtonDisabled  } from "./SolverComponents";
+import { createPropertyInputs, useSolverProperty, PropertyButton } from "./SolverComponents";
 import PropertyRowFolder from "./property-row/PropertyRowFolder";
 import PropertyRow from "./property-row/PropertyRow";
 import PropertyRowLabel from "./property-row/PropertyRowLabel";
@@ -79,20 +79,6 @@ function getSourcesAndReceivers(state) {
 
 
 export const RT60Tab = ({ uuid }: RT60TabProps) => {
-  const [rt60solver, set] = useSolver<[RT60, any]>((state) => [state.solvers[uuid] as RT60, state.set]);
-  const [sources, receivers] = useContainer(getSourcesAndReceivers);
-  const [state, setState] = useRT60Properties(["name"], rt60solver, set);
-
-  useEffect(() => {
-    return on("RT60_SET_PROPERTY", (props) => {
-      if (props.uuid === uuid) setState(props.property, props.value);
-    });
-  }, []);
-
-  const onChangeHandler =  useCallback((e: ObjectPropertyInputEvent) => {
-    emit("RT60_SET_PROPERTY", { uuid, property: e.name as keyof RT60, value: e.value });
-  }, [uuid]);
-
   return (
     <div>
       <General uuid={uuid} />

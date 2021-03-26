@@ -20,8 +20,8 @@ import {LineGeometry} from 'three/examples/jsm/lines/LineGeometry';
 import {LineMaterial} from 'three/examples/jsm/lines/LineMaterial';
 import {useContainer} from '../../../store';
 import { pickProps } from "../../../common/helpers";
-import {normalize} from '../../acoustics/util/normalize'; 
-import FileSaver from "file-saver";
+import { normalize } from "../../acoustics";
+import {saveAs} from 'file-saver';
 
 function createLine(){
   let points = [];
@@ -295,6 +295,7 @@ export type ImageSourceSaveObject = {
   imageSourcesVisible: boolean;
   rayPathsVisible: boolean;
   plotOrders: number[];
+  frequencies: number[];
 }
 
 
@@ -308,7 +309,7 @@ export interface ImageSourceSolverParams {
   imageSourcesVisible: boolean;
   rayPathsVisible: boolean;
   plotOrders: number[];
-  frequencies: number[]; 
+  frequencies: number[];
 }
 
 const defaults = {
@@ -624,7 +625,12 @@ export class ImageSourceSolver extends Solver {
     downloadImpulseResponse(){
       let sortedPath: ImageSourcePath[] | null = this.validRayPaths; 
       sortedPath?.sort((a, b) => (a.arrivalTime(343) > b.arrivalTime(343)) ? 1 : -1); 
-      this.levelTimeProgression.info.maxOrder = this.maxReflectionOrder;
+      const levelTimeProgression = { ...useResult.getState().results[this.levelTimeProgression] as Result<ResultKind.LevelTimeProgression> };
+      levelTimeProgression.data = [] as ResultTypes[ResultKind.LevelTimeProgression]["data"];
+      levelTimeProgression.info = {
+        ...levelTimeProgression.info,
+        maxOrder: this.maxReflectionOrder
+      }
 
         if(sortedPath != undefined){
           let endTime = sortedPath[sortedPath.length - 1].arrivalTime(343)+0.05; // end time is latest time of arrival plus 0.1 seconds for safety
@@ -632,14 +638,14 @@ export class ImageSourceSolver extends Solver {
           let Fs = 44100; // sample rate 
           let endSample = Fs*endTime; 
   
-          let samples: number[][] = []; 
+          let samples: Float32Array[] = []; 
           for(let f = 0; f<this.frequencies.length; f++){
-            samples.push(Array<number>(Math.floor(endSample)).fill(0)); 
+            samples.push(new Float32Array(Math.floor(endSample))); 
           }
         
           for(let i = 0; i<sortedPath?.length; i++){
             let t = sortedPath[i].arrivalTime(343); 
-            let p = sortedPath[i].arrivalPressure(this.frequencies.map(x => this.levelTimeProgression.info.initialSPL[0]), this.frequencies); 
+            let p = sortedPath[i].arrivalPressure(this.frequencies.map(x => levelTimeProgression.info.initialSPL[0]), this.frequencies); 
   
             if(Math.random() > 0.5){
               p=p.map(x=>-x); 
@@ -654,7 +660,9 @@ export class ImageSourceSolver extends Solver {
             }
           }
           for(let f = 0; f<this.frequencies.length; f++){
-            downloadWav([normalize(samples[f])], this.frequencies[f].toString()); 
+            const blob = ac.wavAsBlob([normalize(samples[f])], { sampleRate: 44100, bitDepth: 32 });
+            saveAs(blob, this.frequencies[f].toString() + ".wav");
+
           }
         }
     }
@@ -783,8 +791,8 @@ export class ImageSourceSolver extends Solver {
       }
       this.clearRayPaths(); 
       this.clearImageSources(); 
-      (this._imageSourcesVisible) && (this.drawImageSources());
-      (this._rayPathsVisible) && (this.drawRayPaths()); 
+      this.drawRayPaths();
+      this.drawImageSources(); 
     }
 
     get plotOrders(){
@@ -795,20 +803,11 @@ export class ImageSourceSolver extends Solver {
       this._plotOrders = orders;
       this.clearRayPaths(); 
       this.clearImageSources(); 
-      (this._imageSourcesVisible) && (this.drawImageSources());
-      (this._rayPathsVisible) && (this.drawRayPaths()); 
+      this.drawRayPaths();
+      this.drawImageSources(); 
     }
 
-}
-
-function downloadWav(data: any, name: string){
-  const buffer = ac.encode(data, {
-    sampleRate: 44100, 
-    channels: 1, 
-    bitDepth: 16
-  });
-  const blob = new Blob([buffer], {type: "audio/wav"});
-  FileSaver.saveAs(blob, name+".wav");
+  
 }
 
 export default ImageSourceSolver;

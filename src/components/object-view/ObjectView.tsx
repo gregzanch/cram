@@ -187,7 +187,7 @@ export default function ObjectView() {
         unselectable={unselctable}
         nodeId="containers"
       >
-        {keys.filter(x => containers[x].parent!.uuid === workspace.uuid).map((x: string) => (
+        {keys.map((x: string) => (
           <MapChildren
             parent={workspace ? workspace.uuid : ""}
             container={containers[x]}

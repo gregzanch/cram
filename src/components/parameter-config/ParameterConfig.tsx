@@ -97,7 +97,7 @@ export const ParameterConfig = () => {
             case "rt60":
               return (
                 <TabPanel key={"parameter-config-tabpanel-" + i}>
-                  {/* <RT60Tab uuid={x} /> */}
+                  <RT60Tab uuid={x} />
                 </TabPanel>
               );
             case "fdtd-2d":
