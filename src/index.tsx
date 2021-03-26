@@ -65,15 +65,16 @@ import csg from "./compute/csg";
 import * as THREE from "three";
 import FileSaver from "file-saver";
 import { createFileFromData } from "./common/file";
-import produce from "immer";
+import produce, { enableMapSet } from "immer";
 
-import { useContainer, useSolver, useResult, useAppStore } from "./store";
-
+import { useContainer, useSolver, useResult, useAppStore, useMaterial } from "./store";
+import { audioEngine } from './audio-engine/audio-engine';
+enableMapSet();
 
 import './objects/events';
 import './compute/events';
 
-expose({ useSolver, useContainer, useResult, useAppStore, produce, on, emit });
+expose({ audioEngine, useSolver, useContainer, useResult, useAppStore, useMaterial, produce, on, emit });
 
 
 import {CLFViewer} from "./objects/CLFViewer";
@@ -249,15 +250,8 @@ messenger.addMessageHandler("SET_SELECTION", (acc, objects) => {
   messenger.postMessage("APPEND_SELECTION", objects);
 });
 
-messenger.addMessageHandler("DESELECT_ALL_OBJECTS", () => {
-  Object.keys(cram.state.containers).forEach((x) => {
-    cram.state.containers[x].deselect();
-  });
-  cram.state.selectedObjects = [] as Container[];
-});
-
 messenger.addMessageHandler("APPEND_SELECTION", (acc, objects) => {
-  hotkeys.setScope("editor");
+  hotkeys.setScope("EDITOR");
   if (objects instanceof Array) {
     for (let i = 0; i < objects.length; i++) {
       if (objects[i] instanceof Container) {
@@ -267,6 +261,15 @@ messenger.addMessageHandler("APPEND_SELECTION", (acc, objects) => {
     }
   }
 });
+
+
+messenger.addMessageHandler("DESELECT_ALL_OBJECTS", () => {
+  Object.keys(cram.state.containers).forEach((x) => {
+    cram.state.containers[x].deselect();
+  });
+  cram.state.selectedObjects = [] as Container[];
+});
+
 
 
 //messenger.addMessageHandler("OPEN_CLF_VIEWER", () => {
@@ -372,7 +375,6 @@ messenger.addMessageHandler("SHOULD_ADD_IMAGE_SOURCE", (acc, ...args) => {
     roomID: "",
     sourceIDs: [] as string[],
     surfaceIDs: [] as string[],
-    containers: cram.state.containers,
     receiverIDs: [] as string[],
     maxReflectionOrder: 2,
     imageSourcesVisible: false,
@@ -1005,8 +1007,6 @@ messenger.addMessageHandler("RESTORE_CONTAINERS", (acc, ...args) => {
     messenger.postMessage("SHOULD_REMOVE_CONTAINER", key);
   });
   if (args && args[0] && args[0] instanceof Array) {
-    // console.log(args[0]);
-    console.log(args[0]);
     args[0].forEach((saveObj) => {
       switch (saveObj["kind"]) {
         case "source":
@@ -1031,56 +1031,10 @@ messenger.addMessageHandler("RESTORE_CONTAINERS", (acc, ...args) => {
           break;
         case "room":
           {
-            const surfaces = saveObj.surfaces.map((surfaceState: SurfaceSaveObject) => {
-              const geometry = new THREE.BufferGeometry();
-              if (!(surfaceState.geometry instanceof THREE.BufferGeometry)) {
-                const geom = surfaceState.geometry as BufferGeometrySaveObject;
-                geometry.setAttribute(
-                  "position",
-                  new THREE.BufferAttribute(
-                    new Float32Array(geom.data.attributes.position.array),
-                    geom.data.attributes.position.itemSize,
-                    geom.data.attributes.position.normalized
-                  )
-                );
-                geometry.setAttribute(
-                  "normals",
-                  new THREE.BufferAttribute(
-                    new Float32Array(geom.data.attributes.normals.array),
-                    geom.data.attributes.normals.itemSize,
-                    geom.data.attributes.normals.normalized
-                  )
-                );
-                geometry.setAttribute(
-                  "texCoords",
-                  new THREE.BufferAttribute(
-                    new Float32Array(geom.data.attributes.texCoords.array),
-                    geom.data.attributes.texCoords.itemSize,
-                    geom.data.attributes.texCoords.normalized
-                  )
-                );
-              }
-              geometry.name = surfaceState.geometry.name;
-              geometry.uuid = surfaceState.geometry.uuid;
-              const surf = new Surface(surfaceState.name, {
-                acousticMaterial: surfaceState.acousticMaterial,
-                geometry
-              });
-              surf.visible = surfaceState.visible;
-              surf.wireframeVisible = surfaceState.wireframeVisible;
-              surf.displayVertexNormals = surfaceState.displayVertexNormals;
-              surf.edgesVisible = surfaceState.edgesVisible;
-              surf.uuid = surfaceState.uuid;
-              surf.position.set(surfaceState.position[0], surfaceState.position[1], surfaceState.position[2]);
-              surf.rotation.set(surfaceState.rotation[0], surfaceState.rotation[1], surfaceState.rotation[2], "XYZ");
-              surf.scale.set(surfaceState.scale[0], surfaceState.scale[1], surfaceState.scale[2]);
-              return surf;
-            });
+
             // console.log(surfaces);
             // console.log(saveObj.surfaces);
-            const room = new Room(saveObj.name || "room", {
-              surfaces
-            });
+            const room = new Room(saveObj.name || "room").restore(saveObj)
             cram.state.containers[room.uuid] = room;
             emit("ADD_ROOM", room);
             cram.state.renderer.addRoom(room);
@@ -1101,8 +1055,6 @@ messenger.addMessageHandler("RESTORE_SOLVERS", (acc, ...args) => {
     messenger.postMessage("SHOULD_REMOVE_SOLVER", key);
   });
   if (args && args[0] && args[0] instanceof Array) {
-    // console.log(args[0]);
-    console.log(args[0]);
     args[0].forEach((saveObj) => {
       switch (saveObj["kind"]) {
         case "ray-tracer":
@@ -1180,6 +1132,7 @@ messenger.addMessageHandler("RESTORE", (acc, ...args) => {
   const version = (json.meta && json.meta.version) || "0.0.0";
   console.log(version);
   if (gte(version, "0.2.1")) {
+    console.log(json);
     messenger.postMessage("RESTORE_CONTAINERS", json.containers);
     messenger.postMessage("RESTORE_SOLVERS", json.solvers);
     messenger.postMessage("SET_PROJECT_NAME", json.meta.name);
@@ -1198,59 +1151,28 @@ messenger.addMessageHandler("ADD_SELECTED_OBJECTS_TO_GLOBAL_VARIABLES", () => {
   }
 });
 
-function addHotKey(keybinding, scopes, message, ...args) {
-  scopes.forEach((scope) => {
-    hotkeys(keybinding, scope, () => void messenger.postMessage(message, args));
-  });
-}
 
-function registerHotKeys() {
-  addHotKey("ctrl+i, command+i", ["normal", "editor"], "SHOW_IMPORT_DIALOG");
-  addHotKey("shift+m", ["normal", "editor"], "TOGGLE_MATERIAL_SEARCH");
-  addHotKey("shift+n", ["normal", "editor"], "SHOW_NEW_WARNING");
-  addHotKey("shift+o", ["normal", "editor"], "TOGGLE_CAMERA_ORTHO");
-  addHotKey("ctrl+shift+f, command+shift+f", ["normal", "editor", "editor-moving"], "TOGGLE_FULLSCREEN");
-  addHotKey("ctrl+z, command+z", ["normal", "editor"], "UNDO");
-  addHotKey("ctrl+shift+z, command+shift+z", ["normal", "editor"], "REDO");
-
-  addHotKey("m", ["editor"], "MOVE_SELECTED_OBJECTS");
-  addHotKey("f", ["editor"], "FOCUS_ON_SELECTED_OBJECTS");
-  addHotKey("shift+f", ["editor"], "FOCUS_ON_CURSOR");
-  addHotKey("shift+g", ["editor"], "ADD_SELECTED_OBJECTS_TO_GLOBAL_VARIABLES");
-  addHotKey("escape", ["editor", "editor-moving"], "PHASE_OUT");
-}
-
-registerHotKeys();
-
-hotkeys.setScope("normal");
+hotkeys.setScope("NORMAL");
 
 window.addEventListener("resize", () => {
   cram.state.renderer.needsToRender = true;
 });
 
-function downloadWav(data: any){
-  const buffer = ac.encode(data, {
-    sampleRate: 44100, 
-    channels: 1, 
-    bitDepth: 16
-  })
-  const blob = new Blob([buffer], {type: "audio/wav"})
-  FileSaver.saveAs(blob, "test.wav");
-}
 
 async function finishedLoading() {
-  const filepath = "/res/saves/concord.json";
+  const filepath = "/res/saves/concord2.json";
   const filename = filepath.slice(filepath.lastIndexOf("/") + 1);
   const filedata = await(await fetch(filepath)).text();
   const json = JSON.parse(filedata);
   const file = createFileFromData(filename, [filedata]);
+  console.log(json);
 
-  messenger.postMessage("RESTORE", { file, json });
-
+  // messenger.postMessage("RESTORE", { file, json });
+  emit("RESTORE", { file, json });
+  emit("REGISTER_SHORTCUTS");
   expose({
     chroma,
     ac,
-    downloadWav,
     THREE,
   });
 }

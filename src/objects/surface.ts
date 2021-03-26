@@ -10,7 +10,7 @@ import { BRDF } from "../compute/raytracer/brdf";
 import Room from "./room";
 import csg from "../compute/csg";
 import { numbersEqualWithinTolerence, equalWithinTolerenceFactory } from "../common/equal-within-range";
-import { addContainer, removeContainer, setContainerProperty } from "../store";
+import { addContainer, removeContainer, setContainerProperty, setNestedContainerProperty } from "../store";
 import { on } from "../messenger";
 
 const v3eq = equalWithinTolerenceFactory(["x", "y", "z"])(csg.math.constants.EPS as number);
@@ -120,6 +120,39 @@ export interface BufferGeometrySaveObject {
   };
 }
 
+function restoreBufferGeometry(geom: BufferGeometrySaveObject){
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute(
+    "position",
+    new THREE.BufferAttribute(
+      new Float32Array(geom.data.attributes.position.array),
+      geom.data.attributes.position.itemSize,
+      geom.data.attributes.position.normalized
+    )
+  );
+  geometry.setAttribute(
+    "normals",
+    new THREE.BufferAttribute(
+      new Float32Array(geom.data.attributes.normals.array),
+      geom.data.attributes.normals.itemSize,
+      geom.data.attributes.normals.normalized
+    )
+  );
+  geometry.setAttribute(
+    "texCoords",
+    new THREE.BufferAttribute(
+      new Float32Array(geom.data.attributes.texCoords.array),
+      geom.data.attributes.texCoords.itemSize,
+      geom.data.attributes.texCoords.normalized
+    )
+  );
+  geometry.name = geom.name;
+  geometry.uuid = geom.uuid;
+
+  return geometry;
+
+}
+
 export interface SurfaceSaveObject {
   kind: string;
   name: string;
@@ -128,7 +161,7 @@ export interface SurfaceSaveObject {
   rotation: number[];
   scale: number[];
   acousticMaterial: AcousticMaterial;
-  geometry: THREE.BufferGeometry;
+  geometry: BufferGeometrySaveObject;
   visible: boolean;
   wireframeVisible: boolean;
   edgesVisible: boolean;
@@ -177,11 +210,19 @@ class Surface extends Container {
   edgeLoop!: THREE.Vector3[];
   polygon!: poly3type;
   normal!: THREE.Vector3;
+  eventDestructors!: Array<() => void>;
   // renderer: Renderer;
   constructor(name: string, props?: SurfaceProps) {
     super(name);
     this.kind = "surface";
+    this.eventDestructors = [];
     props && this.init(props, true);
+  }
+  destroyEvents() {
+    while(this.eventDestructors.length > 0) {
+      this.eventDestructors[this.eventDestructors.length-1]();
+      this.eventDestructors.pop();
+    }
   }
   init(props: SurfaceProps, fromConstructor: boolean = false) {
     if (!fromConstructor) {
@@ -189,8 +230,8 @@ class Surface extends Container {
       this.remove(this.wire);
       this.remove(this.edges);
       this.remove(this.vertexNormals);
+      this.destroyEvents();
     }
-
     this.fillSurface = props.fillSurface || defaults.fillSurface;
     this.wire = new THREE.Mesh(props.geometry, defaults.materials.wire);
     this.wire.geometry.name = "surface-wire-geometry";
@@ -209,7 +250,6 @@ class Surface extends Container {
       chunk(Array.from((props.geometry.getAttribute("position") as THREE.BufferAttribute).array), 3),
       3
     );
-    console.log(this.triangles.map((x) => []));
     this._triangles = this.triangles.map(
       (x) =>
         new THREE.Triangle(
@@ -325,7 +365,7 @@ class Surface extends Container {
 
     this.polygon = csg.geometry.poly3.fromPointsAndPlane(points, plane);
 
-    const eqeps = numbersEqualWithinTolerence(csg.math.constants.EPS as number);
+    const eqeps = numbersEqualWithinTolerence(1e-5);
     const n0 = this.normal;
     const n1 = this.polygon.plane;
     if (!eqeps(n0.x, n1[0]) || !eqeps(n0.y, n1[1]) || !eqeps(n0.z, n1[2])) {
@@ -339,6 +379,16 @@ class Surface extends Container {
     }
 
     // this.polygon.parentSurface = this;
+    // this.eventDestructors.push(
+      // on("SURFACE_SET_PROPERTY", ({ uuid, property, value }) => {
+      //   if(uuid === this.uuid){
+          
+      //   }
+      // })
+    // );
+  }
+  dispose(){
+    this.parent && this.parent.remove(this);
   }
   save() {
     return {
@@ -357,13 +407,20 @@ class Surface extends Container {
       uuid: this.uuid
     } as SurfaceSaveObject;
   }
-  restore(state: SurfaceSaveObject) {
-    this.init({ ...state });
-    this.visible = state.visible;
-    this.position.set(state.position[0], state.position[1], state.position[2]);
-    this.rotation.set(state.rotation[0], state.rotation[1], state.rotation[2], "XYZ");
-    this.scale.set(state.scale[0], state.scale[1], state.scale[2]);
-    this.uuid = state.uuid;
+  restore(surfaceState: SurfaceSaveObject) {
+    this.init({
+      acousticMaterial: surfaceState.acousticMaterial,
+      geometry: restoreBufferGeometry(surfaceState.geometry),
+      wireframeVisible: surfaceState.wireframeVisible,
+      edgesVisible: surfaceState.edgesVisible,
+      fillSurface: surfaceState.fillSurface,
+      displayVertexNormals: surfaceState.displayVertexNormals
+    });
+    this.visible = surfaceState.visible;
+    this.uuid = surfaceState.uuid;
+    this.position.set(surfaceState.position[0], surfaceState.position[1], surfaceState.position[2]);
+    this.rotation.set(surfaceState.rotation[0], surfaceState.rotation[1], surfaceState.rotation[2], "XYZ");
+    this.scale.set(surfaceState.scale[0], surfaceState.scale[1], surfaceState.scale[2]);
     return this;
   }
   select() {
@@ -560,7 +617,7 @@ declare global {
 
 on("ADD_SURFACE", addContainer(Surface))
 on("REMOVE_SURFACE", removeContainer);
-on("SURFACE_SET_PROPERTY", setContainerProperty);
+on("SURFACE_SET_PROPERTY", setContainerProperty)
 
 
 

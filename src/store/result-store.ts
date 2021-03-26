@@ -1,7 +1,6 @@
 import create from "zustand";
 import produce from "immer";
 import { KeyValuePair } from "../common/key-value-pair";
-import { SetFunction } from ".";
 import { on } from '../messenger';
 import { result } from "lodash";
 import { omit } from "../common/helpers";
@@ -13,6 +12,7 @@ export enum ResultKind {
   Default = "default",
   StatisticalRT60 = "statisticalRT60"
 }
+
 
 export interface ResultTypes {
   [ResultKind.Default]: {

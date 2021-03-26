@@ -1,6 +1,6 @@
 import React from 'react';
 import Surface from '../../objects/surface';
-import Messenger from '../../messenger';
+import Messenger, { emit } from '../../messenger';
 import { AcousticMaterial } from '../../db/acoustic-material';
 import { uuid } from 'uuidv4';
 import { absorptionGradient } from '../absorption-gradient/AbsorptionGradient';
@@ -82,10 +82,10 @@ export default class MaterialDrawer extends React.Component<MaterialDrawerProps,
   handleObjectViewClick(object, e: React.MouseEvent) {
   if (object instanceof Container && object['kind']!=="room") {
     if (e.shiftKey) {
-      this.props.messenger.postMessage("APPEND_SELECTION", [object])
+      emit("APPEND_SELECTION", [object])
     }
     else {
-      this.props.messenger.postMessage("SET_SELECTION", [object]);
+      emit("SET_SELECTION", [object]);
     }
     if (object instanceof Surface) {
       console.log(object);
@@ -197,15 +197,7 @@ export default class MaterialDrawer extends React.Component<MaterialDrawerProps,
       <div className="material_drawer-grid">
         <div className="material_drawer-surface-container">
           {rooms && (
-            <ObjectView
-              solvers={{}}
-              containers={rooms.reduce((a, b) => {
-                a[b.uuid] = b;
-                return a;
-              }, {} as KeyValuePair<Room>)}
-              onClick={this.handleObjectViewClick}
-              messenger={this.props.messenger}
-            />
+            <ObjectView />
           )}
         </div>
         <div className="material_drawer-container">

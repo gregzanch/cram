@@ -3,7 +3,7 @@ import { emit, on } from "../../messenger";
 import { useSolver } from "../../store";
 import PropertyRow from "./property-row/PropertyRow";
 import PropertyRowLabel from "./property-row/PropertyRowLabel";
-import PropertyRowButton, { PropertyRowButtonWithDisable } from "./property-row/PropertyRowButton";
+import PropertyRowButton from "./property-row/PropertyRowButton";
 import { PropertyRowCheckbox } from "./property-row/PropertyRowCheckbox";
 import { PropertyRowTextInput } from "./property-row/PropertyRowTextInput";
 import { PropertyRowNumberInput } from "./property-row/PropertyRowNumberInput";
@@ -31,7 +31,6 @@ export function useSolverProperty<T extends RayTracer | FDTD_2D|ImageSourceSolve
   const [state, setState] = useState<T[K]>(defaultValue);
   useEffect(
     () => on(event, (props) => {
-      //@ts-ignore
       if(props.uuid === uuid && props.property === property) setState(props.value) 
     }),
     [uuid]
@@ -74,39 +73,19 @@ export const PropertyButton = <T extends keyof EventTypes>({
   args,
   event,
   label,
-  tooltip
-}: {
-  args: EventTypes[T];
-  event: T;
-  label: string;
-  tooltip: string;
-}) => {
-  return (
-    <PropertyRow>
-      <PropertyRowLabel label={label} hasToolTip tooltip={tooltip} />
-      <PropertyRowButton onClick={(e) => emit(event, args)} label={label} />
-    </PropertyRow>
-  );
-};
-
-export const PropertyButtonDisabled = <T extends keyof EventTypes>({
-  args,
-  event,
-  label,
   tooltip,
-  disableCondition
+  disabled,
 }: {
   args: EventTypes[T];
   event: T;
   label: string;
   tooltip: string;
-  disableCondition;
+  disabled?: boolean;
 }) => {
   return (
     <PropertyRow>
       <PropertyRowLabel label={label} hasToolTip tooltip={tooltip} />
-      <PropertyRowButtonWithDisable disableCondition={disableCondition} onClick={(e) => emit(event, args)} label={label} />
+      <PropertyRowButton onClick={(e) => emit(event, args)} label={label} disabled={disabled} />
     </PropertyRow>
   );
 };
-

@@ -5,6 +5,7 @@ import Receiver, { ReceiverSaveObject } from './receiver';
 import Room, { RoomSaveObject } from './room';
 import Source, { SourceSaveObject } from './source';
 import Container from './container';
+import hotkeys from 'hotkeys-js';
 
 
 
@@ -12,17 +13,21 @@ declare global {
   interface EventTypes {
     REMOVE_CONTAINERS: string | string[];
     RESTORE_CONTAINERS: Array<SourceSaveObject | RoomSaveObject | ReceiverSaveObject>;
+    DESELECT_ALL_OBJECTS: undefined;
+    SET_SELECTION: Container[];
+    APPEND_SELECTION: Container[];
   }
 }
 
+
 on("REMOVE_CONTAINERS", (uuids) => {
-  const currentContainers = useContainer.getState().containers;
-  const containers = omit(typeof uuids === "string" ? [uuids] : uuids, currentContainers);
+  const containers = useContainer.getState().containers;
+  const ids = typeof uuids === "string" ? [uuids] : uuids;
+  ids.forEach(id => containers[id].dispose());
   useContainer.getState().set((state) => {
-    state.containers = containers;
+    state.containers = omit(ids, containers);
   });
 });
-
 
 
 const restore = <ContainerType extends Container>(
@@ -46,62 +51,6 @@ on("RESTORE_CONTAINERS", (containers) => {
       case "room":
         emit("ADD_ROOM", restore(Room, container));
         break;
-        // {
-        //   const surfaces = saveObj.surfaces.map((surfaceState: SurfaceSaveObject) => {
-        //     const geometry = new THREE.BufferGeometry();
-        //     if (!(surfaceState.geometry instanceof THREE.BufferGeometry)) {
-        //       const geom = surfaceState.geometry as BufferGeometrySaveObject;
-        //       geometry.setAttribute(
-        //         "position",
-        //         new THREE.BufferAttribute(
-        //           new Float32Array(geom.data.attributes.position.array),
-        //           geom.data.attributes.position.itemSize,
-        //           geom.data.attributes.position.normalized
-        //         )
-        //       );
-        //       geometry.setAttribute(
-        //         "normals",
-        //         new THREE.BufferAttribute(
-        //           new Float32Array(geom.data.attributes.normals.array),
-        //           geom.data.attributes.normals.itemSize,
-        //           geom.data.attributes.normals.normalized
-        //         )
-        //       );
-        //       geometry.setAttribute(
-        //         "texCoords",
-        //         new THREE.BufferAttribute(
-        //           new Float32Array(geom.data.attributes.texCoords.array),
-        //           geom.data.attributes.texCoords.itemSize,
-        //           geom.data.attributes.texCoords.normalized
-        //         )
-        //       );
-        //     }
-        //     geometry.name = surfaceState.geometry.name;
-        //     geometry.uuid = surfaceState.geometry.uuid;
-        //     const surf = new Surface(surfaceState.name, {
-        //       acousticMaterial: surfaceState.acousticMaterial,
-        //       geometry
-        //     });
-        //     surf.visible = surfaceState.visible;
-        //     surf.wireframeVisible = surfaceState.wireframeVisible;
-        //     surf.displayVertexNormals = surfaceState.displayVertexNormals;
-        //     surf.edgesVisible = surfaceState.edgesVisible;
-        //     surf.uuid = surfaceState.uuid;
-        //     surf.position.set(surfaceState.position[0], surfaceState.position[1], surfaceState.position[2]);
-        //     surf.rotation.set(surfaceState.rotation[0], surfaceState.rotation[1], surfaceState.rotation[2], "XYZ");
-        //     surf.scale.set(surfaceState.scale[0], surfaceState.scale[1], surfaceState.scale[2]);
-        //     return surf;
-        //   });
-        //   // console.log(surfaces);
-        //   // console.log(saveObj.surfaces);
-        //   const room = new Room(saveObj.name || "room", {
-        //     surfaces
-        //   });
-        //   cram.state.containers[room.uuid] = room;
-        //   cram.state.renderer.addRoom(room);
-
-        //   messenger.postMessage("ADDED_ROOM", room);
-        // }
       default:
         break;
     }
@@ -109,3 +58,35 @@ on("RESTORE_CONTAINERS", (containers) => {
 });
 
 
+on("DESELECT_ALL_OBJECTS", () => {
+  useContainer.getState().set(state => {
+    Object.keys(state.containers).forEach((uuid) => {
+      state.containers[uuid].deselect();
+    });
+    state.selectedObjects.clear();
+  });
+});
+
+
+
+on("SET_SELECTION", (containers) => {
+  useContainer.getState().set(state => {
+    for(const container of state.selectedObjects) container.deselect();
+    state.selectedObjects.clear();
+    containers.forEach(container=>{
+      container.select();
+      state.selectedObjects.add(container);
+    })
+  });
+  hotkeys.setScope("EDITOR");
+});
+
+on("APPEND_SELECTION", (containers) => {
+  hotkeys.setScope("EDITOR");
+  useContainer.getState().set(state=>{
+    containers.forEach(container=>{
+      container.select();
+      state.selectedObjects.add(container);
+    })
+  });
+});

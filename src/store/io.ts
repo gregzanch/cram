@@ -2,7 +2,7 @@ import FileSaver from 'file-saver';
 import { useContainer, useSolver, useAppStore } from '.';
 import { KeyValuePair } from '../common/key-value-pair';
 import Solver from '../compute/solver';
-import Container, { ContainerSaveObject } from '../objects/container';
+
 
 import {on, emit} from '../messenger';
 import { gte } from 'semver';
@@ -12,7 +12,10 @@ import { RoomSaveObject } from '../objects/room';
 import { SurfaceGroupSaveObject } from '../objects/surface-group';
 import { RayTracerSaveObject } from '../compute/raytracer';
 import { RT60SaveObject } from '../compute/rt';
+import { ImageSourceSaveObject } from '../compute/raytracer/image-source';
 
+export type ContainerSaveObject = (SourceSaveObject|ReceiverSaveObject|RoomSaveObject);
+export type SolverSaveObject = (RayTracerSaveObject|RT60SaveObject|ImageSourceSaveObject);
 
 export type SaveState = {
   meta: {
@@ -20,23 +23,23 @@ export type SaveState = {
       name: string;
       timestamp: string;
   };
-  containers: (SourceSaveObject|ReceiverSaveObject|RoomSaveObject)[];
-  solvers: (RayTracerSaveObject|RT60SaveObject)[];
+  containers: ContainerSaveObject[];
+  solvers: SolverSaveObject[];
 };
 
 const getSaveState = () => {
   const solvers = useSolver.getState().solvers;
   const containers = useContainer.getState().containers;
   const { projectName, version } = useAppStore.getState();
-  const savedContainers = {};
-  const savedSolvers = {};
+  const savedContainers = [] as SaveState["containers"];
+  const savedSolvers = [] as SaveState["solvers"];
   
   Object.keys(containers).forEach(uuid=>{
-    savedContainers[uuid]=containers[uuid].save();
+    savedContainers.push(containers[uuid].save() as ContainerSaveObject);
   });
   
   Object.keys(solvers).forEach(uuid=>{
-    savedSolvers[uuid]=solvers[uuid].save();
+    savedSolvers.push(solvers[uuid].save() as SolverSaveObject);
   });
 
   return {
@@ -115,10 +118,18 @@ declare global {
 
 
 on("RESTORE", ({ file, json }) => {
-  useAppStore.getState().set((state) => void (state.projectName = json.meta.name));
   emit("RESTORE_CONTAINERS", json.containers);
   emit("RESTORE_SOLVERS", json.solvers);
+  useAppStore.getState().set((state) => { state.projectName = json.meta.name });
 });
+
+
+// on("RESTORE", ({ file, json }) => {
+//   console.log(json);
+//  
+//   emit("RESTORE_CONTAINERS", json.containers);
+//   emit("RESTORE_SOLVERS", json.solvers);
+// });
 
 
 
