@@ -250,6 +250,7 @@ class Surface extends Container {
       chunk(Array.from((props.geometry.getAttribute("position") as THREE.BufferAttribute).array), 3),
       3
     );
+    console.log(this);
     this._triangles = this.triangles.map(
       (x) =>
         new THREE.Triangle(
@@ -433,7 +434,7 @@ class Surface extends Container {
     (this.mesh.material as THREE.MeshLambertMaterial) = this.normalMaterial;
     (this.mesh.material as THREE.MeshLambertMaterial).needsUpdate = true;
   }
-  flipNormals() {}
+
 
   resetHits() {
     this.numHits = 0;
@@ -474,6 +475,7 @@ class Surface extends Container {
 
     return edgeLoop;
   }
+
 
   mergeSurfaces(surfaces: Surface[]) {
     const name = this.name + "-merged";

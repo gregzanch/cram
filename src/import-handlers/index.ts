@@ -56,10 +56,15 @@ export function obj(data) {
   console.log(res);
 
   const [vertices, vertexNormals, textureCoords] = res.models.reduce(
-    (a, b) => [a[0].concat(b.vertices), a[1].concat(b.vertexNormals), a[2].concat(b.textureCoords)],
+    (a, b) => [
+      a[0].concat(b.vertices), 
+      a[1].concat(b.vertexNormals), 
+      a[2].concat(b.textureCoords)
+    ],
     [[] as any[], [] as any[], [] as any[]]
   );
   const models = [] as Model[];
+  debugger;
   res.models.forEach((model) => {
     const buffer = new THREE.BufferGeometry();
     const verts = [] as number[];

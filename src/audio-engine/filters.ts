@@ -1,6 +1,6 @@
 const { pow, round, sin, cos, PI: pi } = Math;
 
-function wayverb_filters(ω_lowest, ω_highest, Nbands, sampleRate, totalSamples) {
+export function wayverb_filters(ω_lowest, ω_highest, Nbands, sampleRate, totalSamples) {
 
   const x = (ω_highest / ω_lowest) ** (1 / Nbands);
   const ω_edges = [...Array(Nbands)].map((_, i) => ω_lowest * (ω_highest / ω_lowest) ** ((i) / Nbands));

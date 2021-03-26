@@ -694,6 +694,7 @@ messenger.addMessageHandler("IMPORT_FILE", (acc, ...args) => {
           {
             const result = await (await fetch(objectURL)).text();
             const models = importHandlers.obj(result);
+            console.log(models);
             const surfaces = models.map(
               (model) =>
                 new Surface(model.name, {
@@ -1159,7 +1160,7 @@ window.addEventListener("resize", () => {
 
 
 async function finishedLoading() {
-  const filepath = "/res/saves/concord2.json";
+  const filepath = "/res/saves/shoebox2.json";
   const filename = filepath.slice(filepath.lastIndexOf("/") + 1);
   const filedata = await(await fetch(filepath)).text();
   const json = JSON.parse(filedata);

@@ -145,11 +145,7 @@ export class AudioEngine {
   }
 
 
-  wayverb_filters(ω_lowest, ω_highest, Nbands){
-    const x = (ω_highest/ω_lowest)**(1/Nbands);
-    const w = (x-1)/(x+1);
-    
-  }
+
 
 
 

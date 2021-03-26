@@ -68,9 +68,9 @@ export function FileMenu(props: MenuProps) {
       onInteraction={(e)=>props.onInteraction(e)}
       content={
         <Menu>
-          <MenuItemWithMessenger label="New" message="SHOW_NEW_WARNING" hotkey={[Characters.SHIFT, "N"]} />
-          <MenuItemWithMessenger label="Open" message="SHOW_OPEN_WARNING" hotkey={[Characters.COMMAND, "O"]} />
-          <MenuItemWithMessenger label="Save" message="SHOW_SAVE_DIALOG" hotkey={[Characters.COMMAND, "S"]} />
+          <MenuItemWithEmitter label="New" event="NEW" hotkey={[Characters.SHIFT, "N"]} />
+          <MenuItemWithEmitter label="Open" event="OPEN" hotkey={[Characters.COMMAND, "O"]} />
+          <MenuItemWithEmitter label="Save" event="SAVE" hotkey={[Characters.COMMAND, "S"]} />
           <MenuDivider />
           <MenuItemWithEmitter label="Import" event="SHOW_IMPORT_DIALOG" args={true} hotkey={[Characters.COMMAND, "I"]} />
         </Menu>

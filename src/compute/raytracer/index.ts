@@ -26,6 +26,7 @@ import { addSolver, removeSolver, setSolverProperty, useContainer, useSolver } f
 
 import {cramangle2threejsangle} from "../../common/dir-angle-conversions";
 import { audioEngine } from "../../audio-engine/audio-engine";
+import observe, { Observable } from "../../common/observable";
 
 const {floor, random, abs, asin} = Math;
 const coinFlip = () => random() > 0.5;
@@ -246,6 +247,7 @@ class RayTracer extends Solver {
   validRayCount: number;
   plotStyle: Partial<PlotData>;
   bvh!: BVH;
+  observed_name: Observable<string>;
   
   constructor(params?: RayTracerParams) {
     super(params);
@@ -253,6 +255,7 @@ class RayTracer extends Solver {
     params = {    ...defaults, ...params    };
     this.uuid = params.uuid || this.uuid;
     this.name = params.name || defaults.name;
+    this.observed_name = observe(this.name);
     this.responseOverlayElement = document.querySelector("#response-overlay") || document.createElement("div");
     this.responseOverlayElement.style.backgroundColor = "#FFFFFF";
     this.sourceIDs = params.sourceIDs || defaults.sourceIDs;

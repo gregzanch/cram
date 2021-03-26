@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useReducer, useState } from "react";
 import RayTracer from "../../compute/raytracer";
 import { emit, on } from "../../messenger";
 import { ObjectPropertyInputEvent } from "../ObjectProperties";
@@ -16,6 +16,7 @@ import useToggle from "../hooks/use-toggle";
 import PropertyRowLabel from "./property-row/PropertyRowLabel";
 import PropertyRowCheckbox from "./property-row/PropertyRowCheckbox";
 import PropertyButton from "./property-row/PropertyButton";
+import { PropertyRowTextInput } from "./property-row/PropertyRowTextInput";
 
 const { PropertyTextInput, PropertyNumberInput, PropertyCheckboxInput } = createPropertyInputs<RayTracer>(
   "RAYTRACER_SET_PROPERTY"
@@ -90,9 +91,14 @@ export const SourceSelect = ({ uuid }: { uuid: string }) => {
 
 const General = ({ uuid }: { uuid: string }) => {
   const [open, toggle] = useToggle(true);
+  const observed_name = useSolver(state=>(state.solvers[uuid] as RayTracer).observed_name);
+  const [, forceUpdate] = useReducer((c) => c + 1, 0) as [never, () => void]
+  useEffect(()=>observed_name.watch(()=>forceUpdate()), [uuid]);
+
   return (
     <PropertyRowFolder label="General" open={open} onOpenClose={toggle}>
       <PropertyTextInput uuid={uuid} label="Name" property="name" tooltip="Sets the name of this solver" />
+      <PropertyRowTextInput value={observed_name.value} onChange={(e)=>{observed_name.value = e.value}}/>
     </PropertyRowFolder>
   );
 };
