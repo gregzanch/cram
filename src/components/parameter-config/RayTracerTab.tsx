@@ -3,7 +3,7 @@ import RayTracer from "../../compute/raytracer";
 import { emit, on } from "../../messenger";
 import { ObjectPropertyInputEvent } from "../ObjectProperties";
 import { useContainer, useSolver } from "../../store";
-import GridRow from "../grid-row/GridRow";
+import GridRow from "../GridRow";
 import TextInput from "../text-input/TextInput";
 import NumberInput from "../number-input/NumberInput";
 import { filteredMapObject, pickProps } from "../../common/helpers";

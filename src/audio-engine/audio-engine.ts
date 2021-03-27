@@ -154,3 +154,13 @@ export class AudioEngine {
 export const audioEngine = new AudioEngine();
 
 
+// function sig = filterit(order, lowfreq, highfreq)
+//   y=zeros(44100,1);
+//   y(1)=1;
+//   [b,a]=butter(order, [lowfreq/44100, highfreq/44100]);
+//   filtered=filter(b,a,y);
+//   sig = filtered;
+// end
+
+
+

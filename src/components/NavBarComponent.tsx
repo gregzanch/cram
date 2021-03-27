@@ -3,7 +3,7 @@ import Messenger, { emit, postMessage } from "../messenger";
 import { Position, Button, Menu, MenuItem, MenuDivider, Colors, Navbar, ButtonGroup } from "@blueprintjs/core";
 import { Popover2 , Classes} from "@blueprintjs/popover2";
 import NavbarMenuItemLabel from "./NavbarMenuItemLabel";
-import MenuItemText from "./menu-item-text/MenuItemText";
+import MenuItemText from "./MenuItemText";
 import { Characters } from "../constants";
 import create from "zustand";
 import "./NavBarComponent.css";

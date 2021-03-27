@@ -1,8 +1,4 @@
 import React from "react";
-import VisibilityIcon from "@material-ui/icons/Visibility";
-import VisibilityOffIcon from "@material-ui/icons/VisibilityOff";
-
-import "./CheckboxInput.css";
 
 export type CheckboxChangeEvent = {
   name: string;

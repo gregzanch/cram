@@ -1,20 +1,15 @@
-import React, {useCallback, useState} from 'react';
-import Messenger, {emit, messenger} from '../../messenger';
+import React, {useCallback, useEffect, useState} from 'react';
+import {emit, on} from '../../messenger';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
-import ContextMenu from "../context-menu/ContextMenu";
+import ContextMenu from "../ContextMenu";
 import './ParameterConfig.css';
-import { KeyValuePair } from "../../common/key-value-pair";
-import Solver from '../../compute/solver';
-import RT60Tab from './RT60Tab';
-import { RT60 } from '../../compute/rt';
 import RayTracerTab from './RayTracerTab';
 import RendererTab from './RendererTab';
 import FDTD_2DTab from './FDTD_2DTab';
-import { FDTD_2D } from '../../compute/2d-fdtd';
-import { addToGlobalVars } from '../../common/global-vars';
 import { ImageSourceTab } from './image-source-tab/ImageSourceTab';
 import { SolverStore, useSolver } from '../../store';
 import styled from 'styled-components';
+import RT60Tab from './RT60Tab';
 
 
 export interface ParameterConfigState {
@@ -61,6 +56,7 @@ export const ParameterConfig = () => {
     kinds: Object.keys(state.solvers).map(x=>state.solvers[x].kind)
   }));
   const [index, setIndex] = useState(0);
+  useEffect(()=>on("NEW", ()=>setIndex(0)), [])
   return (
     <div
       style={{

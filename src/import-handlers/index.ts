@@ -64,7 +64,6 @@ export function obj(data) {
     [[] as any[], [] as any[], [] as any[]]
   );
   const models = [] as Model[];
-  debugger;
   res.models.forEach((model) => {
     const buffer = new THREE.BufferGeometry();
     const verts = [] as number[];

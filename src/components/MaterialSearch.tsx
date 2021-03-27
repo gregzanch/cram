@@ -3,7 +3,7 @@ import Surface from '../objects/surface';
 import Messenger, { emit } from '../messenger';
 import { AcousticMaterial } from '../db/acoustic-material';
 import { uuid } from 'uuidv4';
-import { absorptionGradient } from './absorption-gradient/AbsorptionGradient';
+import { absorptionGradient } from './AbsorptionGradient';
 import { clamp } from '../common/clamp';
 import { Drawer, Icon, Position } from '@blueprintjs/core';
 import { Button } from '@blueprintjs/core';
