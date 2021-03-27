@@ -1,15 +1,4 @@
 import React, {useState} from "react";
-import TabUnselectedIcon from '@material-ui/icons/TabUnselected';
-import SourceProperties, { SourcePropertiesProps } from './SourceProperties';
-import ReceiverProperties, { ReceiverPropertiesProps } from './ReceiverProperties';
-import RayTracerProperties, {RayTracerPropertiesProps} from './RayTracerProperties';
-import RoomProperties, { RoomPropertiesProps } from './RoomProperties';
-import RT60Properties, { RT60PropertiesProps } from "./RT60Properties";
-import SurfaceProperties, { SurfacePropertiesProps } from './SurfaceProperties';
-import GenericObjectProperties, { GenericObjectPropertiesProps } from './GenericObjectProperties';
-import Container from "../../objects/container";
-import Solver from "../../compute/solver";
-import Messenger from "../../messenger";
 import { SourceTab } from "../parameter-config/SourceTab";
 import { useContainer } from "../../store";
 import { pickProps } from "../../common/helpers";

@@ -1,3 +1,4 @@
+//@ts-nocheck
 import { GPU, IGPUKernelSettings, IKernelFunctionThis } from "gpu.js";
 const { sin, cos, PI: pi } = Math;
 /**

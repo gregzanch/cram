@@ -7,6 +7,8 @@ import { DAELoader } from "./dae";
 import { chunk } from "../common/chunk";
 import roundTo from "../common/round-to";
 
+
+
 export interface Model {
   name: string;
   geometry: THREE.BufferGeometry;
@@ -106,3 +108,5 @@ export function dae(data) {
   const res = loader.parse(data, undefined);
   return res;
 }
+
+export {dxf} from './dxf';
