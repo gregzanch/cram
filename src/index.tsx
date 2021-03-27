@@ -74,7 +74,7 @@ enableMapSet();
 import './objects/events';
 import './compute/events';
 
-expose({ audioEngine, useSolver, useContainer, useResult, useAppStore, useMaterial, produce, on, emit });
+expose({ Container, audioEngine, useSolver, useContainer, useResult, useAppStore, useMaterial, produce, on, emit });
 
 
 import {CLFViewer} from "./objects/CLFViewer";
