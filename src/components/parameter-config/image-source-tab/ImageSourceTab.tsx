@@ -106,7 +106,7 @@ const Calculation = ({ uuid }: { uuid: string}) => {
   const disabled = !(sourceIDs.length > 0 && receiverIDs.length > 0);
   return (
     <PropertyRowFolder label="Calculation" open={open} onOpenClose={toggle}>
-      <PropertyNumberInput uuid={uuid} label="Maximum Order" property="maxReflectionOrder" tooltip="Sets the maximum reflection order"/>
+      <PropertyNumberInput uuid={uuid} label="Maximum Order" property="maxReflectionOrderReset" tooltip="Sets the maximum reflection order"/>
       <PropertyButton disabled={disabled} event="UPDATE_IMAGESOURCE" args={uuid} label="Update" tooltip="Updates Imagesource Calculation" />
       <PropertyButton disabled={disabled} event="RESET_IMAGESOURCE" args={uuid} label="Clear" tooltip="Clears Imagesource Calculation" />
     </PropertyRowFolder>

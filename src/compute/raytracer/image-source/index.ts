@@ -803,8 +803,8 @@ export class ImageSourceSolver extends Solver {
       this._plotOrders = orders;
       this.clearRayPaths(); 
       this.clearImageSources(); 
-      this.drawRayPaths();
-      this.drawImageSources(); 
+      this.rayPathsVisible && this.drawRayPaths();
+      this.imageSourcesVisible && this.drawImageSources(); 
     }
 
   
