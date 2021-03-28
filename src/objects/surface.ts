@@ -266,7 +266,7 @@ class Surface extends Container {
 
     if (!this.isPlanar) {
       console.error(new Error(`Surface '${this.name}' is not planar`));
-      debugger;
+      // debugger;
     }
 
     this.normal = new THREE.Vector3();

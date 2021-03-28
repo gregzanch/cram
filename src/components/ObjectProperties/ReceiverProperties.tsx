@@ -2,14 +2,14 @@ import React from "react";
 import TextInput from "../text-input/TextInput";
 import NumberInput from "../number-input/NumberInput";
 import { ObjectPropertyInputEvent } from ".";
-import CheckboxInput from "../checkbox-input/CheckboxInput";
-import GridRow from "../grid-row/GridRow";
+import CheckboxInput from "../CheckboxInput";
+import GridRow from "../GridRow";
 import Receiver from "../../objects/receiver";
-import ColorInput from "../color-input/ColorInput";
+import ColorInput from "../ColorInput";
 import PropertyRow from "../parameter-config/property-row/PropertyRow";
 import PropertyRowLabel from "../parameter-config/property-row/PropertyRowLabel";
 import PropertyRowButton from "../parameter-config/property-row/PropertyRowButton";
-import GridRowSeperator from "../grid-row/GridRowSeperator";
+import GridRowSeperator from "../GridRowSeperator";
 import Messenger from "../../messenger";
 import { IToastProps } from "@blueprintjs/core";
 

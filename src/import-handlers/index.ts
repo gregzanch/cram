@@ -8,6 +8,8 @@ import { DAELoader } from "./dae";
 import { chunk } from "../common/chunk";
 import roundTo from "../common/round-to";
 
+
+
 export interface Model {
   name: string;
   geometry: THREE.BufferGeometry;
@@ -71,7 +73,6 @@ export function obj(data) {
     [[] as any[], [] as any[], [] as any[]]
   );
   const models = [] as Model[];
-  debugger;
   res.models.forEach((model) => {
     const buffer = new THREE.BufferGeometry();
     const verts = [] as number[];
@@ -114,3 +115,5 @@ export function dae(data) {
   const res = loader.parse(data, undefined);
   return res;
 }
+
+export {dxf} from './dxf';

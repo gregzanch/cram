@@ -27,6 +27,7 @@ import { addSolver, removeSolver, setSolverProperty, useContainer, useSolver } f
 import {cramangle2threejsangle} from "../../common/dir-angle-conversions";
 import { audioEngine } from "../../audio-engine/audio-engine";
 import observe, { Observable } from "../../common/observable";
+import { coefs, filter } from "../../audio-engine/filter";
 
 const {floor, random, abs, asin} = Math;
 const coinFlip = () => random() > 0.5;
@@ -452,7 +453,7 @@ class RayTracer extends Solver {
     // this.bsp = new BSP();
     // Have an array of faces (array of stride 9)
 
-    const faces = this.room.surfaces.children.map((x: Surface) => x.triangles).flat(3);
+    const faces = this.room._surfaces.map((x: Surface) => x.triangles).flat(3);
 
     // Generate  the Bounding Volume Hierachy from an array of faces
     const maxTrianglesPerNode = 5;
@@ -1012,8 +1013,8 @@ class RayTracer extends Solver {
   }
   clearRays() {
     if (this.room) {
-      for (let i = 0; i < this.room.surfaces.children.length; i++) {
-        (this.room.surfaces.children[i] as Surface).resetHits();
+      for (let i = 0; i < this.room._surfaces.length; i++) {
+        (this.room._surfaces[i] as Surface).resetHits();
       }
     }
     this.validRayCount = 0;
@@ -1459,93 +1460,6 @@ class RayTracer extends Solver {
     }
   }
 
-  hidePlot() {
-    if (!this.responseOverlayElement.classList.contains("response_overlay-hidden")) {
-      this.responseOverlayElement.classList.add("response_overlay-hidden");
-    }
-    renderer.stats.unhide();
-    renderer.orientationControl.show();
-  }
-  showPlot() {
-    if (this.responseOverlayElement.classList.contains("response_overlay-hidden")) {
-      this.responseOverlayElement.classList.remove("response_overlay-hidden");
-    }
-    renderer.stats.hide();
-    renderer.orientationControl.hide();
-  }
-
-  plotResponseByIntensity(receiverId?: string, sourceId?: string) {
-    this.showPlot();
-    const reckeys = this.receiverIDs;
-    const srckeys = this.sourceIDs;
-    if (reckeys.length > 0 && srckeys.length > 0) {
-      const recid = receiverId || reckeys[0];
-      const srcid = sourceId || srckeys[0];
-      const resampledResponse = this.responseByIntensity[recid][srcid].resampledResponse;
-      const sampleRate = this.responseByIntensity[recid][srcid].sampleRate;
-      const freqs = this.responseByIntensity[recid][srcid].freqs;
-
-      if (resampledResponse && sampleRate) {
-        const resampleTime = new Float32Array(resampledResponse[0].length);
-        for (let i = 0; i < resampledResponse[0].length; i++) {
-          resampleTime[i] = i / sampleRate;
-        }
-        this.plotData = freqs.map((freq, i) => {
-          return {
-            x: resampleTime,
-            y: resampledResponse[i],
-            mode: this.plotStyle.mode,
-            name: freq.toString() + " Hz",
-            line: {
-              width: 1
-            }
-          } as Partial<Plotly.PlotData>;
-        });
-
-        const layout = {
-          title: `<b>${useContainer.getState().containers[recid].name}</b> from <b>${useContainer.getState().containers[srcid].name}</b>`
-        };
-
-        if (this.responseOverlayElement.childElementCount > 0) {
-          const xs = [] as Float32Array[];
-          const ys = [] as Float32Array[];
-          const is = [] as number[];
-          this.plotData.forEach((x, i) => {
-            //xs.push(x.x as Float32Array);
-            //@ts-ignore
-            ys.push(x.y as Float32Array);
-            is.push(i);
-          });
-          //@ts-ignore
-          Plotly.update(this.responseOverlayElement.id, { x: xs, y: ys }, is);
-
-          // Plotly.extendTraces(this.responseOverlayElement.id, { x: xs, y: ys }, is);
-        } else {
-          Plotly.newPlot(this.responseOverlayElement.id, this.plotData, layout, { responsive: true });
-          const { responseOverlayElement } = this;
-          const traverseFunction = reverseTraverse((elt) => elt && elt.classList.contains("splitter-layout"));
-          const splitterLayout = traverseFunction(this.responseOverlayElement);
-          console.log(splitterLayout);
-          if (splitterLayout) {
-            const splitter = splitterLayout.querySelector(".layout-splitter");
-            if (splitter) {
-              (splitter as HTMLDivElement).addEventListener("mouseup", (e) => {
-                Plotly.Plots.resize(responseOverlayElement);
-              });
-            }
-          }
-        }
-      }
-    }
-  }
-
-  updatePlotStyle(plotStyle: Partial<PlotData>) {
-    Object.assign(this.plotStyle, plotStyle);
-    if (this.responseOverlayElement.childElementCount > 0) {
-      Plotly.restyle(this.responseOverlayElement, this.plotStyle);
-    }
-  }
-
   calculateT30(receiverId?: string, sourceId?: string) {
     const reckeys = this.receiverIDs;
     const srckeys = this.sourceIDs;
@@ -1660,7 +1574,7 @@ class RayTracer extends Solver {
     //             sources[nofSources++] = newSource
     //             if (maxOrder > 0)
     //                 computeImageSources(newSource, surface, maxOrder - 1)
-    for(const surface of this.room.surfaces.children){
+    for(const surface of this.room._surfaces){
       if(surface.uuid !== previousReflector.uuid){
         
       }
@@ -1815,7 +1729,7 @@ class RayTracer extends Solver {
     // convert back to pressure
     return ac.Lp2P(arrivalLp) as number[]; 
   }
-  async calculateImpulseResponse(initialSPL = 100, frequencies = ac.Octave(125, 20000), sampleRate = 44100) {
+  async calculateImpulseResponse(initialSPL = 100, frequencies = ac.Octave(125, 8000), sampleRate = 44100) {
     if(this.receiverIDs.length == 0) throw Error("No receivers have been assigned to the raytracer");
     if(this.sourceIDs.length == 0) throw Error("No sources have been assigned to the raytracer");
     if(this.paths[this.receiverIDs[0]].length == 0) throw Error("No rays have been traced yet");
@@ -1841,18 +1755,22 @@ class RayTracer extends Solver {
         samples[f][roundedSample] = p[f]; 
       }
     }
-    console.log(samples);
+
+    samples.forEach((x,i,arr)=>{
+      const {b, a} = coefs.get(frequencies[i])!;
+      arr[i] = filter(b,a,x);
+    });
 
     const offlineContext = audioEngine.createOfflineContext(1, numberOfSamples, sampleRate);
-    const sources = audioEngine.createFilteredSources(samples, frequencies, offlineContext);
+    const sources = samples.map(x => audioEngine.createBufferSource(x, offlineContext));
     const merger = audioEngine.createMerger(sources.length, offlineContext);
     
     for(let i = 0; i<sources.length; i++){
-      sources[i].gain.connect(merger, 0, i);
+      sources[i].connect(merger, 0, i);
     }
 
     merger.connect(offlineContext.destination);
-    sources.forEach(source=>source.source.start());
+    sources.forEach(source=>source.start());
 
     // this.impulseResponse = audioEngine.context.createBufferSource();
     this.impulseResponse = await offlineContext.startRendering();

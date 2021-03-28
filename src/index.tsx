@@ -74,7 +74,7 @@ enableMapSet();
 import './objects/events';
 import './compute/events';
 
-expose({ audioEngine, useSolver, useContainer, useResult, useAppStore, useMaterial, produce, on, emit });
+expose({ Container, audioEngine, useSolver, useContainer, useResult, useAppStore, useMaterial, produce, on, emit });
 
 
 import {CLFViewer} from "./objects/CLFViewer";
@@ -688,6 +688,13 @@ messenger.addMessageHandler("IMPORT_FILE", (acc, ...args) => {
     if (allowed[fileType(file.name)]) {
       const objectURL = URL.createObjectURL(file);
       switch (fileType(file.name)) {
+        case "dxf": 
+        {
+          const result = await (await fetch(objectURL)).text();
+          const room = importHandlers.dxf(result);
+          emit("ADD_ROOM", room);
+          console.log(room);
+        } break;
         case "obj":
           {
             const result = await (await fetch(objectURL)).text();

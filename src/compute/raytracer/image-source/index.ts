@@ -456,7 +456,7 @@ export class ImageSourceSolver extends Solver {
 
         // get valid paths
         for(let i = 0; i<paths?.length; i++){
-          if(paths[i].isvalid(this.room.surfaces.children as Surface[])){
+          if(paths[i].isvalid(this.room._surfaces as Surface[])){
             valid_paths.push(paths[i]); 
           }
         }
@@ -547,7 +547,7 @@ export class ImageSourceSolver extends Solver {
 
           let validCount = 0; 
           for(let i = 0; i<paths.length; i++){
-            if(paths[i].isvalid(this.room.surfaces.children as Surface[])){
+            if(paths[i].isvalid(this.room._surfaces as Surface[])){
               paths[i].markup(); 
               console.log(paths[i]);
               console.log(paths[i].totalLength)
@@ -814,7 +814,7 @@ export default ImageSourceSolver;
 
 function computeImageSources(is: ImageSource, maxOrder: number): ImageSource | null {
 
-  let surfaces: any[] = is.room.surfaces.children; 
+  let surfaces: any[] = is.room._surfaces; 
     
   // end recursion
   if(maxOrder==0){

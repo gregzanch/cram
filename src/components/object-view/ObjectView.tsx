@@ -9,7 +9,7 @@ import properCase from "../../common/proper-case";
 import { KeyValuePair } from "../../common/key-value-pair";
 import Container from "../../objects/container";
 import { Colors } from "@blueprintjs/core";
-import ContextMenu from "../context-menu/ContextMenu";
+import ContextMenu from "../ContextMenu";
 import { NodesIcon, RoomIcon, SurfaceIcon, SourceIcon, ReceiverIcon } from "../icons";
 import "./ObjectView.css";
 import Messenger, { emit, on } from "../../messenger";

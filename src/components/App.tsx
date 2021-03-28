@@ -25,7 +25,6 @@ import { Stat } from "./parameter-config/Stats";
 
 import Surface from "../objects/surface";
 import { AcousticMaterial } from "../db/acoustic-material";
-import MaterialDrawer from "./material-drawer/MaterialDrawer";
 import { SettingsPanel } from "./setting-components/SettingsPanel";
 import { Tab, Tabs, TabList, TabPanel } from "react-tabs";
 import properCase from "../common/proper-case";

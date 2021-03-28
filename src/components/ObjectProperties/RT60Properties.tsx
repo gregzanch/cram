@@ -1,10 +1,10 @@
 import React, { Fragment } from "react";
 import TextInput from "../text-input/TextInput";
 import NumberInput, { ObjectPropertyInputEvent } from ".";
-import CheckboxInput from "../checkbox-input/CheckboxInput";
+import CheckboxInput from "../CheckboxInput";
 import Source from "../../objects/source";
-import GridRow from "../grid-row/GridRow";
-import GridRowSeperator from "../grid-row/GridRowSeperator";
+import GridRow from "../GridRow";
+import GridRowSeperator from "../GridRowSeperator";
 import {RT60} from "../../compute/rt";
 import { Button } from "@blueprintjs/core";
 import Select, { components } from "react-select";
