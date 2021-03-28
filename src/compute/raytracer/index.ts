@@ -1511,7 +1511,7 @@ class RayTracer extends Solver {
           const ys = [] as Float32Array[];
           const is = [] as number[];
           this.plotData.forEach((x, i) => {
-            xs.push(x.x as Float32Array);
+            //xs.push(x.x as Float32Array);
             //@ts-ignore
             ys.push(x.y as Float32Array);
             is.push(i);

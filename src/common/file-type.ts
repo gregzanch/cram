@@ -19,6 +19,7 @@ export const allowed = {
 	stl: true,
 	obj: true,
 	dae: true,
+	"3ds": true, 
 }
 export const assoc = {
 	html: ICONS.CODE,

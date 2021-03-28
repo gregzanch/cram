@@ -747,7 +747,15 @@ messenger.addMessageHandler("IMPORT_FILE", (acc, ...args) => {
             console.log(models);
           }
           break;
-
+        
+        case "3ds":
+          {
+            console.log("load 3ds")
+            const result = await (await fetch(objectURL)).arrayBuffer(); 
+            const models = importHandlers.tds(result);
+            console.log(models); 
+          }
+          break; 
         case "wav":
           {
             try {
