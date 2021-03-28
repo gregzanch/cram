@@ -78,6 +78,9 @@ export class Room extends Container {
   }
   dispose(){
     renderer.remove(this);
+    this._surfaces.forEach(surface=>{
+      emit("REMOVE_SURFACE", surface.uuid);
+    })
   }
   save() {
     return {

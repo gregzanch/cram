@@ -1755,9 +1755,11 @@ class RayTracer extends Solver {
       const roundedSample = floor(t * sampleRate);
 
       for(let f = 0; f<frequencies.length; f++){
-        samples[f][roundedSample] = p[f]; 
+        samples[f][roundedSample] += p[f];
       }
     }
+
+    
 
     samples.forEach((x,i,arr)=>{
       const {b, a} = coefs.get(frequencies[i])!;
@@ -1782,8 +1784,7 @@ class RayTracer extends Solver {
 
   impulseResponse!: AudioBuffer;
   impulseResponsePlaying = false;
-
-
+  
   async playImpulseResponse(){
     if(!this.impulseResponse){
       await this.calculateImpulseResponse().catch(console.error);
@@ -1802,6 +1803,46 @@ class RayTracer extends Solver {
       impulseResponse.disconnect(audioEngine.context.destination);
       emit("RAYTRACER_SET_PROPERTY", { uuid: this.uuid, property: "impulseResponsePlaying", value: false });
     };
+  }
+  downloadImpulses(initialSPL = 100, frequencies = ac.Octave(125, 8000), sampleRate = 44100){
+    if(this.receiverIDs.length == 0) throw Error("No receivers have been assigned to the raytracer");
+    if(this.sourceIDs.length == 0) throw Error("No sources have been assigned to the raytracer");
+    if(this.paths[this.receiverIDs[0]].length == 0) throw Error("No rays have been traced yet");
+
+    const sorted = this.paths[this.receiverIDs[0]].sort((a,b)=>a.time - b.time) as RayPath[];
+    const totalTime = sorted[sorted.length - 1].time + 0.05; // end time is latest time of arrival plus 0.1 seconds for safety
+
+    const spls = Array(frequencies.length).fill(initialSPL);
+    const numberOfSamples = floor(sampleRate * totalTime);
+
+    const samples: Array<Float32Array> = []; 
+    for(let f = 0; f<frequencies.length; f++){
+      samples.push(new Float32Array(numberOfSamples));
+    }
+    let max = 0;
+    for(let i = 0; i<sorted.length; i++){
+      const randomPhase = coinFlip() ? 1 : -1;
+      const t = sorted[i].time; 
+      const p = this.arrivalPressure(spls, frequencies, sorted[i]).map(x => x * randomPhase); 
+      const roundedSample = floor(t * sampleRate);
+
+      for(let f = 0; f<frequencies.length; f++){
+        samples[f][roundedSample] += p[f];
+        if(abs(samples[f][roundedSample]) > max){
+          max = abs(samples[f][roundedSample]);
+        }
+      }
+    }
+
+    for(let f = 0; f<frequencies.length; f++){
+      for(let i = 0; i<samples[f].length; i++){
+        samples[f][i] /= max;
+      }
+      const blob = ac.wavAsBlob([samples[f]], { sampleRate, bitDepth: 32 });
+      FileSaver.saveAs(blob, `${frequencies[f]}.wav`);
+    }
+
+    
   }
   async downloadImpulseResponse(filename: string, sampleRate = 44100){
     if(!this.impulseResponse){

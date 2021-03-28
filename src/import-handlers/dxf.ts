@@ -38,7 +38,7 @@ export function dxf(data: string){
         vertices.push([vertex.x,vertex.y,vertex.z!]);
       }
     });
-    const geometry = makeBufferGeometry((indices.flat() as number[]).map(index=>vertices[index]).flat() as number[]);
+    const geometry = makeBufferGeometry((indices.flat().reverse() as number[]).map(index=>vertices[index]).flat() as number[]);
     const acousticMaterial = defaultMaterial;
     const surface = new Surface(`untitled-${i}`, {
       acousticMaterial,

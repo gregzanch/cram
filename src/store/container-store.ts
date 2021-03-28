@@ -54,11 +54,18 @@ export const addContainer = <T extends Container>(ContainerClass: new(...args) =
 };
 
 export const removeContainer = (uuid: keyof ContainerStore['containers']) => {
-  useContainer.getState().containers[uuid].dispose();
-  useContainer.setState(state => ({
-    ...state, 
-    containers: omit([uuid], state.containers)
-  }), true);
+  if(useContainer.getState().containers[uuid]){
+    useContainer.getState().containers[uuid].dispose();
+    // console.log(uuid);
+    useContainer.getState().set(store=>{
+      store.selectedObjects.delete(useContainer.getState().containers[uuid]);
+    });
+    useContainer.setState(state => ({
+      ...state, 
+      containers: omit([uuid], state.containers)
+    }), true);
+
+  }
 }
 
 

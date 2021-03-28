@@ -66,7 +66,7 @@ import * as THREE from "three";
 import FileSaver from "file-saver";
 import { createFileFromData } from "./common/file";
 import produce, { enableMapSet } from "immer";
-
+import {omit} from './common/helpers'
 import { useContainer, useSolver, useResult, useAppStore, useMaterial } from "./store";
 import { audioEngine } from './audio-engine/audio-engine';
 enableMapSet();
@@ -74,7 +74,7 @@ enableMapSet();
 import './objects/events';
 import './compute/events';
 
-expose({ Container, audioEngine, useSolver, useContainer, useResult, useAppStore, useMaterial, produce, on, emit });
+expose({ omit, Container, audioEngine, useSolver, useContainer, useResult, useAppStore, useMaterial, produce, on, emit });
 
 
 import {CLFViewer} from "./objects/CLFViewer";

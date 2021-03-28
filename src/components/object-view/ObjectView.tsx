@@ -76,7 +76,23 @@ function MapChildren(props: MapChildrenProps) {
     handleMenuItemClick: (e) => {
       if (e.target.textContent) {
         switch (e.target.textContent) {
-          case "Delete": emit("REMOVE_CONTAINERS", container.uuid); break;
+          case "Delete": {
+            const newExpanded = new Set(expanded);
+            container.traverse((object: Container) => {
+              if(newExpanded.has(object.uuid)){
+                newExpanded.delete(object.uuid);
+              }
+            });
+            emit("DESELECT_ALL_OBJECTS");
+            setExpanded([...newExpanded]);
+            const toDelete = [] as string[];
+            container.traverse((object: Container) => {
+              if(object["kind"] && ["surface", "source", "receiver", "room"].includes(object["kind"])){
+                toDelete.push(object.uuid);
+              }
+            });
+            emit("REMOVE_CONTAINERS", toDelete);
+          } break;
           case "Log to Console": console.log(container); break;
           default: break;
         }
