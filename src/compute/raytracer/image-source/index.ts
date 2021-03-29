@@ -352,6 +352,8 @@ export class ImageSourceSolver extends Solver {
 
     selectedImageSourcePath: MeshLine;
 
+    private _plotFrequency: number; 
+
     constructor(params: ImageSourceSolverParams = defaults){
         super(params);
         this.uuid = uuid(); 
@@ -369,12 +371,14 @@ export class ImageSourceSolver extends Solver {
 
         this.impulseResponsePlaying = false; 
 
+        this._plotFrequency = 1000; 
+
         emit("ADD_RESULT", {
           kind: ResultKind.LevelTimeProgression, 
           data: [],
           info: {
             initialSPL: [100],
-            frequency: [1000],
+            frequency: [this._plotFrequency],
             maxOrder: this.maxReflectionOrder,
           },
           name: `LTP - ${this.name}`,
@@ -484,7 +488,8 @@ export class ImageSourceSolver extends Solver {
       levelTimeProgression.data = [] as ResultTypes[ResultKind.LevelTimeProgression]["data"];
       levelTimeProgression.info = {
         ...levelTimeProgression.info,
-        maxOrder: this.maxReflectionOrder
+        maxOrder: this.maxReflectionOrder,
+        frequency: [this._plotFrequency]
       }
       if(sortedPath != undefined){
         for(let i = 0; i<sortedPath?.length; i++){
@@ -862,6 +867,11 @@ export class ImageSourceSolver extends Solver {
       this.clearImageSources(); 
       this.rayPathsVisible && this.drawRayPaths();
       this.imageSourcesVisible && this.drawImageSources(); 
+    }
+
+    set plotFrequency(f: number){
+      this._plotFrequency = f;
+      this.calculateLTP(343); 
     }
 
   
