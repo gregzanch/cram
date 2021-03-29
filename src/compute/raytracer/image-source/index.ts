@@ -21,7 +21,10 @@ import {LineMaterial} from 'three/examples/jsm/lines/LineMaterial';
 import {useContainer} from '../../../store';
 import { pickProps } from "../../../common/helpers";
 import { normalize } from "../../acoustics";
-import {saveAs} from 'file-saver';
+import FileSaver, {saveAs} from 'file-saver';
+import { audioEngine } from "../../../audio-engine/audio-engine";
+import observe, { Observable } from "../../../common/observable";
+import { coefs, filter } from "../../../audio-engine/filter";
 
 function createLine(){
   let points = [];
@@ -340,6 +343,8 @@ export class ImageSourceSolver extends Solver {
     private _rayPathsVisible: boolean;
     private _plotOrders: number[]; 
 
+    impulseResponse!: AudioBuffer; 
+    impulseResponsePlaying: boolean; 
 
     rootImageSource: ImageSource | null; 
     validRayPaths: ImageSourcePath[] | null; 
@@ -361,6 +366,9 @@ export class ImageSourceSolver extends Solver {
         this._rayPathsVisible = params.rayPathsVisible; 
         this._plotOrders = params.plotOrders; 
         this.levelTimeProgression = uuid();
+
+        this.impulseResponsePlaying = false; 
+
         emit("ADD_RESULT", {
           kind: ResultKind.LevelTimeProgression, 
           data: [],
@@ -622,49 +630,98 @@ export class ImageSourceSolver extends Solver {
       }
 
     }
-    downloadImpulseResponse(){
+
+    async calculateImpulseResponse(){
+      const initialSPL = 100; //PLACEHOLDER
+      const freqs = this.frequencies;
+      const sampleRate = 44100; 
+      const spls = Array(freqs.length).fill(initialSPL);
+
+      if(this.receiverIDs.length == 0) throw Error("No receivers have been assigned to the raytracer");
+      if(this.sourceIDs.length == 0) throw Error("No sources have been assigned to the raytracer");
+      if(this.validRayPaths?.length == 0) throw Error("No rays have been traced yet");
+
       let sortedPath: ImageSourcePath[] | null = this.validRayPaths; 
       sortedPath?.sort((a, b) => (a.arrivalTime(343) > b.arrivalTime(343)) ? 1 : -1); 
-      const levelTimeProgression = { ...useResult.getState().results[this.levelTimeProgression] as Result<ResultKind.LevelTimeProgression> };
-      levelTimeProgression.data = [] as ResultTypes[ResultKind.LevelTimeProgression]["data"];
-      levelTimeProgression.info = {
-        ...levelTimeProgression.info,
-        maxOrder: this.maxReflectionOrder
-      }
 
-        if(sortedPath != undefined){
-          let endTime = sortedPath[sortedPath.length - 1].arrivalTime(343)+0.05; // end time is latest time of arrival plus 0.1 seconds for safety
-  
-          let Fs = 44100; // sample rate 
-          let endSample = Fs*endTime; 
-  
-          let samples: Float32Array[] = []; 
-          for(let f = 0; f<this.frequencies.length; f++){
-            samples.push(new Float32Array(Math.floor(endSample))); 
-          }
-        
-          for(let i = 0; i<sortedPath?.length; i++){
-            let t = sortedPath[i].arrivalTime(343); 
-            let p = sortedPath[i].arrivalPressure(this.frequencies.map(x => levelTimeProgression.info.initialSPL[0]), this.frequencies); 
-  
-            if(Math.random() > 0.5){
-              p=p.map(x=>-x); 
-            }else{
-  
-            }
-  
-            let roundedSample = Math.floor(t*Fs);
+      console.log(sortedPath);
 
-            for(let f = 0; f<this.frequencies.length; f++){
-              samples[f][roundedSample] = p[f]; 
-            }
-          }
-          for(let f = 0; f<this.frequencies.length; f++){
-            const blob = ac.wavAsBlob([normalize(samples[f])], { sampleRate: 44100, bitDepth: 32 });
-            saveAs(blob, this.frequencies[f].toString() + ".wav");
-
-          }
+      if(sortedPath != undefined){
+        const endTime = sortedPath[sortedPath.length - 1].arrivalTime(343)+0.05;
+        const endSample = sampleRate*endTime; 
+  
+        let samples: Float32Array[] = []; 
+        for(let f = 0; f<this.frequencies.length; f++){
+          samples.push(new Float32Array(Math.floor(endSample))); 
         }
+
+        console.log("hello1")
+        
+        for(let i = 0; i<sortedPath?.length; i++){
+          let t = sortedPath[i].arrivalTime(343); 
+          let p = sortedPath[i].arrivalPressure(spls, this.frequencies); 
+
+          console.log("hello2");
+
+          (Math.random() > 0.5) && (p=p.map(x=>-x)); 
+
+          let roundedSample = Math.floor(t*sampleRate);
+
+          for(let f = 0; f<this.frequencies.length; f++){
+            samples[f][roundedSample] = p[f]; 
+          }
+
+        }
+          
+        // samples.forEach((x,i,arr)=>{
+        // const {b, a} = coefs.get(freqs[i])!;
+        // arr[i] = filter(b,a,x);
+        // });
+    
+        const offlineContext = audioEngine.createOfflineContext(1, endSample, sampleRate);
+        const sources = samples.map(x => audioEngine.createBufferSource(x, offlineContext));
+        const merger = audioEngine.createMerger(sources.length, offlineContext);
+        
+        for(let i = 0; i<sources.length; i++){
+          sources[i].connect(merger, 0, i);
+        }
+    
+        merger.connect(offlineContext.destination);
+        sources.forEach(source=>source.start());
+    
+        console.log(samples); 
+        this.impulseResponse = await offlineContext.startRendering();
+        return this.impulseResponse;
+
+      } 
+    }
+
+    async playImpulseResponse(){
+      if(!this.impulseResponse){
+        await this.calculateImpulseResponse().catch(console.error);
+      }
+      if (audioEngine.context.state === 'suspended') {
+        audioEngine.context.resume();
+      }
+      console.log(this.impulseResponse);
+      const impulseResponse = audioEngine.context.createBufferSource();
+      impulseResponse.buffer = this.impulseResponse;
+      impulseResponse.connect(audioEngine.context.destination);
+      impulseResponse.start();
+      emit("IMAGESOURCE_SET_PROPERTY", { uuid: this.uuid, property: "impulseResponsePlaying", value: true });
+      impulseResponse.onended = () => {
+        impulseResponse.stop();
+        impulseResponse.disconnect(audioEngine.context.destination);
+        emit("IMAGESOURCE_SET_PROPERTY", { uuid: this.uuid, property: "impulseResponsePlaying", value: false });
+      };
+    }
+    async downloadImpulseResponse(filename: string, sampleRate = 44100){
+      if(!this.impulseResponse){
+        await this.calculateImpulseResponse().catch(console.error);
+      }
+      const blob = ac.wavAsBlob([normalize(this.impulseResponse.getChannelData(0))], { sampleRate, bitDepth: 32 });
+      const extension = !filename.endsWith(".wav") ? ".wav" : "";
+      FileSaver.saveAs(blob, filename + extension);
     }
 
     // getters and setters
@@ -988,6 +1045,8 @@ declare global {
     UPDATE_IMAGESOURCE: string; 
     RESET_IMAGESOURCE: string;
     CALCULATE_LTP: string; 
+    IMAGESOURCE_PLAY_IR: string; 
+    IMAGESOURCE_DOWNLOAD_IR: string; 
   }
 }
 
@@ -997,5 +1056,8 @@ on("ADD_IMAGESOURCE", addSolver(ImageSourceSolver));
 on("UPDATE_IMAGESOURCE", (uuid: string) => void (useSolver.getState().solvers[uuid] as ImageSourceSolver).updateImageSourceCalculation());
 on("RESET_IMAGESOURCE", (uuid: string) => void (useSolver.getState().solvers[uuid] as ImageSourceSolver).reset());
 on("CALCULATE_LTP", (uuid: string) => void (useSolver.getState().solvers[uuid] as ImageSourceSolver).calculateLTP(343));
+on("IMAGESOURCE_PLAY_IR", (uuid: string) => void (useSolver.getState().solvers[uuid] as ImageSourceSolver).playImpulseResponse().catch(console.error));
+on("IMAGESOURCE_DOWNLOAD_IR", (uuid: string) => void (useSolver.getState().solvers[uuid] as ImageSourceSolver).downloadImpulseResponse(`ir-imagesource-${uuid}`).catch(console.error));
+
 
 
