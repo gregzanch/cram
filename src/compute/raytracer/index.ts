@@ -1460,9 +1460,6 @@ class RayTracer extends Solver {
     }
   }
 
-
-
-
   calculateT30(receiverId?: string, sourceId?: string) {
     const reckeys = this.receiverIDs;
     const srckeys = this.sourceIDs;

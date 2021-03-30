@@ -106,7 +106,7 @@ const Calculation = ({ uuid }: { uuid: string}) => {
   const disabled = !(sourceIDs.length > 0 && receiverIDs.length > 0);
   return (
     <PropertyRowFolder label="Calculation" open={open} onOpenClose={toggle}>
-      <PropertyNumberInput uuid={uuid} label="Maximum Order" property="maxReflectionOrder" tooltip="Sets the maximum reflection order"/>
+      <PropertyNumberInput uuid={uuid} label="Maximum Order" property="maxReflectionOrderReset" tooltip="Sets the maximum reflection order"/>
       <PropertyButton disabled={disabled} event="UPDATE_IMAGESOURCE" args={uuid} label="Update" tooltip="Updates Imagesource Calculation" />
       <PropertyButton disabled={disabled} event="RESET_IMAGESOURCE" args={uuid} label="Clear" tooltip="Clears Imagesource Calculation" />
     </PropertyRowFolder>
@@ -143,11 +143,10 @@ const Graphing = ({ uuid }: { uuid: string}) => {
 
 const ImpulseResponse = ({uuid}: { uuid: string}) => {
   const [open, toggle] = useToggle(true);
-
   return (
     <PropertyRowFolder label="Impulse Response" open={open} onOpenClose={toggle}>
-      <PropertyButton event="RAYTRACER_PLAY_IR" args={uuid} label="Play" tooltip="Plays the calculated impulse response" disabled={false} />
-      <PropertyButton event="RAYTRACER_DOWNLOAD_IR" args={uuid} label="Download" tooltip="Plays the calculated impulse response" />
+      <PropertyButton event="IMAGESOURCE_PLAY_IR" args={uuid} label="Play" tooltip="Plays the calculated impulse response" disabled={false} />
+      <PropertyButton event="IMAGESOURCE_DOWNLOAD_IR" args={uuid} label="Download" tooltip="Plays the calculated impulse response" />
     </PropertyRowFolder>
   )
 }
@@ -169,6 +168,7 @@ export const ImageSourceTab = ({ uuid }: ImageSourceTabProps) => {
       <SourceConfiguration uuid={uuid}/>
       <ReceiverConfiguration uuid={uuid}/>
       <Graphing uuid={uuid}/>
+      <ImpulseResponse uuid={uuid}/>
       <Developer uuid={uuid}/>
     </div>
   );

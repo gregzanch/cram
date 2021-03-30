@@ -28,6 +28,8 @@ import { ImageSourceSolver } from '../../compute/raytracer/image-source';
 import { useSolver } from '../../store';
 import PropertyRowCheckbox from "../parameter-config/property-row/PropertyRowCheckbox";
 import { createPropertyInputs } from '../parameter-config/SolverComponents';
+import PropertyRowLabel from '../parameter-config/property-row/PropertyRowLabel';
+import PropertyRow from '../parameter-config/property-row/PropertyRow';
 // accessors
 const getTime = (d) => d.time;
 const getPressure = (d) => d.pressure[0];
@@ -73,6 +75,13 @@ const LegendContainer = styled.div`
  flex-direction: column;
  align-items: center;
  padding: 0px 16px;
+`;
+
+const FrequencyContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 16px;
 `;
 
 const GraphContainer = styled.div`
@@ -181,8 +190,9 @@ const Chart = ({ uuid, width = 400, height = 200, events = false }: LTPChartProp
 
 export const LTPChart = ({ uuid, width = 400, height = 300, events = false }: LTPChartProps) => {
   const {name, info, from} = useResult(state=>pickProps(["name", "info", "from"], state.results[uuid] as Result<ResultKind.LevelTimeProgression>));
-
   const initialPlotOrders = useSolver(state=>(state.solvers[from] as ImageSourceSolver).plotOrders);
+  const frequencies = useSolver(state=>(state.solvers[from] as ImageSourceSolver).frequencies);
+
   const [plotOrders, setPlotOrders] = useState(initialPlotOrders);
   const [order, setMaxOrder] = useState(info.maxOrder);
 
@@ -198,8 +208,6 @@ export const LTPChart = ({ uuid, width = 400, height = 300, events = false }: LT
         setPlotOrders(e.value);
     }
   }), [uuid]);  
-
-
 
   const ordinalColorScale = useMemo(
     () => scaleOrdinal(
@@ -226,41 +234,66 @@ export const LTPChart = ({ uuid, width = 400, height = 300, events = false }: LT
           {({ width })=><Chart {...{ width, height, uuid, events }} />}
         </ParentSize>
       </GraphContainer>
-      <LegendOrdinal scale={ordinalColorScale} labelFormat={label => `Order ${label}`}>
-          {labels => (
+      <VerticalContainer>
+        <LegendOrdinal scale={ordinalColorScale} labelFormat={label => `Order ${label}`}>
+            {labels => (
+              <LegendContainer>
+                {labels.map((label, i) => (
+                  <LegendItem
+                    key={`legend-quantile-${i}`}
+                    margin="0 5px"
+                    onClick={() => {
+                      //if (events) alert(`clicked: ${JSON.stringify(label)}`);
+                    }}
+                  >
+                    <svg width={legendGlyphSize} height={legendGlyphSize}>
+                      <rect fill={label.value} width={legendGlyphSize} height={legendGlyphSize} />
+                    </svg>
+                    <LegendLabel align="left" margin="0 0 0 4px">
+                      {label.text}
+                    </LegendLabel>
+                    <PropertyRowCheckbox
+                      value={plotOrders.includes(label.datum)}
+                      onChange={(e) =>
+                        {
+                          const newPlotOrders = e.value ? unique([...plotOrders, label.datum]) : plotOrders.reduce((acc, curr) => curr === label.datum ? acc : [...acc, curr], []);
+                          emit("IMAGESOURCE_SET_PROPERTY", { uuid: from, property: "plotOrders", value: newPlotOrders })
+                          if(this != undefined){
+                            //@ts-ignore
+                            console.log(this.refs.complete.state.checked)
+                          }
+                        }
+                      }
+                    />
+                  </LegendItem>
+                ))}
+              </LegendContainer>
+            )}
+          </LegendOrdinal>
+          <FrequencyContainer>
+            <Title><b>Octave Band (Hz)</b></Title>
             <LegendContainer>
-              {labels.map((label, i) => (
+              {frequencies.map((f)=>(
                 <LegendItem
-                  key={`legend-quantile-${i}`}
+                  key={`freq-control-${f}`}
                   margin="0 5px"
                   onClick={() => {
                     //if (events) alert(`clicked: ${JSON.stringify(label)}`);
-                  }}
-                >
-                  <svg width={legendGlyphSize} height={legendGlyphSize}>
-                    <rect fill={label.value} width={legendGlyphSize} height={legendGlyphSize} />
-                  </svg>
-                  <LegendLabel align="left" margin="0 0 0 4px">
-                    {label.text}
-                  </LegendLabel>
+                }}>
+                  <PropertyRowLabel
+                    label={f.toString()}
+                  />
                   <PropertyRowCheckbox
-                    value={plotOrders.includes(label.datum)}
-                    onChange={(e) =>
-                      {
-                        const newPlotOrders = e.value ? unique([...plotOrders, label.datum]) : plotOrders.reduce((acc, curr) => curr === label.datum ? acc : [...acc, curr], []);
-                        emit("IMAGESOURCE_SET_PROPERTY", { uuid: from, property: "plotOrders", value: newPlotOrders })
-                        if(this != undefined){
-                          //@ts-ignore
-                          console.log(this.refs.complete.state.checked)
-                        }
-                      }
+                    value={(f)==(info.frequency[0])}
+                    onChange = {(e) => 
+                      emit("IMAGESOURCE_SET_PROPERTY", { uuid: from, property: "plotFrequency", value: f })
                     }
                   />
                 </LegendItem>
               ))}
             </LegendContainer>
-          )}
-        </LegendOrdinal>
+          </FrequencyContainer>
+        </VerticalContainer>
       </HorizontalContainer>
     </VerticalContainer>
   );
