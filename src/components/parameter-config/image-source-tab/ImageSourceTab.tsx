@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import "./ImageSourceTab.css";
 import RayTracer from "../../../compute/raytracer";
 import {ImageSourceSolver} from "../../../compute/raytracer/image-source/index"; 
@@ -104,6 +104,12 @@ const Calculation = ({ uuid }: { uuid: string}) => {
   const [open, toggle] = useToggle(true);
   const {sourceIDs, receiverIDs} = useSolver(state=>pickProps(["sourceIDs", "receiverIDs"], state.solvers[uuid] as ImageSourceSolver));
   const disabled = !(sourceIDs.length > 0 && receiverIDs.length > 0);
+  const [, forceUpdate] = useReducer((c) => c + 1, 0) as [never, () => void]
+  useEffect(()=>on("IMAGESOURCE_SET_PROPERTY", (e)=>{
+    if(e.uuid === uuid && (e.property === "sourceIDs" || e.property === "receiverIDs")){
+      forceUpdate();
+    }
+  }))
   return (
     <PropertyRowFolder label="Calculation" open={open} onOpenClose={toggle}>
       <PropertyNumberInput uuid={uuid} label="Maximum Order" property="maxReflectionOrderReset" tooltip="Sets the maximum reflection order"/>
