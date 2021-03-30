@@ -1,6 +1,6 @@
 import React, {useCallback, useState} from "react";
 import Slider, { SliderChangeEvent } from '../slider/Slider';
-import Messenger from "../../messenger";
+import Messenger, { emit } from "../../messenger";
 
 import { clamp } from '../../common/clamp';
 import PropertyRow from "./property-row/PropertyRow";
@@ -161,7 +161,7 @@ const CameraProperties = () => {
         tooltip="Toggles between perspective/orthographic" 
         onText="Orthographic" 
         offText="Perspective" 
-        updateFn={()=>postMessage("TOGGLE_CAMERA_ORTHO")} 
+        updateFn={()=>emit("TOGGLE_CAMERA_ORTHO")} 
       />
     </PropertyRowFolder>
   )

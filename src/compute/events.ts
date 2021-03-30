@@ -4,21 +4,27 @@ import { useSolver, getSolverKeys } from "../store";
 import RayTracer, { RayTracerSaveObject } from "./raytracer";
 import RT60, { RT60SaveObject } from "./rt";
 import Solver from "./solver";
+import ImageSourceSolver, { ImageSourceSaveObject } from "./raytracer/image-source";
 
 declare global {
   interface EventTypes {
-    RESTORE_SOLVERS: (RayTracerSaveObject | RT60SaveObject)[];
+    RESTORE_SOLVERS: (RayTracerSaveObject | RT60SaveObject | ImageSourceSaveObject)[];
     REMOVE_SOLVERS: string|string[];
+    LOG_SOLVER: string;
   }
 }
 
 
+on("LOG_SOLVER", uuid => {
+  console.log(useSolver.getState().solvers[uuid]);
+});
 
 on("REMOVE_SOLVERS", (uuids) => {
-  const currentSolvers = useSolver.getState().solvers;
-  const containers = omit(typeof uuids === "string" ? [uuids] : uuids, currentSolvers);
+  const solvers = useSolver.getState().solvers;
+  const ids = typeof uuids === "string" ? [uuids] : uuids;
+  ids.forEach(id => solvers[id].dispose());
   useSolver.getState().set((state) => {
-    state.solvers = containers;
+    state.solvers = omit(ids, solvers);
   });
 });
 
@@ -32,7 +38,7 @@ const restore = <SolverType extends Solver>(
 on("RESTORE_SOLVERS", solvers => {
   emit("REMOVE_SOLVERS", getSolverKeys());
 
-
+  console.log(solvers);
   solvers.forEach((solver) => {
     switch (solver.kind) {
       case "ray-tracer":
@@ -40,6 +46,9 @@ on("RESTORE_SOLVERS", solvers => {
         break;
       case "rt60":
         emit("ADD_RT60", restore(RT60, solver));
+        break;
+      case "image-source":
+        emit("ADD_IMAGESOURCE", restore(ImageSourceSolver, solver));
         break;
     }
   });

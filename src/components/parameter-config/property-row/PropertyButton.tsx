@@ -8,17 +8,21 @@ export const PropertyButton = <T extends keyof EventTypes>({
   args,
   event,
   label,
-  tooltip
+  tooltip,
+  buttonLabel = label,
+  disabled
 }: {
   args: EventTypes[T];
   event: T;
   label: string;
   tooltip: string;
+  buttonLabel?: string;
+  disabled?: boolean
 }) => {
   return (
     <PropertyRow>
       <PropertyRowLabel label={label} hasToolTip tooltip={tooltip} />
-      <PropertyRowButton onClick={(e) => emit(event, args)} label={label} />
+      <PropertyRowButton onClick={(e) => emit(event, args)} label={buttonLabel} disabled={disabled}/>
     </PropertyRow>
   );
 };

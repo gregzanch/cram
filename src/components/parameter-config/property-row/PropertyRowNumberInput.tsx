@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import styled from 'styled-components';
 
 export const StyledInput = styled.input`
@@ -35,10 +35,20 @@ interface Props {
   onChange: ({ value }: {value: number }) => void;
 }
 
-export const PropertyRowNumberInput = ({ value, onChange }: Props) => (
-  <StyledInput
-    type="number"
-    onChange={(e) => onChange({ value: e.currentTarget.valueAsNumber })}
-    value={value}
-  />
-)
+export const PropertyRowNumberInput = ({ value, onChange }: Props) => {
+  const [_value, setValue] = useState(value);
+  return (
+    <StyledInput
+      type="number"
+      onBlur={() => {
+        if(!Number.isNaN(_value)){
+          onChange({value: _value});
+        } else{
+          setValue(value);
+        }
+      }}
+      onChange={(e) => setValue(e.currentTarget.valueAsNumber) }
+      value={_value}
+    />
+  )
+}

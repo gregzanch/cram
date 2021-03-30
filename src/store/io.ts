@@ -2,9 +2,9 @@ import FileSaver from 'file-saver';
 import { useContainer, useSolver, useAppStore } from '.';
 import { KeyValuePair } from '../common/key-value-pair';
 import Solver from '../compute/solver';
-import Container, { ContainerSaveObject } from '../objects/container';
 
-import {on, emit} from '../messenger';
+
+import { on, emit } from '../messenger';
 import { gte } from 'semver';
 import { SourceSaveObject } from '../objects/source';
 import { ReceiverSaveObject } from '../objects/receiver';
@@ -12,22 +12,36 @@ import { RoomSaveObject } from '../objects/room';
 import { SurfaceGroupSaveObject } from '../objects/surface-group';
 import { RayTracerSaveObject } from '../compute/raytracer';
 import { RT60SaveObject } from '../compute/rt';
+import { ImageSourceSaveObject } from '../compute/raytracer/image-source';
+import { getSolverKeys } from './solver-store';
 
+export type ContainerSaveObject = (SourceSaveObject | ReceiverSaveObject | RoomSaveObject);
+export type SolverSaveObject = (RayTracerSaveObject | RT60SaveObject | ImageSourceSaveObject);
 
 export type SaveState = {
   meta: {
-      version: `${number}.${number}.${number}`;
-      name: string;
-      timestamp: string;
+    version: `${number}.${number}.${number}`;
+    name: string;
+    timestamp: string;
   };
-  containers: (SourceSaveObject|ReceiverSaveObject|RoomSaveObject)[];
-  solvers: (RayTracerSaveObject|RT60SaveObject)[];
+  containers: ContainerSaveObject[];
+  solvers: SolverSaveObject[];
 };
 
 const getSaveState = () => {
   const solvers = useSolver.getState().solvers;
   const containers = useContainer.getState().containers;
   const { projectName, version } = useAppStore.getState();
+  const savedContainers = [] as SaveState["containers"];
+  const savedSolvers = [] as SaveState["solvers"];
+
+  Object.keys(containers).forEach(uuid => {
+    savedContainers.push(containers[uuid].save() as ContainerSaveObject);
+  });
+
+  Object.keys(solvers).forEach(uuid => {
+    savedSolvers.push(solvers[uuid].save() as SolverSaveObject);
+  });
 
   return {
     meta: {
@@ -35,19 +49,34 @@ const getSaveState = () => {
       name: projectName,
       timestamp: new Date().toISOString()
     },
-    containers,
-    solvers
+    containers: savedContainers,
+    solvers: savedSolvers
   };
 }
 
+
+declare global {
+  interface EventTypes {
+    SAVE: () => void | undefined;
+    OPEN: () => void | undefined;
+    NEW: () => void | undefined;
+
+    RESTORE: {
+      file?: File;
+      json: SaveState;
+    };
+  }
+}
+
+
 on("SAVE", (callback) => {
   const state = getSaveState();
-  const options = { type: "text/plain;charset=utf-8" };
+  const options = { type: "application/json" };
   const blob = new Blob([JSON.stringify(state)], options);
-  
+
   const projectName = state.meta.name;
   FileSaver.saveAs(blob, `${projectName}.json`);
-  callback && callback();
+  if (callback) callback();
 });
 
 const createFileInput = () => {
@@ -58,7 +87,7 @@ const createFileInput = () => {
   return tempinput
 }
 
-const open = (callback: (files: FileList|undefined) => Promise<any>) => {
+const open = (callback: (files: FileList | undefined) => Promise<any>) => {
   const tempinput = createFileInput();
   document.body.appendChild(tempinput);
   tempinput.addEventListener("change", async (e) => {
@@ -75,8 +104,8 @@ const open = (callback: (files: FileList|undefined) => Promise<any>) => {
 
 
 on("OPEN", async (callback) => {
-  open(async (files: FileList|undefined)=>{
-    if(!files) return;
+  open(async (files: FileList | undefined) => {
+    if (!files) return;
     const objectURL = URL.createObjectURL(files![0]);
     try {
       const result = await (await fetch(objectURL)).text();
@@ -85,29 +114,37 @@ on("OPEN", async (callback) => {
     } catch (e) {
       console.warn(e);
     }
-    callback()
+    if (callback) callback();
   })
-  
+
 })
 
-declare global {
-  interface EventTypes {
-    SAVE: () => void | undefined;
-    OPEN: () => void | undefined;
-    
- 
-    RESTORE: {
-      file: File;
-      json: SaveState;
+
+on("NEW", (callback) => {
+  if(confirm("Create a new project? Unsaved data will be lost.")){
+    const version = useAppStore.getState().version;
+    const newSaveState = { 
+      json: { 
+        containers: [], 
+        solvers: [], 
+        meta: { 
+          name: "untitled", 
+          version, 
+          timestamp: new Date().toJSON() 
+        }
+      } 
     };
+    emit("RESTORE", newSaveState);
   }
-}
+  if(callback) callback();
+});
+
 
 
 on("RESTORE", ({ file, json }) => {
-  useAppStore.getState().set((state) => void (state.projectName = json.meta.name));
   emit("RESTORE_CONTAINERS", json.containers);
   emit("RESTORE_SOLVERS", json.solvers);
+  useAppStore.getState().set((state) => { state.projectName = json.meta.name });
 });
 
 

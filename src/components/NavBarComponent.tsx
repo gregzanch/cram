@@ -3,7 +3,7 @@ import Messenger, { emit, postMessage } from "../messenger";
 import { Position, Button, Menu, MenuItem, MenuDivider, Colors, Navbar, ButtonGroup } from "@blueprintjs/core";
 import { Popover2 , Classes} from "@blueprintjs/popover2";
 import NavbarMenuItemLabel from "./NavbarMenuItemLabel";
-import MenuItemText from "./menu-item-text/MenuItemText";
+import MenuItemText from "./MenuItemText";
 import { Characters } from "../constants";
 import create from "zustand";
 import "./NavBarComponent.css";
@@ -23,6 +23,25 @@ function MenuItemWithMessenger(props: MenuItemWithMessengerProps) {
       text={<MenuItemText text={props.label} hotkey={props.hotkey || [""]} />}
       onClick={(e) => postMessage(props.message)}
       disabled={props.disabled}
+    />
+  );
+}
+
+type MenuItemWithEmitterProps = {
+  label: string;
+  hotkey?: string[];
+  disabled?: boolean;
+  event: keyof EventTypes;
+  args?: EventTypes[MenuItemWithEmitterProps["event"]];
+}
+
+const MenuItemWithEmitter = ({ label, hotkey, disabled, event, args }: MenuItemWithEmitterProps) => {
+  return (
+    <MenuItem
+      className={Classes.POPOVER2_DISMISS}
+      text={<MenuItemText text={label} hotkey={hotkey || [""]} />}
+      onClick={(e) => emit(event, args)}
+      disabled={disabled}
     />
   );
 }
@@ -49,11 +68,11 @@ export function FileMenu(props: MenuProps) {
       onInteraction={(e)=>props.onInteraction(e)}
       content={
         <Menu>
-          <MenuItemWithMessenger label="New" message="SHOW_NEW_WARNING" hotkey={[Characters.SHIFT, "N"]} />
-          <MenuItemWithMessenger label="Open" message="SHOW_OPEN_WARNING" hotkey={[Characters.COMMAND, "O"]} />
-          <MenuItemWithMessenger label="Save" message="SHOW_SAVE_DIALOG" hotkey={[Characters.COMMAND, "S"]} />
+          <MenuItemWithEmitter label="New" event="NEW" hotkey={[Characters.SHIFT, "N"]} />
+          <MenuItemWithEmitter label="Open" event="OPEN" hotkey={[Characters.COMMAND, "O"]} />
+          <MenuItemWithEmitter label="Save" event="SAVE" hotkey={[Characters.COMMAND, "S"]} />
           <MenuDivider />
-          <MenuItemWithMessenger label="Import" message="SHOW_IMPORT_DIALOG" hotkey={[Characters.COMMAND, "I"]} />
+          <MenuItemWithEmitter label="Import" event="SHOW_IMPORT_DIALOG" args={true} hotkey={[Characters.COMMAND, "I"]} />
         </Menu>
       }
       placement="bottom-start"

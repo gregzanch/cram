@@ -2,7 +2,6 @@
 import create from "zustand";
 import produce from "immer";
 import { KeyValuePair } from "../common/key-value-pair";
-import { SetFunction } from ".";
 import Solver from "../compute/solver";
 import { omit } from "../common/helpers";
 

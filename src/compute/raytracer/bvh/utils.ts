@@ -21,7 +21,7 @@ export async function asyncWork(workCheck:Evaluator, work:Work, options:Asyncify
 	if(options.ms !== undefined && options.steps !== undefined) {
 		console.warn("Asyncify got both steps and ms, defaulting to steps.");
 	}
-	const worker:Generator = (options.steps !== undefined ? percentageAsyncify : timeAsyncify)(workCheck, work, options);
+	const worker: Generator = (options.steps !== undefined ? percentageAsyncify : timeAsyncify)(workCheck, work, options);
 	// let done: boolean = false;
 	let nodesSplit: number;
 	// !(, done)

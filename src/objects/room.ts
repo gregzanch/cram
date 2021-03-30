@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import Container, { ContainerProps } from "./container";
+import Container, { ContainerProps, getContainersOfKind } from "./container";
 import Surface, { SurfaceSaveObject } from "./surface";
 
 import { UNITS } from "../enums/units";
@@ -7,11 +7,13 @@ import { RT_CONSTANTS } from "../constants/rt-constants";
 import { third_octave } from "../compute/acoustics";
 import { KVP } from "../common/key-value-pair";
 import RT60 from "../compute/rt";
-import { on } from "../messenger";
-import { addContainer, removeContainer, setContainerProperty } from "../store";
+import { emit, on } from "../messenger";
+import { addContainer, removeContainer, setContainerProperty, useContainer } from "../store";
+import { renderer } from "../render/renderer";
+import { filterObjectToArray } from "../common/helpers";
 
 export interface RoomProps extends ContainerProps {
-  surfaces: Surface[];
+  surfaces: (Surface|Container)[];
   // surfaceEdges: Surface[];
   originalFileName?: string;
   originalFileData?: string;
@@ -40,7 +42,6 @@ export class Room extends Container {
   originalFileName!: string;
   originalFileData!: string;
   surfaceMap!: KVP<Surface>;
-  rt!: RT60;
   constructor(name?: string, props?: RoomProps) {
     super(name || "new room");
     this.kind = "room";
@@ -56,23 +57,34 @@ export class Room extends Container {
     this.originalFileData = props.originalFileData || "";
     this.units = props.units || UNITS.METERS;
     props.surfaces.forEach((surface) => {
+      if(surface['kind']==="surface"){
+        emit("ADD_SURFACE", surface as Surface);
+      }
+      surface.traverse((obj)=>{
+        if(obj['kind'] && obj['kind']==="surface"){
+          emit("ADD_SURFACE", obj as Surface);
+        }
+      })
       this.surfaces.add(surface);
     });
     this.add(this.surfaces);
     this.calculateBoundingBox();
     this.volume = this.volumeOfMesh();
-    this.surfaceMap = this.surfaces.children.reduce((a, b) => {
+    this.surfaceMap = this._surfaces.reduce((a, b) => {
       a[b.uuid] = b as Surface;
       return a;
     }, {} as KVP<Surface>);
-    this.rt = new RT60({
-      name: this.name + "rt60"
-    });
+    renderer.add(this);
   }
-
+  dispose(){
+    renderer.remove(this);
+    this._surfaces.forEach(surface=>{
+      emit("REMOVE_SURFACE", surface.uuid);
+    })
+  }
   save() {
     return {
-      surfaces: this.surfaces.children.map((surf: Surface) => surf.save()),
+      surfaces: this._surfaces.map((surf: Surface) => surf.save()),
       kind: this.kind,
       name: this.name,
       uuid: this.uuid,
@@ -86,12 +98,11 @@ export class Room extends Container {
     } as RoomSaveObject;
   }
   restore(state: RoomSaveObject) {
-    const surfaces = state.surfaces.map((surfaceState) =>
-      new Surface(surfaceState.name, { ...surfaceState }).restore(surfaceState)
-    );
     this.init({
       ...state,
-      surfaces
+      surfaces: state.surfaces.map((surfaceState) =>
+        new Surface(surfaceState.name).restore(surfaceState)
+      )
     });
     this.visible = state.visible;
     this.position.set(state.position[0], state.position[1], state.position[2]);
@@ -114,7 +125,7 @@ export class Room extends Container {
   }
 
   calculateBoundingBox() {
-    this.boundingBox = this.surfaces.children.reduce((a: THREE.Box3, b: Container) => {
+    this.boundingBox = this._surfaces.reduce((a: THREE.Box3, b: Container) => {
       (b as Surface).geometry.computeBoundingBox();
       return (a as THREE.Box3).union((b as Surface).geometry.boundingBox);
     }, new THREE.Box3());
@@ -125,7 +136,7 @@ export class Room extends Container {
   }
   volumeOfMesh() {
     let sum = 0;
-    this.surfaces.children.forEach((surface: Surface) => {
+    this._surfaces.forEach((surface: Surface) => {
       surface._triangles.forEach((triangle: THREE.Triangle) => {
         sum += this.signedVolumeOfTriangle(triangle.a, triangle.b, triangle.c);
       });
@@ -135,10 +146,10 @@ export class Room extends Container {
   calculateMeanAbsorptionCoefficientFromHits(frequencies: number[] = third_octave) {
     let totalHits = 0;
     const ha = [] as number[][];
-    for (let i = 0; i < this.surfaces.children.length; i++) {
-      const numHits = (this.surfaces.children[i] as Surface).numHits;
+    for (let i = 0; i < this._surfaces.length; i++) {
+      const numHits = (this._surfaces[i] as Surface).numHits;
       totalHits += numHits;
-      ha.push(frequencies.map((freq) => (this.surfaces.children[i] as Surface).absorptionFunction(freq) * numHits));
+      ha.push(frequencies.map((freq) => (this._surfaces[i] as Surface).absorptionFunction(freq) * numHits));
     }
     if (totalHits > 0) {
       console.log(ha);
@@ -165,7 +176,7 @@ export class Room extends Container {
     this.volume = this.volumeOfMesh();
     const unitsConstant = RT_CONSTANTS[this.units] || RT_CONSTANTS[UNITS.METERS];
     const { totalHits, meanAbsorption } = this.calculateMeanAbsorptionCoefficientFromHits(frequencies);
-    const totalSurfaceArea = this.surfaces.children.reduce((a, b) => a + (b as Surface).getArea(), 0);
+    const totalSurfaceArea = this._surfaces.reduce((a, b) => a + (b as Surface).getArea(), 0);
     if (totalHits > 0) {
       const t60 = meanAbsorption.map((alpha) => {
         return (unitsConstant * this.volume) / (alpha * totalSurfaceArea);
@@ -177,13 +188,23 @@ export class Room extends Container {
     }
   }
 
+  get _surfaces(){
+    const surfaces = [] as Surface[];
+    this.surfaces.traverse((container)=>{
+      if(container["kind"] && container["kind"] === "surface"){
+        surfaces.push(container as Surface);
+      }
+    });
+    return surfaces;
+  }
+
   get brief() {
     return {
       uuid: this.uuid,
       name: this.name,
       selected: this.selected,
       //@ts-ignore
-      children: this.surfaces.children.map((x) => x.brief),
+      children: this._surfaces.map((x) => x.brief),
       kind: this.kind
     };
   }
@@ -204,5 +225,7 @@ on("ADD_ROOM", addContainer(Room))
 on("REMOVE_ROOM", removeContainer);
 on("ROOM_SET_PROPERTY", setContainerProperty);
 
+
+export const getRooms = () => getContainersOfKind<Room>("room")
 
 export default Room;

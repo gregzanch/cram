@@ -7,6 +7,7 @@ import { SaveState } from "../store/io";
 import RayTracer, { RayTracerParams, RayTracerSaveObject } from "./raytracer";
 import RT60, { RT60SaveObject } from "./rt";
 
+
 export interface SolverParams {
   [key: string]: any;
   name?: string;

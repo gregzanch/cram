@@ -51,6 +51,7 @@ import { Processes } from "../constants/processes";
 
 import { Markup } from "./Markup";
 import Model from "../objects/model";
+import { useContainer } from "../store";
 
 
 
@@ -230,6 +231,7 @@ export default class Renderer {
     this.env = new Container("env");
     this.fdtdItems = new Container("fdtdItems");
     this.workspace = new Container("workspace");
+    this.workspace.userData.isWorkspace = true;
     this.interactables = new Container("interactables");
     this.sketches = new Container("sketches");
     this.constructions = new Container("constructions");
@@ -424,11 +426,7 @@ export default class Renderer {
       this.fogColor = args[0];
       this.needsToRender = true;
     });
-    messenger.addMessageHandler("TOGGLE_CAMERA_ORTHO", (acc, ...args) => {
-      this.setOrtho(this.camera instanceof THREE.PerspectiveCamera);
-      this.needsToRender = true;
-      this.storeCameraState();
-    });
+    
     messenger.addMessageHandler("SHOULD_REMOVE_CONTAINER", (acc, ...args) => {
       const id = args[0];
       const object = this.scene.getObjectByProperty("uuid", id);
@@ -440,41 +438,7 @@ export default class Renderer {
       this.needsToRender = true;
     });
 
-    messenger.addMessageHandler("FOCUS_ON_SELECTED_OBJECTS", (acc, ...args) => {
-      const selectedObjects = messenger.postMessage("GET_SELECTED_OBJECTS")[0];
-      if (selectedObjects && selectedObjects.length > 0) {
-        const easingFunction = EasingFunctions.linear;
-        const position = this.camera.position;
-        const target = selectedObjects[0].position;
-        const duration = 125;
-        const onFinish = () => {
-          this.controls.target.set(target.x, target.y, target.z);
-        };
-        this.smoothCameraTo({ position, target, duration, onFinish, easingFunction });
-      } else {
-        const easingFunction = EasingFunctions.linear;
-        const position = this.camera.position;
-        const target = new THREE.Vector3(0, 0, 0);
-        const duration = 125;
-        const onFinish = () => {
-          this.controls.target.set(target.x, target.y, target.z);
-        };
-        this.smoothCameraTo({ position, target, duration, onFinish, easingFunction });
-      }
-      this.needsToRender = true;
-    });
 
-    messenger.addMessageHandler("FOCUS_ON_CURSOR", (acc, ...args) => {
-      const easingFunction = EasingFunctions.linear;
-      const position = this.camera.position;
-      const target = this.cursor.position;
-      const duration = 125;
-      const onFinish = () => {
-        this.controls.target.set(target.x, target.y, target.z);
-      };
-      this.smoothCameraTo({ position, target, duration, onFinish, easingFunction });
-      this.needsToRender = true;
-    });
 
     messenger.addMessageHandler("LOOK_ALONG_AXIS", (acc, ...args) => {
       const axis = args[0];
@@ -502,44 +466,11 @@ export default class Renderer {
       this.needsToRender = true;
     });
 
-    messenger.addMessageHandler("MOVE_SELECTED_OBJECTS", () => {
-      const selectedObjects = messenger.postMessage("GET_SELECTED_OBJECTS")[0];
-      if (selectedObjects && selectedObjects.length > 0) {
-        for (let i = 0; i < selectedObjects.length; i++) {
-          selectedObjects[i].userData.lastSave = selectedObjects[i].save();
-        }
-        hotkeys.setScope("editor-moving");
-        this.transformControls.setTranslationSnap(editorSettings.transform_snap_normal.value);
-        this.overlays.transform.setValues(0, 0, 0);
-        this.overlays.transform.show();
-        this.currentlyMovingObjects = true;
-        this.transformControls.attach(selectedObjects);
-        // selectedObjects[0] && (selectedObjects[0] as Container).add(this.transformControls);
-        //@ts-ignore
-        this.interactables.add(this.transformControls);
-      }
-      this.needsToRender = true;
-    });
 
-    messenger.addMessageHandler("PHASE_OUT", () => {
-      if (this.isPerformingOperation) {
-        messenger.postMessage("STOP_OPERATIONS");
-        hotkeys.setScope("editor");
-      } else {
-        messenger.postMessage("DESELECT_ALL_OBJECTS");
-        hotkeys.setScope("normal");
-      }
-      this.needsToRender = true;
-    });
 
-    messenger.addMessageHandler("STOP_OPERATIONS", () => {
-      //@ts-ignore
-      this.interactables.remove(this.transformControls);
-      this.transformControls.detach();
-      this.currentlyMovingObjects = false;
-      this.overlays.transform.hide();
-      this.needsToRender = true;
-    });
+
+
+  
 
     messenger.addMessageHandler("TOGGLE_RENDERER_STATS_VISIBLE", () => {
       if (this.stats.hidden) {
@@ -649,35 +580,29 @@ export default class Renderer {
 
     this.renderer.domElement.addEventListener("wheel", (e) => {
       this.needsToRender = true;
-      hotkeys.setScope("editor");
+      hotkeys.setScope("EDITOR");
     });
 
     this.renderer.domElement.addEventListener("mousedown", (e) => {
-      hotkeys.setScope("editor");
+      hotkeys.setScope("EDITOR");
       const selection = this.pickHelper.pick(e, [this.workspace, this.interactables]);
 
       if (selection.pickedObject) {
         if (e.button == 0) {
           const point = this.pickHelper.getPickedPoint();
           this.cursor.position.set(point[0], point[1], point[2]);
-          console.log();
-          // if (selection.pickedObject.kind === "surface") {
-          // 	window['normal'] = new THREE.Vector3().fromArray(selection.pickedObject.geometry.attributes.normals.array.slice(0, 3));
-          // 	window['point'] = new THREE.Vector3().fromArray(point);
-          // }
-
           if (!this.currentlyMovingObjects) {
             if (e.shiftKey) {
-              messenger.postMessage("APPEND_SELECTION", [selection.pickedObject]);
+              emit("APPEND_SELECTION", [selection.pickedObject]);
             } else if (!e.altKey) {
-              messenger.postMessage("SET_SELECTION", [selection.pickedObject]);
+              emit("SET_SELECTION", [selection.pickedObject]);
             }
           }
         }
       } else {
         if (e.button == 0) {
           if (!e.shiftKey && !e.altKey) {
-            messenger.postMessage("PHASE_OUT");
+            emit("PHASE_OUT");
           }
         }
       }
@@ -907,7 +832,8 @@ export default class Renderer {
     this.needsToRender = true;
   }
   remove(obj: THREE.Object3D) {
-    this.workspace.getObjectByProperty("uuid", obj.uuid)?.remove();
+    this.workspaceCursor.remove(obj);
+    // this.workspace.getObjectByProperty("uuid", obj.uuid)?.remove();
     this.needsToRender = true;
   }
   addModel(model: Model) {
@@ -916,15 +842,6 @@ export default class Renderer {
   }
   addRoom(room: Room) {
     this.workspaceCursor.add(room);
-    // const near =
-    // room.boundingBox.max
-    // .clone()
-    // .sub(room.boundingBox.min)
-    // .length() * 4;
-    // const far = near * 4;
-    // const color = this.fog.color;
-    // this.fog = new THREE.Fog(color.getHex(), 10, 50);
-    // this.scene.fog = this.fog;
     this.needsToRender = true;
   }
 
@@ -1256,7 +1173,9 @@ export default class Renderer {
 
   set isOrtho(ortho: boolean) {
     if (ortho != this.isOrtho) {
-      messenger.postMessage("TOGGLE_CAMERA_ORTHO");
+      this.setOrtho(this.camera instanceof THREE.PerspectiveCamera);
+      this.needsToRender = true;
+      this.storeCameraState();
     }
   }
 
@@ -1302,10 +1221,90 @@ export const renderer = new Renderer();
 declare global {
   interface EventTypes {
     RENDERER_UPDATED: any;
-    RENDERER_SHOULD_ANIMATE: boolean
+    RENDERER_SHOULD_ANIMATE: boolean;
+    PHASE_OUT: undefined;
+    STOP_OPERATIONS: undefined;
+    MOVE_SELECTED_OBJECTS: undefined;
+    TOGGLE_CAMERA_ORTHO: undefined;
+    FOCUS_ON_SELECTED_OBJECTS: undefined;
+    FOCUS_ON_CURSOR: undefined;
   }
 }
 
 on("RENDERER_SHOULD_ANIMATE", shouldAnimate => {
   renderer.shouldAnimate = shouldAnimate;
 });
+
+on("PHASE_OUT", () => {
+  if (renderer.isPerformingOperation) {
+    emit("STOP_OPERATIONS");
+    // hotkeys.setScope("EDITOR");
+  } else {
+    emit("DESELECT_ALL_OBJECTS");
+    // hotkeys.setScope("NORMAL");
+  }
+  renderer.needsToRender = true;
+});
+
+on("STOP_OPERATIONS", () => {
+  renderer.interactables.remove(renderer.transformControls);
+  renderer.transformControls.detach();
+  renderer.currentlyMovingObjects = false;
+  renderer.overlays.transform.hide();
+  renderer.needsToRender = true;
+});
+
+on("MOVE_SELECTED_OBJECTS", () => {
+  const selectedObjects = useContainer.getState().selectedObjects
+  if (selectedObjects && selectedObjects.size > 0) {
+    selectedObjects.forEach(container => container.userData.lastSave = container.save());
+    hotkeys.setScope("EDITOR_MOVING");
+    renderer.overlays.transform.setValues(0, 0, 0);
+    renderer.transformControls.setTranslationSnap(0.01);
+    renderer.overlays.transform.show();
+    renderer.currentlyMovingObjects = true;
+    renderer.transformControls.attach([...selectedObjects]);
+    renderer.interactables.add(renderer.transformControls);
+  }
+  renderer.needsToRender = true;
+});
+
+
+on("TOGGLE_CAMERA_ORTHO", () => { renderer.isOrtho = !renderer.isOrtho; });
+
+on("FOCUS_ON_SELECTED_OBJECTS", () => {
+  const selectedObjects = [...useContainer.getState().selectedObjects];
+  if (selectedObjects && selectedObjects.length > 0) {
+    const easingFunction = EasingFunctions.linear;
+    const position = renderer.camera.position;
+    const target = selectedObjects[0].position;
+    const duration = 125;
+    const onFinish = () => {
+      renderer.controls.target.set(target.x, target.y, target.z);
+    };
+    renderer.smoothCameraTo({ position, target, duration, onFinish, easingFunction });
+  } else {
+    const easingFunction = EasingFunctions.linear;
+    const position = renderer.camera.position;
+    const target = new THREE.Vector3(0, 0, 0);
+    const duration = 125;
+    const onFinish = () => {
+      renderer.controls.target.set(target.x, target.y, target.z);
+    };
+    renderer.smoothCameraTo({ position, target, duration, onFinish, easingFunction });
+  }
+  renderer.needsToRender = true;
+});
+
+on("FOCUS_ON_CURSOR", () => {
+  const easingFunction = EasingFunctions.linear;
+  const position = renderer.camera.position;
+  const target = renderer.cursor.position;
+  const duration = 125;
+  const onFinish = () => {
+    renderer.controls.target.set(target.x, target.y, target.z);
+  };
+  renderer.smoothCameraTo({ position, target, duration, onFinish, easingFunction });
+  renderer.needsToRender = true;
+});
+

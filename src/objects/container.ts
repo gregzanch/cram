@@ -7,7 +7,10 @@ import { KeyValuePair } from "../common/key-value-pair";
 import { EditorModes } from "../constants";
 import { emit, on } from "../messenger";
 import { getContainerKeys, useContainer } from "../store";
-import { omit } from "../common/helpers";
+import { filterObjectToArray, omit } from "../common/helpers";
+
+
+
 
 type UserData = {
   [key: string]: any;
@@ -63,36 +66,21 @@ export default class Container extends THREE.Group {
     }
     return this;
   }
+  dispose() {}
   onModeChange(mode: EditorModes) {}
   select() {
-    this.children.forEach((x: Surface) => {
-      if (x instanceof Surface) {
-        x.select();
-      }
-    });
+    this.selectChildren();
     this.selected = true;
   }
   deselect() {
-    this.children.forEach((x: Surface) => {
-      if (x instanceof Surface) {
-        x.deselect();
-      }
-    });
+    this.deselectChildren();
     this.selected = false;
   }
   selectChildren() {
-    this.children.forEach((x: Surface) => {
-      if (x instanceof Surface) {
-        x.select();
-      }
-    });
+    (this.children.filter(x=>x instanceof Container) as Container[]).forEach((x) => x.select());
   }
   deselectChildren() {
-    this.children.forEach((x: Surface) => {
-      if (x instanceof Surface) {
-        x.deselect();
-      }
-    });
+    (this.children.filter(x=>x instanceof Container) as Container[]).forEach((x) => x.deselect());
   }
 
   traverse(callback, depth = 0) {
@@ -173,3 +161,10 @@ export default class Container extends THREE.Group {
     this.rotation.z = val;
   }
 }
+
+
+
+export const getContainersOfKind = <T extends Container>(kind: T["kind"]) => filterObjectToArray(
+  useContainer.getState().containers, 
+  (container) => container.kind === kind
+) as T[];

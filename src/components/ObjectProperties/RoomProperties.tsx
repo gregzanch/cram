@@ -2,9 +2,9 @@ import React from "react";
 import TextInput from "../text-input/TextInput";
 import NumberInput from "../number-input/NumberInput";
 import { ObjectPropertyInputEvent } from ".";
-import CheckboxInput from "../checkbox-input/CheckboxInput";
+import CheckboxInput from "../CheckboxInput";
 import Source from '../../objects/source';
-import GridRow from '../grid-row/GridRow';
+import GridRow from '../GridRow';
 import Room from '../../objects/room';
 
 export interface RoomPropertiesProps {

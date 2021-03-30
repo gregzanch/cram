@@ -31,7 +31,7 @@ export default function SettingsKeyBindingComponent(props: SettingsKeyBindingCom
         // means the component should now start listening to keyboard events
         if (!listening) {
           setPrevScope(hotkeys.getScope());
-          hotkeys.setScope("keybindinginput");
+          hotkeys.setScope("KEY_BINDING_INPUT");
         }
         else {
           hotkeys.setScope(prevScope);

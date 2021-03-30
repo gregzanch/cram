@@ -79,3 +79,97 @@ export class History {
 export const history = new History();
 
 export const addMoment = history.addMoment.bind(history);
+
+export interface Undoable {
+  /** Undoes the command */
+  undo(): void;
+  /** Redoes the undone command */
+  redo(): void;
+}
+
+export class UndoHistory {
+  /** The undoable objects. */
+  private readonly undos: Array<Undoable>;
+
+  /** The redoable objects. */
+  private readonly redos: Array<Undoable>;
+
+  /** The maximal number of undo. */
+  private sizeMax: number;
+
+  public constructor() {
+      this.sizeMax = 0;
+      this.undos = [];
+      this.redos = [];
+      this.sizeMax = 30;
+  }
+
+  /** Adds an undoable object to the collector. */
+  public add(undoable: Undoable): void {
+      if (this.sizeMax > 0) {
+          // Cleaning the oldest undoable object
+          if (this.undos.length === this.sizeMax) {
+              this.undos.shift();
+          }
+
+          this.undos.push(undoable);
+          // You must clear the redo stack!
+          this.clearRedo();
+      }
+  }
+
+  private clearRedo(): void {
+      if (this.redos.length > 0) {
+          this.redos.length = 0;
+      }
+  }
+
+  /** Undoes the last undoable object. */
+  public undo(): void {
+      const undoable = this.undos.pop();
+      if (undoable !== undefined) {
+          undoable.undo();
+          this.redos.push(undoable);
+      }
+  }
+
+  /** Redoes the last undoable object. */
+  public redo(): void {
+      const undoable = this.redos.pop();
+      if (undoable !== undefined) {
+          undoable.redo();
+          this.undos.push(undoable);
+      }
+  }
+}
+
+
+type TextData = {
+  text: string;
+}
+
+export class ClearTextCmd implements Undoable {
+  // The memento that saves the previous state of the text data
+  private memento!: string;
+
+  public constructor(private text: TextData) {
+    this.text = text;
+  }
+  
+  // Executes the command
+  public execute(): void {
+    // Creating the memento
+    this.memento = this.text.text;
+    // Applying the changes (in many 
+    // cases do and redo are similar, but the memento creation)
+    this.redo();
+  }
+
+  public undo(): void {
+    this.text.text = this.memento;
+  }
+
+  public redo(): void {
+    this.text.text = '';
+  }
+}

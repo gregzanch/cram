@@ -1,16 +1,20 @@
 import Solver, { SolverParams } from "../solver";
 import Room from "../../objects/room";
 import Surface from "../../objects/surface";
-import { third_octave } from '../acoustics';
+import { third_octave, whole_octave } from '../acoustics';
 import { RT_CONSTANTS } from '../../constants/rt-constants';
 import { UNITS } from "../../enums/units";
-import Messenger, { on } from "../../messenger";
+import Messenger, { emit, messenger, on } from "../../messenger";
 import { transpose } from '../../common/helpers'
 import { Matrix4, Triangle, Vector3 } from "three";
-import { useSolver } from "../../store";
+import { addSolver, removeSolver, Result, ResultKind, setSolverProperty, useAppStore, useContainer, useSolver } from "../../store";
+import { uuid } from "uuidv4";
+import Container from "../../objects/container";
+import { KVP } from "../../common/key-value-pair";
 
 export interface RT60Props extends SolverParams{
-  uuid?: string;
+  //uuid?: string;
+  // containers: KVP<Container>; 
 }
 
 export type RT60SaveObject = {
@@ -20,16 +24,53 @@ export type RT60SaveObject = {
 }
 
 const defaults = {
-  name: "RT60"
+  name: "RT60",
 };
 
 export class RT60 extends Solver{
-  constructor(props: RT60Props) {
+  public uuid; 
+  public sabine_rt: number[][]; 
+  public eyring_rt: number[][];
+  public ap_rt: number[][]; 
+
+  public frequencies: number[];
+
+  public roomID: string;
+
+  public rt60results: Result<ResultKind.StatisticalRT60>;
+
+  constructor(props: RT60Props = defaults) {
     super(props);
     this.kind = "rt60";
     this.name = props.name || defaults.name;
-    props.uuid && (this.uuid = props.uuid);
+    this.uuid = uuid(); 
+
+
+    this.sabine_rt = [];
+    this.eyring_rt = []; 
+    this.ap_rt = [];
+ 
+    const rooms = useContainer.getState().getRooms();
+    this.roomID = rooms.length > 0 ? rooms[0].uuid : ''; 
+
+    this.frequencies = whole_octave.slice(4,11);   
+
+    this.rt60results = {
+      kind: ResultKind.StatisticalRT60, 
+      data: [],
+      info: {
+        frequency: this.frequencies,
+        airabsorption: false,
+        temperature: 20, 
+        humidity: 40, 
+      },
+      name: `Statistical RT60 Results`,
+      uuid: uuid(),
+      from: this.uuid
+    };
+
   }
+
   save() {
      const { name, kind, uuid } = this;
      return {
@@ -38,19 +79,68 @@ export class RT60 extends Solver{
        uuid,
      } as RT60SaveObject;
   }
-  sabine(room: Room, frequencies: number[] = third_octave) {
-    const unitsConstant = RT_CONSTANTS[room.units] || RT_CONSTANTS[UNITS.METERS];
+
+  calculate(){
+
+    this.reset(); 
+
+    this.sabine_rt = this.sabine();
+    this.eyring_rt = this.eyring(); 
+    this.ap_rt = this.arauPuchades(this.room,this.frequencies); 
+
+    for(let i = 0; i<this.frequencies.length; i++){
+      this.rt60results.data.push({
+        frequency: this.frequencies[i], 
+        sabine: this.sabine_rt[i][1],
+        eyring: this.eyring_rt[i][1],
+        ap: this.ap_rt[i][1]
+      })
+    }
+    emit("UPDATE_RESULT", { uuid: this.rt60results.uuid, result: this.rt60results });
+  }
+
+  reset(){
+    this.sabine_rt = [];
+    this.eyring_rt = []; 
+    this.ap_rt = []; 
+
+    this.rt60results.data = []; 
+  }
+
+  sabine() {
+    let room = this.room; 
+    const unitsConstant = this.unitsConstant;
     const v = room.volumeOfMesh();
     const response = [] as number[];
-    frequencies.forEach((frequency) => {
+    this.frequencies.forEach((frequency) => {
       let sum = 0;
-      room.surfaces.children.forEach((surface: Surface) => {
+      room._surfaces.forEach((surface: Surface) => {
         sum += surface.getArea() * surface.absorptionFunction(frequency);
       });
-      response.push((unitsConstant * v) / sum);
+      response.push((unitsConstant*v)/(sum)); 
     });
-    return transpose([frequencies, response]);
+    return transpose([this.frequencies, response]);
   }
+  
+  eyring(){
+    let room = this.room; 
+    const unitsConstant = this.unitsConstant;
+    const v = room.volumeOfMesh(); 
+    const response = [] as number[]; 
+    this.frequencies.forEach((frequency) => {
+      let sum = 0; 
+      let totalSurfaceArea = 0; 
+      room._surfaces.forEach((surface: Surface) => {
+        totalSurfaceArea += surface.getArea(); 
+        sum += surface.getArea() * surface.absorptionFunction(frequency);
+      });
+      let avg_abs = sum / totalSurfaceArea; 
+      response.push((unitsConstant * v) / (-totalSurfaceArea*Math.log(1-avg_abs)));
+    });
+    return transpose([this.frequencies, response]); 
+  }
+
+
   arauPuchades(room: Room, frequencies: number[] = third_octave) {
 
     
@@ -60,7 +150,7 @@ export class RT60 extends Solver{
     
 
     const v = room.volumeOfMesh();
-    const unitsConstant = RT_CONSTANTS[room.units] || RT_CONSTANTS[UNITS.METERS];
+    const unitsConstant = this.unitsConstant;
     // prettier-ignore
     const Px = new Matrix4().fromArray([
       [0, 0, 0, 0],
@@ -88,7 +178,7 @@ export class RT60 extends Solver{
     // [Px, Py, Pz].map
     const planes = [Px, Py, Pz];
 
-    const surfaces = room.surfaces.children as Surface[];
+    const surfaces = room._surfaces as Surface[];
     const projectedSurfaces = surfaces.map(surface => {
       const area = surface.triangles.reduce((acc,tri) => {
         const projectedVectors = planes.map(P=>tri.map(pt => new Vector3().fromArray(pt).applyMatrix4(P)));
@@ -121,6 +211,15 @@ export class RT60 extends Solver{
 
   onParameterConfigFocus() {}
   onParameterConfigBlur() {}
+
+
+  // setters and getters
+  get unitsConstant(){
+    return RT_CONSTANTS[useAppStore.getState().units];
+  }
+  get room(){
+    return useContainer.getState().containers[this.roomID] as Room; 
+  }
 }
 
 export default RT60;
@@ -130,13 +229,20 @@ export default RT60;
 // this allows for nice type checking with 'on' and 'emit' from messenger
 declare global {
   interface EventTypes {
-    ADD_RT60: RT60 | undefined;
+    ADD_RT60: RT60 | undefined,
+    REMOVE_RT60: string,
+    RT60_SET_PROPERTY: {
+      uuid: string;
+      property: keyof RT60;
+      value: RT60[EventTypes["RT60_SET_PROPERTY"]["property"]]; 
+    }
+    UPDATE_RT60: string; 
   }
 }
 
 // add event listener 
-on("ADD_RT60", (rt60) => {
-  rt60 = rt60 || new RT60({ name: "new rt60" });
-  useSolver.setState((state) => ({ ...state, [rt60!.uuid]: rt60 }), true);
-});
+on("ADD_RT60", addSolver(RT60)); 
+on("UPDATE_RT60", (uuid: string) => void (useSolver.getState().solvers[uuid] as RT60).calculate());
+on("REMOVE_RT60", removeSolver); 
+on("RT60_SET_PROPERTY", setSolverProperty); 
 

@@ -1,12 +1,12 @@
 import React from "react";
 import TextInput from "../text-input/TextInput";
 import NumberInput from "../number-input/NumberInput";
-import CheckboxInput from "../checkbox-input/CheckboxInput";
+import CheckboxInput from "../CheckboxInput";
 import Source, { SignalSource } from "../../objects/source";
 import {DirectivityHandler} from "../../objects/source"; 
-import GridRow from "../grid-row/GridRow";
+import GridRow from "../GridRow";
 import Messenger, { emit } from "../../messenger";
-import ColorInput from "../color-input/ColorInput";
+import ColorInput from "../ColorInput";
 import Slider, { SliderChangeEvent } from "../slider/Slider";
 import PropertyRow from "../parameter-config/property-row/PropertyRow";
 import Label from "../label/Label";

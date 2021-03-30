@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useReducer, useState } from "react";
 import RayTracer from "../../compute/raytracer";
 import { emit, on } from "../../messenger";
 import { ObjectPropertyInputEvent } from "../ObjectProperties";
 import { useContainer, useSolver } from "../../store";
-import GridRow from "../grid-row/GridRow";
+import GridRow from "../GridRow";
 import TextInput from "../text-input/TextInput";
 import NumberInput from "../number-input/NumberInput";
 import { filteredMapObject, pickProps } from "../../common/helpers";
@@ -16,6 +16,7 @@ import useToggle from "../hooks/use-toggle";
 import PropertyRowLabel from "./property-row/PropertyRowLabel";
 import PropertyRowCheckbox from "./property-row/PropertyRowCheckbox";
 import PropertyButton from "./property-row/PropertyButton";
+import { PropertyRowTextInput } from "./property-row/PropertyRowTextInput";
 
 const { PropertyTextInput, PropertyNumberInput, PropertyCheckboxInput } = createPropertyInputs<RayTracer>(
   "RAYTRACER_SET_PROPERTY"
@@ -90,9 +91,14 @@ export const SourceSelect = ({ uuid }: { uuid: string }) => {
 
 const General = ({ uuid }: { uuid: string }) => {
   const [open, toggle] = useToggle(true);
+  const observed_name = useSolver(state=>(state.solvers[uuid] as RayTracer).observed_name);
+  const [, forceUpdate] = useReducer((c) => c + 1, 0) as [never, () => void]
+  useEffect(()=>observed_name.watch(()=>forceUpdate()), [uuid]);
+
   return (
     <PropertyRowFolder label="General" open={open} onOpenClose={toggle}>
       <PropertyTextInput uuid={uuid} label="Name" property="name" tooltip="Sets the name of this solver" />
+      <PropertyRowTextInput value={observed_name.value} onChange={(e)=>{observed_name.value = e.value}}/>
     </PropertyRowFolder>
   );
 };
@@ -177,6 +183,17 @@ const SolverControls = ({ uuid }: { uuid: string }) => {
   );
 };
 
+const Output = ({uuid}: {uuid: string}) => {
+  const [open, toggle] = useToggle(true);
+  const [impulseResponsePlaying, setImpulseResponsePlaying] = useSolverProperty<RayTracer, "impulseResponsePlaying">(uuid, "impulseResponsePlaying", "RAYTRACER_SET_PROPERTY");
+  return (
+    <PropertyRowFolder label="Impulse Response" open={open} onOpenClose={toggle}>
+      <PropertyButton event="RAYTRACER_PLAY_IR" args={uuid} label="Play" tooltip="Plays the calculated impulse response" disabled={impulseResponsePlaying} />
+      <PropertyButton event="RAYTRACER_DOWNLOAD_IR" args={uuid} label="Download" tooltip="Plays the calculated impulse response" />
+    </PropertyRowFolder>
+  );
+}
+
 export const RayTracerTab = ({ uuid }: { uuid: string }) => {
   return (
     <div>
@@ -186,6 +203,7 @@ export const RayTracerTab = ({ uuid }: { uuid: string }) => {
       <RecieverConfiguration uuid={uuid} />
       <StyleProperties uuid={uuid} />
       <SolverControls uuid={uuid} />
+      <Output uuid={uuid} />
     </div>
   );
 };
