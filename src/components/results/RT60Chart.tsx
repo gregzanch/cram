@@ -8,6 +8,9 @@ import { Grid, GridRows } from '@visx/grid';
 import { Result, ResultKind, useResult } from '../../store/result-store';
 import { pickProps } from '../../common/helpers';
 import { on } from '../../messenger';
+import styled from 'styled-components';
+import { LegendItem, LegendOrdinal } from '@visx/legend';
+import PropertyRowLabel from '../parameter-config/property-row/PropertyRowLabel';
 
 export type BarGroupProps = {
   uuid: string; 
@@ -64,9 +67,11 @@ const testrtdata: RTData[] = [
 
 //type CityName = 'New York' | 'San Francisco' | 'Austin';
 
+const blue = '#48beff';
+const green = '#43c593';
+const darkgreen = '#14453d';
 const black = '#000000';
-const red = '#ff0000';
-const green = '#00ff00';
+
 export const background = '#612efb';
 
 type RtType = 'Sabine' | 'Eyring' | 'AP'; 
@@ -83,12 +88,48 @@ const getFreqAsString = (d: RTData) => (d.frequency).toString()
 const getSabine = (d: RTData) => d.sabine; 
 const getEyring = (d: RTData) => d.eyring; 
 
+const VerticalContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+
+const Title = styled.div`
+  display: flex; 
+  justify-content: center;
+`;
+
+const HorizontalContainer = styled.div`
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+`;
+
+const LegendContainer = styled.div`
+ display: flex;
+ flex-direction: column;
+ align-items: center;
+ padding: 0px 16px;
+`;
+
+const FrequencyContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 16px;
+`;
+
+const GraphContainer = styled.div`
+  display: flex;
+  flex: 8;
+  width: 80%;
+`;
+
 const useUpdate = () => {
   const [updateCount, setUpdateCount] = useState<number>(0);
   return [updateCount, () => setUpdateCount(updateCount + 1)] as  [number, () => void];
 }
 
-export const RT60Chart = ({
+export const Chart = ({
   uuid, 
   width = 500,
   height = 300,
@@ -117,7 +158,7 @@ export const RT60Chart = ({
 
   const colorScale = scaleOrdinal<string, string>({
     domain: keys,
-    range: [black, red, green],
+    range: [blue, green, darkgreen],
   });
 
   useEffect(() => on("UPDATE_RESULT", (e) => {
@@ -209,5 +250,41 @@ export const RT60Chart = ({
     </svg>
   );
 }
+
+export const RT60Chart = ({
+  uuid, 
+  width = 500,
+  height = 300,
+  events = false,
+}: BarGroupProps) => {
+  const {info, data, from} = useResult(state=>pickProps(["info", "data", "from"], state.results[uuid] as Result<ResultKind.StatisticalRT60>))
+  const keys = Object.keys(data[0]).filter(d => d !== 'frequency') as RtType[];
+
+  return width < 10 ? null : (
+    <VerticalContainer>
+      <Title>{'Statistical RT60 Results'}</Title>
+      <HorizontalContainer>
+        <GraphContainer>
+          <Chart {...{ width, height, uuid, events }}></Chart>
+        </GraphContainer>
+        <VerticalContainer>
+          <LegendContainer>
+            {keys.map((k)=>{
+              <LegendItem
+                key={`rt-type-${k}`}
+                margin="0 5px"
+                onClick={() => {
+              }}>
+                <PropertyRowLabel
+                  label={k.toString()}
+                />
+              </LegendItem>
+            })}
+          </LegendContainer>
+        </VerticalContainer>
+      </HorizontalContainer>
+    </VerticalContainer>
+  );
+}; 
 
 export default RT60Chart
