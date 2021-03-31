@@ -12,6 +12,7 @@ import csg from "../compute/csg";
 import { numbersEqualWithinTolerence, equalWithinTolerenceFactory } from "../common/equal-within-range";
 import { addContainer, removeContainer, setContainerProperty, setNestedContainerProperty } from "../store";
 import { on } from "../messenger";
+import {scatteringFunction} from '../compute/acoustics/scattering-function';
 
 const v3eq = equalWithinTolerenceFactory(["x", "y", "z"])(csg.math.constants.EPS as number);
 
@@ -71,7 +72,8 @@ const defaults = {
   wireframeVisible: false,
   edgesVisible: true,
   fillSurface: true,
-  displayVertexNormals: false
+  displayVertexNormals: false,
+  scatteringCoefficient: 0.1,
 };
 
 export interface SurfaceProps extends ContainerProps {
@@ -81,6 +83,7 @@ export interface SurfaceProps extends ContainerProps {
   edgesVisible?: boolean;
   fillSurface?: boolean;
   displayVertexNormals?: boolean;
+  scatteringCoefficient?: number;
 }
 
 export interface BufferGeometrySaveObject {
@@ -167,6 +170,7 @@ export interface SurfaceSaveObject {
   edgesVisible: boolean;
   fillSurface: boolean;
   displayVertexNormals: boolean;
+  scatteringCoefficient: number;
 }
 
 interface KeepLine {
@@ -203,6 +207,8 @@ class Surface extends Container {
   absorptionFunction!: (freq: number) => number;
   reflection!: number[];
   reflectionFunction!: (freq: number, theta: number) => number;
+  _scatteringCoefficient!: number;
+  scatteringFunction!: (f: number) => number;
   _acousticMaterial!: AcousticMaterial;
   brdf!: BRDF[];
   area!: number;
@@ -347,6 +353,7 @@ class Surface extends Container {
     const freq = [63, 125, 250, 500, 1000, 2000, 4000, 8000];
     this.absorptionFunction = interpolateAlpha(this.absorption, freq);
     this.reflectionFunction = (freq, theta) => reflectionCoefficient(this.absorptionFunction(freq), theta);
+    this.scatteringCoefficient = props.scatteringCoefficient || defaults.scatteringCoefficient;
     this.acousticMaterial = props.acousticMaterial;
     this.brdf = [] as BRDF[];
     for (const key in this.acousticMaterial.absorption) {
@@ -415,7 +422,8 @@ class Surface extends Container {
       wireframeVisible: surfaceState.wireframeVisible,
       edgesVisible: surfaceState.edgesVisible,
       fillSurface: surfaceState.fillSurface,
-      displayVertexNormals: surfaceState.displayVertexNormals
+      displayVertexNormals: surfaceState.displayVertexNormals,
+      scatteringCoefficient: surfaceState.scatteringCoefficient
     });
     this.visible = surfaceState.visible;
     this.uuid = surfaceState.uuid;
@@ -567,6 +575,15 @@ class Surface extends Container {
       kind: this.kind,
       children: []
     };
+  }
+
+  get scatteringCoefficient(){
+    return this._scatteringCoefficient;
+  }
+
+  set scatteringCoefficient(coef: number){
+    this._scatteringCoefficient = coef;
+    this.scatteringFunction = scatteringFunction(coef);
   }
 }
 

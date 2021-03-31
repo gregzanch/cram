@@ -28,6 +28,7 @@ import {cramangle2threejsangle} from "../../common/dir-angle-conversions";
 import { audioEngine } from "../../audio-engine/audio-engine";
 import observe, { Observable } from "../../common/observable";
 import { coefs, filter } from "../../audio-engine/filter";
+import {probability} from '../../common/probability';
 
 const {floor, random, abs, asin} = Math;
 const coinFlip = () => random() > 0.5;
@@ -703,10 +704,18 @@ class RayTracer extends Solver {
         const normal = intersections[0].face && intersections[0].face.normal.normalize();
 
         // find the reflected direction
-        const rr =
+        let rr =
           normal &&
           intersections[0].face &&
           rd.clone().sub(normal.clone().multiplyScalar(rd.dot(normal.clone())).multiplyScalar(2));
+        
+        const scattering = (intersections[0].object.parent as Surface).scatteringCoefficient;
+        if(probability(scattering)){
+          rr = new THREE.Vector3(Math.random()-0.5, Math.random()-0.5, Math.random()-0.5).normalize();
+          if(normal!.dot(rr) < 0){
+            rr.multiplyScalar(-1);
+          }
+        }
 
         // calulcate the losses due to reflection
         const reflectionloss =
@@ -1972,4 +1981,5 @@ on("ADD_RAYTRACER", addSolver(RayTracer))
 on("RAYTRACER_CLEAR_RAYS", (uuid: string) => void (useSolver.getState().solvers[uuid] as RayTracer).clearRays());
 on("RAYTRACER_PLAY_IR", (uuid: string) => void (useSolver.getState().solvers[uuid] as RayTracer).playImpulseResponse().catch(console.error));
 on("RAYTRACER_DOWNLOAD_IR", (uuid: string) => void (useSolver.getState().solvers[uuid] as RayTracer).downloadImpulseResponse(`ir-${uuid}`).catch(console.error));
+
 
