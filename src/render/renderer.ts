@@ -1247,6 +1247,7 @@ on("PHASE_OUT", () => {
 });
 
 on("STOP_OPERATIONS", () => {
+  //@ts-ignore
   renderer.interactables.remove(renderer.transformControls);
   renderer.transformControls.detach();
   renderer.currentlyMovingObjects = false;
