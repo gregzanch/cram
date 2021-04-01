@@ -659,29 +659,25 @@ export class ImageSourceSolver extends Solver {
         for(let f = 0; f<this.frequencies.length; f++){
           samples.push(new Float32Array(Math.floor(endSample))); 
         }
-
-        console.log("hello1")
         
         for(let i = 0; i<sortedPath?.length; i++){
           let t = sortedPath[i].arrivalTime(343); 
           let p = sortedPath[i].arrivalPressure(spls, this.frequencies); 
-
-          console.log("hello2");
 
           (Math.random() > 0.5) && (p=p.map(x=>-x)); 
 
           let roundedSample = Math.floor(t*sampleRate);
 
           for(let f = 0; f<this.frequencies.length; f++){
-            samples[f][roundedSample] = p[f]; 
+            samples[f][roundedSample] += p[f]; 
           }
 
         }
           
-        // samples.forEach((x,i,arr)=>{
-        // const {b, a} = coefs.get(freqs[i])!;
-        // arr[i] = filter(b,a,x);
-        // });
+        samples.forEach((x,i,arr)=>{
+          const {b, a} = coefs.get(freqs[i])!;
+          arr[i] = filter(b,a,x);
+        });
     
         const offlineContext = audioEngine.createOfflineContext(1, endSample, sampleRate);
         const sources = samples.map(x => audioEngine.createBufferSource(x, offlineContext));

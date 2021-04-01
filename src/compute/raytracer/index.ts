@@ -1756,13 +1756,11 @@ class RayTracer extends Solver {
       }
     }
 
-    
-
     samples.forEach((x,i,arr)=>{
       const {b, a} = coefs.get(frequencies[i])!;
       arr[i] = filter(b,a,x);
     });
-
+    
     const offlineContext = audioEngine.createOfflineContext(1, numberOfSamples, sampleRate);
     const sources = samples.map(x => audioEngine.createBufferSource(x, offlineContext));
     const merger = audioEngine.createMerger(sources.length, offlineContext);

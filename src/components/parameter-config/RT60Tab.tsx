@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useReducer } from 'react';
 import { RT60 } from '../../compute/rt';
 import Messenger from "../../messenger";
 import RT60Properties from '../ObjectProperties/RT60Properties';
@@ -53,6 +53,22 @@ const General = ({ uuid }: { uuid: string }) => {
   );
 };
 
+const Export = ({uuid}: { uuid: string }) => {
+  const [open, toggle] = useToggle(true); 
+  const {noResults} = useSolver(state=>pickProps(["noResults"], state.solvers[uuid] as RT60))
+  const [, forceUpdate] = useReducer((c) => c + 1, 0) as [never, () => void]
+
+  useEffect(()=>on("UPDATE_RT60", (e)=>{
+    forceUpdate();
+  }));
+
+  return(
+    <PropertyRowFolder label="Export" open={open} onOpenClose={toggle}>
+      <PropertyButton event="DOWNLOAD_RT60_RESULTS" args={uuid} label="Download RT60 Results" disabled={noResults} tooltip="Download RT60 Results as CSV File"/>
+    </PropertyRowFolder>
+  )
+}
+
 type DropdownOption = {
   uuid: string, 
   name: string
@@ -82,6 +98,7 @@ export const RT60Tab = ({ uuid }: RT60TabProps) => {
   return (
     <div>
       <General uuid={uuid} />
+      <Export uuid={uuid} />
     </div>
   );
 };
