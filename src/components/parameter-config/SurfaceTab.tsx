@@ -97,6 +97,16 @@ const Material = ({uuid}: {uuid: string}) => {
 }
 
 
+const Scattering = ({uuid}: {uuid: string}) => {
+  const [open, toggle] = useToggle(true);
+  return (
+    <PropertyRowFolder label="Scattering" open={open} onOpenClose={toggle}>
+      <PropertyNumberInput uuid={uuid} label="Scattering Coefficient" tooltip="Sets this surface's scattering coefficient" property="scatteringCoefficient" />
+    </PropertyRowFolder>
+  )
+}
+
+
 export const SurfaceTab = ({ uuid }: { uuid: string }) => {
   return (
     <div>
@@ -104,6 +114,7 @@ export const SurfaceTab = ({ uuid }: { uuid: string }) => {
       <Visual uuid={uuid} />
       <Transform uuid={uuid} />
       <Material uuid={uuid} />
+      <Scattering uuid={uuid} />
     </div>
   );
 };

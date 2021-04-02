@@ -1,6 +1,6 @@
 import interpolateLog from './interpolate-log';
 
-export function interpolateAlpha(alpha: number[], freq: number[]) {
+export function interpolateAlpha(alpha: number[], freq: number[]): (f: number) => number {
   return function (f: number) {
     let i = 0;
     while (f > freq[i] && i < freq.length) {
