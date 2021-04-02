@@ -1765,23 +1765,27 @@ class RayTracer extends Solver {
       }
     }
 
-    
-
-    samples.forEach((x,i,arr)=>{
-      const {b, a} = coefs.get(frequencies[i])!;
-      arr[i] = filter(b,a,x);
-    });
+    // samples.forEach((x,i,arr)=>{
+    //   const {b, a} = coefs.get(frequencies[i])!;
+    //   arr[i] = filter(b,a,x);
+    // });
 
     const offlineContext = audioEngine.createOfflineContext(1, numberOfSamples, sampleRate);
-    const sources = samples.map(x => audioEngine.createBufferSource(x, offlineContext));
+
+    const sources = Array(frequencies.length); 
+    for(let f = 0; f<frequencies.length; f++){
+      sources[f] = audioEngine.createFilteredSource(samples[f],frequencies[f],1.414,1,offlineContext); 
+    }
+    
+    //const sources = samples.map(x => audioEngine.createBufferSource(x, offlineContext));
     const merger = audioEngine.createMerger(sources.length, offlineContext);
     
     for(let i = 0; i<sources.length; i++){
-      sources[i].connect(merger, 0, i);
+      sources[i].source.connect(merger, 0, i);
     }
 
     merger.connect(offlineContext.destination);
-    sources.forEach(source=>source.start());
+    sources.forEach(source=>source.source.start());
 
     // this.impulseResponse = audioEngine.context.createBufferSource();
     this.impulseResponse = await offlineContext.startRendering();
@@ -1857,6 +1861,7 @@ class RayTracer extends Solver {
     const blob = ac.wavAsBlob([normalize(this.impulseResponse.getChannelData(0))], { sampleRate, bitDepth: 32 });
     const extension = !filename.endsWith(".wav") ? ".wav" : "";
     FileSaver.saveAs(blob, filename + extension);
+    this.downloadImpulses(); 
   }
 
   get sources() {
