@@ -114,9 +114,9 @@ on("OPEN", async (callback) => {
     } catch (e) {
       console.warn(e);
     }
+    emit("RENDERER_SHOULD_ANIMATE",true);
     if (callback) callback();
   })
-
 })
 
 
