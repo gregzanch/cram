@@ -95,7 +95,7 @@ const MaterialAssignButton = () => {
         intent="success"
         text="assign"
         icon="tick"
-        disabled={!selectedMaterial || selectedSurfaces.length == 0}
+        disabled={selectedSurfaces.length == 0}
         onClick={(e) => {
           if(selectedMaterial){
             emit("ASSIGN_MATERIAL", {
