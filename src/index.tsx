@@ -67,7 +67,7 @@ import FileSaver from "file-saver";
 import { createFileFromData } from "./common/file";
 import produce, { enableMapSet } from "immer";
 import {omit} from './common/helpers'
-import { useContainer, useSolver, useResult, useAppStore, useMaterial } from "./store";
+import { useContainer, useSolver, useResult, useAppStore, useMaterial, SaveState } from "./store";
 import { audioEngine } from './audio-engine/audio-engine';
 enableMapSet();
 
@@ -76,10 +76,7 @@ import './compute/events';
 
 expose({ omit, Container, audioEngine, useSolver, useContainer, useResult, useAppStore, useMaterial, produce, on, emit });
 
-
-import {CLFViewer} from "./objects/CLFViewer";
-import { ImageSourceTabProps } from "./components/parameter-config/image-source-tab/ImageSourceTab";
-import { ResultKind } from "./store/result-store";
+import * as examples from './examples';
 import chroma from 'chroma-js';
 
 const materialsIndex = {} as KeyValuePair<AcousticMaterial>;
@@ -1173,15 +1170,16 @@ window.addEventListener("resize", () => {
 
 
 async function finishedLoading() {
-  const filepath = "/res/saves/concord2.json";
-  const filename = filepath.slice(filepath.lastIndexOf("/") + 1);
-  const filedata = await(await fetch(filepath)).text();
-  const json = JSON.parse(filedata);
-  const file = createFileFromData(filename, [filedata]);
-  console.log(json);
+  // const filepath = "/res/saves/concord2.json";
+  // const filename = filepath.slice(filepath.lastIndexOf("/") + 1);
+  // const filedata = await(await fetch(filepath)).text();
+  // const json = JSON.parse(filedata);
+  const json = examples.shoebox as SaveState;
+  // const file = createFileFromData(filename, [filedata]);
+  // console.log(json);
 
   // messenger.postMessage("RESTORE", { file, json });
-  emit("RESTORE", { file, json });
+  emit("RESTORE", { json });
   emit("REGISTER_SHORTCUTS");
   expose({
     chroma,

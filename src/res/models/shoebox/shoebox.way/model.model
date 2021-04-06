@@ -1,0 +1,75 @@
+# File produced by Open Asset Import Library (http://www.assimp.sf.net)
+# (assimp v3.3.176583636)
+
+mtllib model.model.mtl
+
+# 8 vertex positions
+v  -6 0 2.829999923706055
+v  -6 4 2.830000877380371
+v  0 4 2.830000877380371
+v  0 0 2.829999923706055
+v  0 4 9.999999974752427e-07
+v  0 0 0
+v  -6 4 9.999999974752427e-07
+v  -6 0 0
+
+# 14 UV coordinates
+vt 0.875 0.5 0
+vt 0.625 0.5 0
+vt 0.625 0.25 0
+vt 0.875 0.25 0
+vt 0.375 0.25 0
+vt 0.375 0 0
+vt 0.625 0 0
+vt 0.375 0.5 0
+vt 0.625 0.75 0
+vt 0.375 0.75 0
+vt 0.625 1 0
+vt 0.375 1 0
+vt 0.125 0.5 0
+vt 0.125 0.25 0
+
+# 6 vertex normals
+vn 0 0 -1
+vn -1 0 0
+vn 0 -1 0
+vn 1 0 0
+vn 0 1 0
+vn 0 0 1
+
+# Mesh 'Cube.001_Cube.002_Cube.001_Cube.002' with 2 faces
+g Cube.001_Cube.002_Cube.001_Cube.002
+usemtl Wood_Floor
+f  1/1/1 2/2/1 3/3/1
+f  1/1/1 3/3/1 4/4/1
+
+# Mesh 'Cube.002_Cube.003_Gypsum_Board' with 2 faces
+g Cube.002_Cube.003_Gypsum_Board
+usemtl Gypsum_Board
+f  3/3/2 5/5/2 6/6/2
+f  3/3/2 6/6/2 4/7/2
+
+# Mesh 'Cube.003_Cube.004_Cube.003_Cube.004' with 2 faces
+g Cube.003_Cube.004_Cube.003_Cube.004
+usemtl Gypsum_Board
+f  2/2/3 7/8/3 5/5/3
+f  2/2/3 5/5/3 3/3/3
+
+# Mesh 'Cube.004_Cube.005_Cube.004_Cube.005' with 2 faces
+g Cube.004_Cube.005_Cube.004_Cube.005
+usemtl Gypsum_Board
+f  1/9/4 8/10/4 7/8/4
+f  1/9/4 7/8/4 2/2/4
+
+# Mesh 'Cube.005_Cube.006_Cube.005_Cube.006' with 2 faces
+g Cube.005_Cube.006_Cube.005_Cube.006
+usemtl Gypsum_Board
+f  4/11/5 6/12/5 8/10/5
+f  4/11/5 8/10/5 1/9/5
+
+# Mesh 'Cube.006_Cube.007_Dampa_Ceiling' with 2 faces
+g Cube.006_Cube.007_Dampa_Ceiling
+usemtl Dampa_Ceiling
+f  7/8/6 8/13/6 6/14/6
+f  7/8/6 6/14/6 5/5/6
+

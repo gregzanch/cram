@@ -11,6 +11,7 @@ import { addSolver, removeSolver, Result, ResultKind, setSolverProperty, useAppS
 import { uuid } from "uuidv4";
 import Container from "../../objects/container";
 import { KVP } from "../../common/key-value-pair";
+import FileSaver from 'file-saver'; 
 
 export interface RT60Props extends SolverParams{
   //uuid?: string;
@@ -29,9 +30,9 @@ const defaults = {
 
 export class RT60 extends Solver{
   public uuid; 
-  public sabine_rt: number[][]; 
-  public eyring_rt: number[][];
-  public ap_rt: number[][]; 
+  public sabine_rt: number[]; 
+  public eyring_rt: number[];
+  public ap_rt: number[]; 
 
   public frequencies: number[];
 
@@ -44,7 +45,6 @@ export class RT60 extends Solver{
     this.kind = "rt60";
     this.name = props.name || defaults.name;
     this.uuid = uuid(); 
-
 
     this.sabine_rt = [];
     this.eyring_rt = []; 
@@ -91,9 +91,9 @@ export class RT60 extends Solver{
     for(let i = 0; i<this.frequencies.length; i++){
       this.rt60results.data.push({
         frequency: this.frequencies[i], 
-        sabine: this.sabine_rt[i][1],
-        eyring: this.eyring_rt[i][1],
-        ap: this.ap_rt[i][1]
+        sabine: this.sabine_rt[i],
+        eyring: this.eyring_rt[i],
+        ap: this.ap_rt[i]
       })
     }
     emit("UPDATE_RESULT", { uuid: this.rt60results.uuid, result: this.rt60results });
@@ -119,7 +119,7 @@ export class RT60 extends Solver{
       });
       response.push((unitsConstant*v)/(sum)); 
     });
-    return transpose([this.frequencies, response]);
+    return response;
   }
   
   eyring(){
@@ -137,12 +137,11 @@ export class RT60 extends Solver{
       let avg_abs = sum / totalSurfaceArea; 
       response.push((unitsConstant * v) / (-totalSurfaceArea*Math.log(1-avg_abs)));
     });
-    return transpose([this.frequencies, response]); 
+    return response; 
   }
 
 
   arauPuchades(room: Room, frequencies: number[] = third_octave) {
-
     
     // the goal of arau puchades is to break the surfaces into components (x, y, z)
     // well do this by projecting each surface onto the planes x=0, y=0, and z=0
@@ -205,12 +204,32 @@ export class RT60 extends Solver{
       ((unitsConstant*v) / (-A * (Math.log(1-αx[f]))) ) ** (Ax/A) *
       ((unitsConstant*v) / (-A * (Math.log(1-αy[f]))) ) ** (Ay/A) *
       ((unitsConstant*v) / (-A * (Math.log(1-αz[f]))) ) ** (Az/A);
-      return [freq, rt];
+      return rt;
     });
   }
 
   onParameterConfigFocus() {}
   onParameterConfigBlur() {}
+
+  downloadRT60AsCSV(){
+
+    let precision = 4;
+    let freqlabel = "Octave Band (Hz),"
+    let sabinelabel = "Sabine RT,";
+    let eyringlabel = "Eyring RT,";
+    let aplabel = "Arau-Puchades RT,";
+
+    let CSV = [freqlabel.concat((this.frequencies).toString()),
+      sabinelabel.concat((this.sabine_rt).map((n)=>n.toFixed(precision)).toString()),
+      eyringlabel.concat((this.eyring_rt).map((n)=>n.toFixed(precision)).toString()),
+      aplabel.concat((this.ap_rt).map((n)=>n.toFixed(precision)).toString()),
+    ].join('\n');
+
+    console.log(CSV); 
+
+    var csvFile = new Blob([CSV], {type: 'text/csv'});
+    FileSaver.saveAs(csvFile, `rt60-${this.uuid}.csv`);
+  }
 
 
   // setters and getters
@@ -219,6 +238,13 @@ export class RT60 extends Solver{
   }
   get room(){
     return useContainer.getState().containers[this.roomID] as Room; 
+  }
+  get noResults(){
+    if (this.sabine_rt.length == 0 && this.eyring_rt.length == 0  && this.ap_rt.length == 0 ){
+      return true;
+    }else{
+      return false; 
+    }
   }
 }
 
@@ -237,6 +263,7 @@ declare global {
       value: RT60[EventTypes["RT60_SET_PROPERTY"]["property"]]; 
     }
     UPDATE_RT60: string; 
+    DOWNLOAD_RT60_RESULTS: string; 
   }
 }
 
@@ -244,5 +271,6 @@ declare global {
 on("ADD_RT60", addSolver(RT60)); 
 on("UPDATE_RT60", (uuid: string) => void (useSolver.getState().solvers[uuid] as RT60).calculate());
 on("REMOVE_RT60", removeSolver); 
+on("DOWNLOAD_RT60_RESULTS", (uuid: string) => void (useSolver.getState().solvers[uuid] as RT60).downloadRT60AsCSV()); 
 on("RT60_SET_PROPERTY", setSolverProperty); 
 

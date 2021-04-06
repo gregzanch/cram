@@ -1,0 +1,38 @@
+# File produced by Open Asset Import Library (http://www.assimp.sf.net)
+# (assimp v3.3.176583636)
+
+newmtl DefaultMaterial
+Kd 0.6000000238418579 0.6000000238418579 0.6000000238418579
+Ka 0 0 0
+Ks 0 0 0
+Ke 0 0 0
+d 1
+illum 1
+
+newmtl Dampa_Ceiling
+Kd 0.800000011920929 0.800000011920929 0.800000011920929
+Ka 1 1 1
+Ks 0.5 0.5 0.5
+Ke 0 0 0
+d 1
+Ns 900
+illum 2
+
+newmtl Gypsum_Board
+Kd 0.800000011920929 0.800000011920929 0.800000011920929
+Ka 1 1 1
+Ks 0.5 0.5 0.5
+Ke 0 0 0
+d 1
+Ns 900
+illum 2
+
+newmtl Wood_Floor
+Kd 0.800000011920929 0.800000011920929 0.800000011920929
+Ka 1 1 1
+Ks 0.5 0.5 0.5
+Ke 0 0 0
+d 1
+Ns 900
+illum 2
+

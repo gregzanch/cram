@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { CSSProperties, useEffect, useMemo, useState } from 'react';
 import { Group } from '@visx/group';
 import { BarGroup } from '@visx/shape';
 import { AxisBottom, AxisLeft } from '@visx/axis';
@@ -11,6 +11,7 @@ import { on } from '../../messenger';
 import styled from 'styled-components';
 import { LegendItem, LegendOrdinal } from '@visx/legend';
 import PropertyRowLabel from '../parameter-config/property-row/PropertyRowLabel';
+import { BREADCRUMBS_COLLAPSED } from '@blueprintjs/core/lib/esm/common/classes';
 
 export type BarGroupProps = {
   uuid: string; 
@@ -260,6 +261,27 @@ export const RT60Chart = ({
   const {info, data, from} = useResult(state=>pickProps(["info", "data", "from"], state.results[uuid] as Result<ResultKind.StatisticalRT60>))
   const keys = Object.keys(data[0]).filter(d => d !== 'frequency') as RtType[];
 
+  const rtTypeColorScale = scaleOrdinal<RtType, string>({
+    domain: keys,
+    range: [blue, green, darkgreen],
+  });
+
+  function legendLabel(label: string): string {
+    switch(label){
+      case "sabine":
+        return "Sabine"
+        break;
+      case "eyring":
+        return "Norris-Eyring"
+        break;
+      case "ap":
+        return "Arau-Puchades"
+        break;
+      default: 
+        return "error"
+    }
+  }
+
   return width < 10 ? null : (
     <VerticalContainer>
       <Title>{'Statistical RT60 Results'}</Title>
@@ -268,19 +290,7 @@ export const RT60Chart = ({
           <Chart {...{ width, height, uuid, events }}></Chart>
         </GraphContainer>
         <VerticalContainer>
-          <LegendContainer>
-            {keys.map((k)=>{
-              <LegendItem
-                key={`rt-type-${k}`}
-                margin="0 5px"
-                onClick={() => {
-              }}>
-                <PropertyRowLabel
-                  label={k.toString()}
-                />
-              </LegendItem>
-            })}
-          </LegendContainer>
+          <LegendOrdinal scale={rtTypeColorScale} labelFormat={label => legendLabel(label)}/>
         </VerticalContainer>
       </HorizontalContainer>
     </VerticalContainer>
