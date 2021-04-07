@@ -10,6 +10,7 @@ import { ImageSourceTab } from './image-source-tab/ImageSourceTab';
 import { SolverStore, useSolver } from '../../store';
 import styled from 'styled-components';
 import RT60Tab from './RT60Tab';
+import EnergyDecayTab from './EnergyDecayTab';
 
 
 export interface ParameterConfigState {
@@ -100,6 +101,12 @@ export const ParameterConfig = () => {
               return (
                 <TabPanel key={"parameter-config-tabpanel-" + i}>
                   <FDTD_2DTab uuid={x} />
+                </TabPanel>
+              );
+            case "energydecay":
+              return (
+                <TabPanel key={"energydecay-config-tabpanel-" + i}>
+                  <EnergyDecayTab uuid={x}/>
                 </TabPanel>
               );
             default:
