@@ -1,6 +1,7 @@
 // https://dsp.stackexchange.com/questions/17121/calculation-of-reverberation-time-rt60-from-the-impulse-response
 
 import { uuid } from "uuidv4";
+import { AudioEngine } from "../audio-engine/audio-engine";
 import { on } from "../messenger";
 import { addSolver, setSolverProperty, useSolver } from "../store/solver-store";
 import Solver, { SolverParams } from "./solver";
@@ -32,22 +33,35 @@ const defaults = {
     name: "Energy Decay",
 };
 
+const AudioContext = (window.AudioContext);
+
 class EnergyDecay extends Solver{ 
     public uuid; 
+    public broadbandIRData: Float32Array; 
+    public broadbandIRSampleRate: number; 
+    
+    public context: AudioContext;
+    source;
 
     constructor(props: EnergyDecayProps = defaults){
         super(props);
         this.kind = "energydecay";
         this.name = props.name || defaults.name;
-        this.uuid = uuid(); 
+
+        this.context = new AudioContext();
+        this.source = this.context.createBufferSource(); 
+
+        this.broadbandIRData = new Float32Array(); 
+        this.broadbandIRSampleRate = 0; 
 
     }
 
-    loadBroadbandIR(){
-        const reader = new FileReader();
-        reader.addEventListener('loadend', (loadEndEvent) => {
-            console.log(reader.result);
-        });
+    set broadbandIR(f: ArrayBuffer){
+        console.log(f); 
+        this.context.decodeAudioData(f, function(buffer) {
+            this.broadbandIRData = buffer.getChannelData(0);
+            this.broadbandIRSampleRate = buffer.sampleRate; 
+        }) 
     }
 }
 
@@ -62,11 +76,13 @@ declare global {
         property: keyof EnergyDecay;
         value: EnergyDecay[EventTypes["ENERGYDECAY_SET_PROPERTY"]["property"]]; 
       }
-      LOAD_IR_TO_ENERGYDECAY: string;
+      LOAD_IR_TO_ENERGYDECAY: {
+          uuid: string;
+          f: File; 
+      }
     }
 }
 
 on("ADD_ENERGYDECAY", addSolver(EnergyDecay))
 on("ENERGYDECAY_SET_PROPERTY", setSolverProperty); 
-on("LOAD_IR_TO_ENERGYDECAY", (uuid: string) => void (useSolver.getState().solvers[uuid] as EnergyDecay).loadBroadbandIR()); 
 

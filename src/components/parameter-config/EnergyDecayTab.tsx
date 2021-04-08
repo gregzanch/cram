@@ -54,13 +54,14 @@ const General = ({ uuid }: { uuid: string }) => {
         id = "irinput"
         accept = ".wav"
         onChange={(e) => {
-            console.log(e.target.files);
+            //console.log(e.target.files);
             const reader = new FileReader();
             
             reader.addEventListener('loadend', (loadEndEvent) => {
-                console.log(reader.result); 
+                emit("ENERGYDECAY_SET_PROPERTY",{uuid: uuid, property: "broadbandIR", value:reader.result}); 
             });
-            //reader.readAsText(e.target!.files![0]);
+
+            reader.readAsArrayBuffer(e.target!.files![0]);
             }
         }
         />
