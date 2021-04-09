@@ -48,24 +48,27 @@ const General = ({ uuid }: { uuid: string }) => {
     return (
       <PropertyRowFolder label="General" open={open} onOpenClose={toggle}>
         <PropertyTextInput uuid={uuid} label="Name" property="name" tooltip="Sets the name of the solver" />
-        <div style={{alignItems:'center'}}>
-        <input
-        type = "file"
-        id = "irinput"
-        accept = ".wav"
-        onChange={(e) => {
-            //console.log(e.target.files);
-            const reader = new FileReader();
-            
-            reader.addEventListener('loadend', (loadEndEvent) => {
-                emit("ENERGYDECAY_SET_PROPERTY",{uuid: uuid, property: "broadbandIR", value:reader.result}); 
-            });
+        <PropertyRow>
+            <PropertyRowLabel label={"Upload IR"}></PropertyRowLabel>
+            <div style={{alignItems:'center'}}>
+                <input
+                type = "file"
+                id = "irinput"
+                accept = ".wav"
+                onChange={(e) => {
+                    //console.log(e.target.files);
+                    const reader = new FileReader();
+                    
+                    reader.addEventListener('loadend', (loadEndEvent) => {
+                        emit("ENERGYDECAY_SET_PROPERTY",{uuid: uuid, property: "broadbandIR", value:reader.result}); 
+                    });
 
-            reader.readAsArrayBuffer(e.target!.files![0]);
-            }
-        }
-        />
+                    reader.readAsArrayBuffer(e.target!.files![0]);
+                    }
+                }
+                />
         </div>
+        </PropertyRow>
       </PropertyRowFolder>
     );
 };
