@@ -1,7 +1,7 @@
 // https://dsp.stackexchange.com/questions/17121/calculation-of-reverberation-time-rt60-from-the-impulse-response
 
 import { uuid } from "uuidv4";
-import { audioEngine } from "../audio-engine/audio-engine";
+import { audioEngine, FilteredSource } from "../audio-engine/audio-engine";
 import { emit, on } from "../messenger";
 import { addSolver, setSolverProperty, useSolver } from "../store/solver-store";
 import Solver, { SolverParams } from "./solver";
@@ -45,10 +45,12 @@ class EnergyDecay extends Solver{
 
     public source;
 
-    public bandpassSources: any;
+    public bandpassSources: FilteredSource[];
     public bandpassData: Float32Array[]; 
 
     public impulseResponsePlaying: boolean; 
+
+    public filterTest: any; 
 
     constructor(props: EnergyDecayProps = defaults){
         super(props);
@@ -64,33 +66,34 @@ class EnergyDecay extends Solver{
         this.bandpassData = []; 
 
         this.impulseResponsePlaying = false; 
+
+        this.filterTest = null;
     }
 
     calculateBroadbandEnergyDecay(){
 
     }
 
-    playBroadbandIR(){
+    play(source){
         if (audioEngine.context.state === 'suspended') {
             audioEngine.context.resume();
           }
 
-        let source = (this.bandpassSources[1]).source;
-
-        this.source.connect(audioEngine.context.destination);
-        this.source.start();
+        //source.connect(filter);
+        //filter.connect(audioEngine.context.destination);
+        source.start();
 
         emit("ENERGYDECAY_SET_PROPERTY", { uuid: this.uuid, property: "impulseResponsePlaying", value: true });
-        this.source.onended = () => {
-            this.source.stop();
-            this.source.disconnect(audioEngine.context.destination);
+        source.onended = () => {
+            source.stop();
+            source.disconnect(audioEngine.context.destination);
             emit("ENERGYDECAY_SET_PROPERTY", { uuid: this.uuid, property: "impulseResponsePlaying", value: false });
         }
     }
 
     set broadbandIR(f: ArrayBuffer){
         let self = this; 
-        audioEngine.context.decodeAudioData(f, function(buffer) {
+        audioEngine.context.decodeAudioData(f, async function(buffer) {
 
             let decodeddata = trimIR(buffer.getChannelData(0)); 
 
@@ -98,17 +101,23 @@ class EnergyDecay extends Solver{
             self.broadbandIRData = decodeddata;
             self.broadbandIRSampleRate = buffer.sampleRate; 
 
+            self.filterTest = audioEngine.createFilteredSource(decodeddata,8000,1.414,1); 
+
             let broadbandarray: Float32Array[] = []; 
             for(let f = 0; f<filterFreqs.length; f++){
                 broadbandarray[f] = decodeddata; 
             }
 
-            console.log(audioEngine.createFilteredSources(broadbandarray,filterFreqs))
-            self.bandpassSources = audioEngine.createFilteredSources(broadbandarray,filterFreqs);
-
             for(let f = 0; f<filterFreqs.length; f++){
-                self.bandpassData[f] = (self.bandpassSources[f]).source.buffer.getChannelData(0); 
+                const offlineContext = audioEngine.createOfflineContext(1, decodeddata.length, buffer.sampleRate);
+                const filteredsource = audioEngine.createFilteredSource(decodeddata, filterFreqs[f], 1.414,1,offlineContext);
+                filteredsource.gain.connect(offlineContext.destination);
+                filteredsource.source.start(); 
+
+                let data = await offlineContext.startRendering(); 
+                console.log(data.getChannelData(0)); 
             }
+
         }) 
     }
 }

@@ -5,7 +5,7 @@ const throwif = (condition: boolean, message: string) => {
   if(!condition) throw Error(message);
 }
 
-type FilteredSource = {
+export type FilteredSource = {
   source: AudioBufferSourceNode;
   filter: BiquadFilterNode;
   gain: GainNode;
