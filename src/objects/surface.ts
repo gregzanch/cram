@@ -126,6 +126,7 @@ export interface BufferGeometrySaveObject {
 function restoreBufferGeometry(geom: BufferGeometrySaveObject){
 
   const geometry = new THREE.BufferGeometry();
+  
   geometry.setAttribute(
     "position",
     new THREE.BufferAttribute(

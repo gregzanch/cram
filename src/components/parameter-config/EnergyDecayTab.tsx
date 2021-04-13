@@ -69,6 +69,7 @@ const General = ({ uuid }: { uuid: string }) => {
                 />
         </div>
         </PropertyRow>
+        <PropertyButton event="CALCULATE_AC_PARAMS" args={uuid} label="Calculate Parameters" tooltip="Calculates Acoustical Parameters from Uploaded IR" />
       </PropertyRowFolder>
     );
 };
