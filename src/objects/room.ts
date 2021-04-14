@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import Container, { ContainerProps, getContainersOfKind } from "./container";
+import Container, { ContainerProps, getContainersOfKind, ContainerSaveObject } from "./container";
 import Surface, { SurfaceSaveObject } from "./surface";
 
 import { UNITS } from "../enums/units";
@@ -84,7 +84,7 @@ export class Room extends Container {
   }
   save() {
     return {
-      surfaces: this._surfaces.map((surf: Surface) => surf.save()),
+      surfaces: this.surfaces.children.map((surf: Surface) => surf.save()),
       kind: this.kind,
       name: this.name,
       uuid: this.uuid,
@@ -98,11 +98,20 @@ export class Room extends Container {
     } as RoomSaveObject;
   }
   restore(state: RoomSaveObject) {
+    function mapSurfaces(saveObj: SurfaceSaveObject|ContainerSaveObject) {
+      if(saveObj.kind==="surface"){
+        return new Surface(saveObj.name).restore(saveObj as SurfaceSaveObject);
+      } else {
+        const container = new Container(saveObj.name).restore(saveObj as ContainerSaveObject);
+        (saveObj as ContainerSaveObject).children?.forEach(child=>{
+          container.add(mapSurfaces(child));
+        });
+        return container;
+      }
+    }
     this.init({
       ...state,
-      surfaces: state.surfaces.map((surfaceState) =>
-        new Surface(surfaceState.name).restore(surfaceState)
-      )
+      surfaces: state.surfaces.map((surfaceState) => mapSurfaces(surfaceState))
     });
     this.visible = state.visible;
     this.position.set(state.position[0], state.position[1], state.position[2]);
