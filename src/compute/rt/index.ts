@@ -7,7 +7,7 @@ import { UNITS } from "../../enums/units";
 import Messenger, { emit, messenger, on } from "../../messenger";
 import { transpose } from '../../common/helpers'
 import { Matrix4, Triangle, Vector3 } from "three";
-import { addSolver, removeSolver, Result, ResultKind, setSolverProperty, useAppStore, useContainer, useSolver } from "../../store";
+import { addSolver, removeSolver, Result, ResultKind, ResultTypes, setSolverProperty, useAppStore, useContainer, useResult, useSolver } from "../../store";
 import { uuid } from "uuidv4";
 import Container from "../../objects/container";
 import { KVP } from "../../common/key-value-pair";
@@ -34,11 +34,15 @@ export class RT60 extends Solver{
   public eyring_rt: number[];
   public ap_rt: number[]; 
 
+  public volume: number; 
+
   public frequencies: number[];
 
   public roomID: string;
 
-  public rt60results: Result<ResultKind.StatisticalRT60>;
+  public resultID: string;
+
+  public resultExists: boolean; 
 
   constructor(props: RT60Props = defaults) {
     super(props);
@@ -55,20 +59,10 @@ export class RT60 extends Solver{
 
     this.frequencies = whole_octave.slice(4,11);   
 
-    this.rt60results = {
-      kind: ResultKind.StatisticalRT60, 
-      data: [],
-      info: {
-        frequency: this.frequencies,
-        airabsorption: false,
-        temperature: 20, 
-        humidity: 40, 
-      },
-      name: `Statistical RT60 Results`,
-      uuid: uuid(),
-      from: this.uuid
-    };
+    this.resultID = uuid(); 
+    this.resultExists = false; 
 
+    this.volume = (useContainer.getState().containers[this.roomID] as Room).volumeOfMesh();
   }
 
   save() {
@@ -88,36 +82,57 @@ export class RT60 extends Solver{
     this.eyring_rt = this.eyring(); 
     this.ap_rt = this.arauPuchades(this.room,this.frequencies); 
 
+    if(!this.resultExists){
+      emit("ADD_RESULT",{
+        kind: ResultKind.StatisticalRT60, 
+        data: [],
+        info: {
+          frequency: this.frequencies,
+          airabsorption: false,
+          temperature: 20, 
+          humidity: 40, 
+        },
+        name: `Statistical RT60 Results`,
+        uuid: this.resultID,
+        from: this.uuid
+      } as Result<ResultKind.StatisticalRT60>);
+    }else{
+
+    }
+
+    const rt60results = { ...useResult.getState().results[this.resultID] as Result<ResultKind.StatisticalRT60> };
+    rt60results.data = [] as ResultTypes[ResultKind.StatisticalRT60]["data"];
+
     for(let i = 0; i<this.frequencies.length; i++){
-      this.rt60results.data.push({
+      rt60results.data.push({
         frequency: this.frequencies[i], 
         sabine: this.sabine_rt[i],
         eyring: this.eyring_rt[i],
         ap: this.ap_rt[i]
       })
     }
-    emit("UPDATE_RESULT", { uuid: this.rt60results.uuid, result: this.rt60results });
+    emit("UPDATE_RESULT", { uuid: this.resultID, result: rt60results });
   }
 
   reset(){
     this.sabine_rt = [];
     this.eyring_rt = []; 
     this.ap_rt = []; 
-
-    this.rt60results.data = []; 
   }
 
   sabine() {
     let room = this.room; 
     const unitsConstant = this.unitsConstant;
-    const v = room.volumeOfMesh();
+    const v = this.volume;
+
     const response = [] as number[];
     this.frequencies.forEach((frequency) => {
       let sum = 0;
       room._surfaces.forEach((surface: Surface) => {
         sum += surface.getArea() * surface.absorptionFunction(frequency);
       });
-      response.push((unitsConstant*v)/(sum)); 
+      let airabsterm = 4*airAbs20c40rh(frequency)*v; 
+      response.push((unitsConstant*v)/(sum+airabsterm)); 
     });
     return response;
   }
@@ -125,7 +140,8 @@ export class RT60 extends Solver{
   eyring(){
     let room = this.room; 
     const unitsConstant = this.unitsConstant;
-    const v = room.volumeOfMesh(); 
+    const v = this.volume;
+     
     const response = [] as number[]; 
     this.frequencies.forEach((frequency) => {
       let sum = 0; 
@@ -135,7 +151,8 @@ export class RT60 extends Solver{
         sum += surface.getArea() * surface.absorptionFunction(frequency);
       });
       let avg_abs = sum / totalSurfaceArea; 
-      response.push((unitsConstant * v) / (-totalSurfaceArea*Math.log(1-avg_abs)));
+      let airabsterm = 4*airAbs20c40rh(frequency)*v; 
+      response.push((unitsConstant * v) / (-totalSurfaceArea*Math.log(1-avg_abs)+airabsterm));
     });
     return response; 
   }
@@ -245,6 +262,38 @@ export class RT60 extends Solver{
     }else{
       return false; 
     }
+  }
+}
+
+function airAbs20c40rh(f: number): number {
+  // returns metric value of the air abosprtion coefficient m at 20c 40 rh
+  // hardcoded for capstone demonstration 
+
+  switch(f){
+    case 125:
+      return 0; 
+      break;
+    case 250:
+      return 0; 
+      break;
+    case 500: 
+      return 0.000600423; 
+      break;
+    case 1000:
+      return 0.001069606; 
+      break;
+    case 2000: 
+      return 0.002578866; 
+      break;
+    case 4000:
+      return 0.00839936; 
+      break; 
+    case 8000: 
+      return 0.0246; 
+      break; 
+    default: 
+      return 0;
+      break; 
   }
 }
 

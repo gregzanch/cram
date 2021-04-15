@@ -53,6 +53,21 @@ const General = ({ uuid }: { uuid: string }) => {
   );
 };
 
+const Settings = ({ uuid }: { uuid: string }) => {
+  const [open, toggle] = useToggle(true);
+  return (
+    <PropertyRowFolder label="Room Settings" open={open} onOpenClose={toggle}>
+    <PropertyNumberInput
+        uuid={uuid}
+        label="Room Volume"
+        property="volume"
+        tooltip="Overrides the calculated room volume"
+      />
+    </PropertyRowFolder>
+  );
+};
+
+
 const Export = ({uuid}: { uuid: string }) => {
   const [open, toggle] = useToggle(true); 
   const {noResults} = useSolver(state=>pickProps(["noResults"], state.solvers[uuid] as RT60))
@@ -98,6 +113,7 @@ export const RT60Tab = ({ uuid }: RT60TabProps) => {
   return (
     <div>
       <General uuid={uuid} />
+      <Settings uuid={uuid} />
       <Export uuid={uuid} />
     </div>
   );
