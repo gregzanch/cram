@@ -1,5 +1,5 @@
 import DxfParser from 'dxf-parser';
-import {BufferGeometry, BufferAttribute} from 'three';
+import THREE, {BufferGeometry, BufferAttribute} from 'three';
 import { emit } from '../messenger';
 import Container from '../objects/container';
 import Room from '../objects/room';
@@ -28,7 +28,7 @@ export function dxf(data: string){
     if(!layerMap.has(layer)){
       layerMap.set(layer, new Container(layer));
     }
-    
+
     const vertices = [] as number[][];
     const indices = [] as number[][];
     polyline.vertices.forEach(vertex=>{
@@ -38,7 +38,12 @@ export function dxf(data: string){
         vertices.push([vertex.x,vertex.y,vertex.z!]);
       }
     });
-    const geometry = makeBufferGeometry((indices.flat().reverse() as number[]).map(index=>vertices[index]).flat() as number[]);
+
+    let vertices_i = (indices.flat().reverse() as number[]).map(index=>vertices[index]).flat() as number[];
+    const geometry = makeBufferGeometry((vertices_i));
+    geometry.computeVertexNormals(); 
+    geometry.setAttribute("normals", geometry.getAttribute("normal")); 
+    
     const acousticMaterial = defaultMaterial;
     const surface = new Surface(`untitled-${i}`, {
       acousticMaterial,

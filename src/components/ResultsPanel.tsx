@@ -58,6 +58,7 @@ export const ResultsPanel = () => {
 const ChartSelect = (uuid) => {
 
   useResult((state) => console.log(state.results[uuid.uuid])); 
+  console.log(uuid); 
 
   switch (useResult((state) => state.results[uuid.uuid].kind)){
 

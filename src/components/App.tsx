@@ -371,6 +371,11 @@ export default class App extends React.Component<AppProps, AppState> {
       solvers[acc[0].uuid] = acc[0];
       return { solvers };
     });
+    this.addMessageHandler("SHOULD_ADD_ENERGYDECAY", (acc) => {
+      const solvers = { ...this.state.solvers };
+      solvers[acc[0].uuid] = acc[0];
+      return { solvers };
+    });
     this.addMessageHandler("SHOULD_REMOVE_SOLVER", (acc, ...args) => {
       if (args[0] && this.state.solvers[args[0]]) {
         const solvers = { ...this.state.solvers };
@@ -386,6 +391,15 @@ export default class App extends React.Component<AppProps, AppState> {
       }
     });
     this.addMessageHandler("SHOULD_ADD_RT60", (acc) => {
+      if (acc && acc[0]) {
+        const solvers = { ...this.state.solvers };
+        solvers[acc[0].uuid] = acc[0];
+        return { solvers };
+      } else {
+        return {};
+      }
+    });
+    this.addMessageHandler("SHOULD_ADD_ENERGYDECAY", (acc) => {
       if (acc && acc[0]) {
         const solvers = { ...this.state.solvers };
         solvers[acc[0].uuid] = acc[0];

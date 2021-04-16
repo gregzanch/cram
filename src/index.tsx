@@ -78,6 +78,7 @@ expose({ omit, Container, audioEngine, useSolver, useContainer, useResult, useAp
 
 import * as examples from './examples';
 import chroma from 'chroma-js';
+import EnergyDecay from "./compute/energy-decay";
 
 const materialsIndex = {} as KeyValuePair<AcousticMaterial>;
 
@@ -398,6 +399,13 @@ messenger.addMessageHandler("SHOULD_ADD_RT60", (acc, ...args) => {
   cram.state.solvers[rt60.uuid] = rt60;
   emit("ADD_RT60", rt60);
   return rt60; 
+});
+
+messenger.addMessageHandler("SHOULD_ADD_ENERGYDECAY", (acc, ...args) => {
+  const ed = new EnergyDecay(); 
+  cram.state.solvers[ed.uuid] = ed;
+  emit("ADD_ENERGYDECAY", ed);
+  return ed; 
 });
 
 messenger.addMessageHandler("SHOULD_ADD_FDTD_2D", (acc, args) => {

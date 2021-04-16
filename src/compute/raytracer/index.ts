@@ -178,11 +178,11 @@ export const defaults = {
   sourceIDs: [] as string[],
   surfaceIDs: [] as string[],
   receiverIDs: [] as string[],
-  updateInterval: 20,
-  reflectionOrder: 200,
+  updateInterval: 5,
+  reflectionOrder: 50,
   isRunning: false,
   runningWithoutReceivers: false,
-  passes: 1,
+  passes: 100,
   pointSize: 2,
   raysVisible: true,
   pointsVisible: true,
@@ -1787,7 +1787,6 @@ class RayTracer extends Solver {
     merger.connect(offlineContext.destination);
     sources.forEach(source=>source.source.start());
 
-    // this.impulseResponse = audioEngine.context.createBufferSource();
     this.impulseResponse = await offlineContext.startRendering();
     return this.impulseResponse;
   }
@@ -1845,10 +1844,10 @@ class RayTracer extends Solver {
     }
 
     for(let f = 0; f<frequencies.length; f++){
-      for(let i = 0; i<samples[f].length; i++){
-        samples[f][i] /= max;
-      }
-      const blob = ac.wavAsBlob([samples[f]], { sampleRate, bitDepth: 32 });
+      // for(let i = 0; i<samples[f].length; i++){
+      //   samples[f][i] /= max;
+      // }
+      const blob = ac.wavAsBlob([ac.normalize(samples[f])], { sampleRate, bitDepth: 32 });
       FileSaver.saveAs(blob, `${frequencies[f]}.wav`);
     }
 
@@ -1861,7 +1860,7 @@ class RayTracer extends Solver {
     const blob = ac.wavAsBlob([normalize(this.impulseResponse.getChannelData(0))], { sampleRate, bitDepth: 32 });
     const extension = !filename.endsWith(".wav") ? ".wav" : "";
     FileSaver.saveAs(blob, filename + extension);
-    this.downloadImpulses(); 
+    //this.downloadImpulses(); 
   }
 
   get sources() {

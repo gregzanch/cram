@@ -124,7 +124,9 @@ export interface BufferGeometrySaveObject {
 }
 
 function restoreBufferGeometry(geom: BufferGeometrySaveObject){
+
   const geometry = new THREE.BufferGeometry();
+  
   geometry.setAttribute(
     "position",
     new THREE.BufferAttribute(
@@ -133,22 +135,30 @@ function restoreBufferGeometry(geom: BufferGeometrySaveObject){
       geom.data.attributes.position.normalized
     )
   );
-  geometry.setAttribute(
-    "normals",
-    new THREE.BufferAttribute(
-      new Float32Array(geom.data.attributes.normals.array),
-      geom.data.attributes.normals.itemSize,
-      geom.data.attributes.normals.normalized
-    )
-  );
-  geometry.setAttribute(
-    "texCoords",
-    new THREE.BufferAttribute(
-      new Float32Array(geom.data.attributes.texCoords.array),
-      geom.data.attributes.texCoords.itemSize,
-      geom.data.attributes.texCoords.normalized
-    )
-  );
+  if(geom.data.attributes['normals']){
+    geometry.setAttribute(
+      "normals",
+      new THREE.BufferAttribute(
+        new Float32Array(geom.data.attributes.normals.array),
+        geom.data.attributes.normals.itemSize,
+        geom.data.attributes.normals.normalized
+      )
+    );
+  }
+  else{
+    geometry.computeVertexNormals();
+    geometry.setAttribute("normals", geometry.getAttribute("normal"));
+  }
+  if(geom.data.attributes['texCoords']){
+    geometry.setAttribute(
+      "texCoords",
+      new THREE.BufferAttribute(
+        new Float32Array(geom.data.attributes.texCoords.array),
+        geom.data.attributes.texCoords.itemSize,
+        geom.data.attributes.texCoords.normalized
+      )
+    );
+  }
   geometry.name = geom.name;
   geometry.uuid = geom.uuid;
 
@@ -256,7 +266,7 @@ class Surface extends Container {
       chunk(Array.from((props.geometry.getAttribute("position") as THREE.BufferAttribute).array), 3),
       3
     );
-    console.log(this);
+
     this._triangles = this.triangles.map(
       (x) =>
         new THREE.Triangle(
@@ -275,8 +285,17 @@ class Surface extends Container {
       // debugger;
     }
 
+    let largest_area = 0;
+    let largest_index = 0;
+    for(let i = 0; i<this._triangles.length; i++){
+      if (this._triangles[i].getArea() > largest_area){
+        largest_area = this._triangles[i].getArea();
+        largest_index = i; 
+      }
+    }
+
     this.normal = new THREE.Vector3();
-    this._triangles[0].getNormal(this.normal);
+    this._triangles[largest_index].getNormal(this.normal);
 
     this.center = new THREE.Vector3();
     let area = 0;
@@ -376,15 +395,13 @@ class Surface extends Container {
     const eqeps = numbersEqualWithinTolerence(1e-5);
     const n0 = this.normal;
     const n1 = this.polygon.plane;
-    if (!eqeps(n0.x, n1[0]) || !eqeps(n0.y, n1[1]) || !eqeps(n0.z, n1[2])) {
-      this.polygon.plane[0] *= -1;
-      this.polygon.plane[1] *= -1;
-      this.polygon.plane[2] *= -1;
+
 
       if (!eqeps(n0.x, n1[0]) || !eqeps(n0.y, n1[1]) || !eqeps(n0.z, n1[2])) {
-        console.error(new Error(`Surface '${this.name}' has a normal vector issue`));
+        console.warn(new Error(`Surface '${this.name}' has a normal vector issue`));
       }
     }
+
 
     // this.polygon.parentSurface = this;
     // this.eventDestructors.push(
@@ -399,6 +416,7 @@ class Surface extends Container {
     this.parent && this.parent.remove(this);
   }
   save() {
+
     return {
       kind: this.kind,
       visible: this.visible,
@@ -415,7 +433,11 @@ class Surface extends Container {
       uuid: this.uuid
     } as SurfaceSaveObject;
   }
+
   restore(surfaceState: SurfaceSaveObject) {
+
+    console.log(surfaceState)
+
     this.init({
       acousticMaterial: surfaceState.acousticMaterial,
       geometry: restoreBufferGeometry(surfaceState.geometry),

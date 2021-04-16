@@ -1,13 +1,14 @@
 import * as THREE from "three";
 import Receiver, { ReceiverSaveObject } from "./receiver";
-import Surface from "./surface";
-import Room, { RoomSaveObject } from "./room";
-import Source, { SourceSaveObject } from "./source";
+// import Surface from "./surface";
+// import Room, { RoomSaveObject } from "./room";
+// import Source, { SourceSaveObject } from "./source";
 import { KeyValuePair } from "../common/key-value-pair";
 import { EditorModes } from "../constants";
 import { emit, on } from "../messenger";
 import { getContainerKeys, useContainer } from "../store";
 import { filterObjectToArray, omit } from "../common/helpers";
+
 
 
 
@@ -24,6 +25,7 @@ export interface ContainerSaveObject {
   rotation: Array<string | number>;
   uuid: string;
   kind: string;
+  children?: Array<ContainerSaveObject>
 }
 
 export interface ContainerProps {
@@ -57,13 +59,17 @@ export default class Container extends THREE.Group {
       position: this.position.toArray(),
       rotation: this.rotation.toArray().slice(0, 3),
       scale: this.scale.toArray(),
-      uuid: this.uuid
+      uuid: this.uuid,
+      children: this.children.reduce((acc, curr) => typeof curr['save'] === "function" ? [...acc, curr['save']()] : acc, [])
     } as ContainerSaveObject;
   }
   restore(state: ContainerSaveObject) {
-    for(const key in state){
-      this[key] = state[key];
-    }
+    this.visible = state.visible;
+    this.name = state.name;
+    this.position.fromArray(state.position);
+    this.rotation.fromArray(state.rotation);
+    this.scale.fromArray(state.scale);
+    this.uuid = state.uuid;
     return this;
   }
   dispose() {}

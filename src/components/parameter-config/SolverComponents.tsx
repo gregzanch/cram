@@ -13,14 +13,16 @@ import FDTD_2D from "../../compute/2d-fdtd"
 import {AllowedNames } from '../../common/helpers';
 import { ImageSourceSolver } from "../../compute/raytracer/image-source";
 import RT60 from "../../compute/rt";
+import EnergyDecay from "../../compute/energy-decay";
 
 type SetPropertyEventTypes =
   | AllowedNames<EventTypes, SetPropertyPayload<FDTD_2D>>
   | AllowedNames<EventTypes, SetPropertyPayload<RayTracer>>
   | AllowedNames<EventTypes, SetPropertyPayload<ImageSourceSolver>>
   | AllowedNames<EventTypes, SetPropertyPayload<RT60>>
+  | AllowedNames<EventTypes, SetPropertyPayload<EnergyDecay>>
 
-export function useSolverProperty<T extends RayTracer | FDTD_2D|ImageSourceSolver|RT60, K extends keyof T>(
+export function useSolverProperty<T extends RayTracer | FDTD_2D|ImageSourceSolver|RT60|EnergyDecay, K extends keyof T>(
   uuid: string,
   property: K,
   event: SetPropertyEventTypes
@@ -42,14 +44,14 @@ export function useSolverProperty<T extends RayTracer | FDTD_2D|ImageSourceSolve
 }
 
 type PropertyRowInputElement = ({ value, onChange }) => JSX.Element;
-type Props<T extends RayTracer | FDTD_2D|ImageSourceSolver|RT60, K extends keyof T> = {
+type Props<T extends RayTracer | FDTD_2D|ImageSourceSolver|RT60|EnergyDecay, K extends keyof T> = {
   uuid: string;
   property: K;
   label: string;
   tooltip: string;
 };
 
-export const createPropertyInput = <T extends RayTracer | FDTD_2D|ImageSourceSolver|RT60>(
+export const createPropertyInput = <T extends RayTracer | FDTD_2D|ImageSourceSolver|RT60|EnergyDecay>(
   event: SetPropertyEventTypes,
   Element: PropertyRowInputElement
 ) => <K extends keyof T>({ uuid, property, label, tooltip }: Props<T, K>) => {
@@ -62,12 +64,11 @@ export const createPropertyInput = <T extends RayTracer | FDTD_2D|ImageSourceSol
   );
 };
 
-export const createPropertyInputs = <T extends RayTracer|FDTD_2D|ImageSourceSolver|RT60>(event: SetPropertyEventTypes) => ({
+export const createPropertyInputs = <T extends RayTracer|FDTD_2D|ImageSourceSolver|RT60|EnergyDecay>(event: SetPropertyEventTypes) => ({
   PropertyTextInput: createPropertyInput<T>(event, PropertyRowTextInput),
   PropertyNumberInput: createPropertyInput<T>(event, PropertyRowNumberInput),
   PropertyCheckboxInput: createPropertyInput<T>(event, PropertyRowCheckbox),
 })
-
 
 export const PropertyButton = <T extends keyof EventTypes>({
   args,
