@@ -262,7 +262,7 @@ export const RT60Chart = ({
   const keys = Object.keys(data[0]).filter(d => d !== 'frequency') as RtType[];
 
   const rtTypeColorScale = scaleOrdinal<RtType, string>({
-    domain: keys,
+    domain: keys, 
     range: [blue, green, darkgreen],
   });
 

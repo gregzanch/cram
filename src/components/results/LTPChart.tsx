@@ -189,6 +189,9 @@ const Chart = ({ uuid, width = 400, height = 200, events = false }: LTPChartProp
 
 
 export const LTPChart = ({ uuid, width = 400, height = 300, events = false }: LTPChartProps) => {
+
+  console.log(uuid);
+  
   const {name, info, from} = useResult(state=>pickProps(["name", "info", "from"], state.results[uuid] as Result<ResultKind.LevelTimeProgression>));
   const initialPlotOrders = useSolver(state=>(state.solvers[from] as ImageSourceSolver).plotOrders);
   const frequencies = useSolver(state=>(state.solvers[from] as ImageSourceSolver).frequencies);
