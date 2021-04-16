@@ -397,11 +397,9 @@ class Surface extends Container {
     const n1 = this.polygon.plane;
 
 
-      if (!eqeps(n0.x, n1[0]) || !eqeps(n0.y, n1[1]) || !eqeps(n0.z, n1[2])) {
-        console.warn(new Error(`Surface '${this.name}' has a normal vector issue`));
-      }
+    if (!eqeps(n0.x, n1[0]) || !eqeps(n0.y, n1[1]) || !eqeps(n0.z, n1[2])) {
+      console.warn(new Error(`Surface '${this.name}' has a normal vector issue`));
     }
-
 
     // this.polygon.parentSurface = this;
     // this.eventDestructors.push(
@@ -659,7 +657,6 @@ declare global {
 on("ADD_SURFACE", addContainer(Surface))
 on("REMOVE_SURFACE", removeContainer);
 on("SURFACE_SET_PROPERTY", setContainerProperty)
-
 
 
 export default Surface;

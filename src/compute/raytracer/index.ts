@@ -1813,13 +1813,14 @@ class RayTracer extends Solver {
       emit("RAYTRACER_SET_PROPERTY", { uuid: this.uuid, property: "impulseResponsePlaying", value: false });
     };
   }
-  downloadImpulses(initialSPL = 100, frequencies = ac.Octave(125, 8000), sampleRate = 44100){
+
+  downloadImpulses(filename: string, initialSPL = 100, frequencies = ac.Octave(125, 8000), sampleRate = 44100){
     if(this.receiverIDs.length == 0) throw Error("No receivers have been assigned to the raytracer");
     if(this.sourceIDs.length == 0) throw Error("No sources have been assigned to the raytracer");
     if(this.paths[this.receiverIDs[0]].length == 0) throw Error("No rays have been traced yet");
 
     const sorted = this.paths[this.receiverIDs[0]].sort((a,b)=>a.time - b.time) as RayPath[];
-    const totalTime = sorted[sorted.length - 1].time + 0.05; // end time is latest time of arrival plus 0.1 seconds for safety
+    const totalTime = sorted[sorted.length - 1].time + 0.05; // end time is latest time of arrival plus 0.05 seconds for safety
 
     const spls = Array(frequencies.length).fill(initialSPL);
     const numberOfSamples = floor(sampleRate * totalTime);
@@ -1844,15 +1845,11 @@ class RayTracer extends Solver {
     }
 
     for(let f = 0; f<frequencies.length; f++){
-      // for(let i = 0; i<samples[f].length; i++){
-      //   samples[f][i] /= max;
-      // }
       const blob = ac.wavAsBlob([ac.normalize(samples[f])], { sampleRate, bitDepth: 32 });
-      FileSaver.saveAs(blob, `${frequencies[f]}.wav`);
+      FileSaver.saveAs(blob, `${frequencies[f]}_${filename}.wav`);
     }
-
-    
   }
+
   async downloadImpulseResponse(filename: string, sampleRate = 44100){
     if(!this.impulseResponse){
       await this.calculateImpulseResponse().catch(console.error);
@@ -1975,6 +1972,7 @@ declare global {
     RAYTRACER_SET_PROPERTY: SetPropertyPayload<RayTracer>
     RAYTRACER_PLAY_IR: string;
     RAYTRACER_DOWNLOAD_IR: string;
+    RAYTRACER_DOWNLOAD_IR_OCTAVE: string; 
   }
 }
 
@@ -1985,5 +1983,6 @@ on("ADD_RAYTRACER", addSolver(RayTracer))
 on("RAYTRACER_CLEAR_RAYS", (uuid: string) => void (useSolver.getState().solvers[uuid] as RayTracer).clearRays());
 on("RAYTRACER_PLAY_IR", (uuid: string) => void (useSolver.getState().solvers[uuid] as RayTracer).playImpulseResponse().catch(console.error));
 on("RAYTRACER_DOWNLOAD_IR", (uuid: string) => void (useSolver.getState().solvers[uuid] as RayTracer).downloadImpulseResponse(`ir-${uuid}`).catch(console.error));
+on("RAYTRACER_DOWNLOAD_IR_OCTAVE", (uuid: string) => void (useSolver.getState().solvers[uuid] as RayTracer).downloadImpulses(uuid));
 
 
