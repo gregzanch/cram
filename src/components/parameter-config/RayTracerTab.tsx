@@ -98,7 +98,7 @@ const General = ({ uuid }: { uuid: string }) => {
   return (
     <PropertyRowFolder label="General" open={open} onOpenClose={toggle}>
       <PropertyTextInput uuid={uuid} label="Name" property="name" tooltip="Sets the name of this solver" />
-      <PropertyRowTextInput value={observed_name.value} onChange={(e)=>{observed_name.value = e.value}}/>
+      {/* <PropertyRowTextInput value={observed_name.value} onChange={(e)=>{observed_name.value = e.value}}/> */}
     </PropertyRowFolder>
   );
 };

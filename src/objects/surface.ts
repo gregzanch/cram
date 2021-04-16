@@ -135,22 +135,30 @@ function restoreBufferGeometry(geom: BufferGeometrySaveObject){
       geom.data.attributes.position.normalized
     )
   );
-  geometry.setAttribute(
-    "normals",
-    new THREE.BufferAttribute(
-      new Float32Array(geom.data.attributes.normals.array),
-      geom.data.attributes.normals.itemSize,
-      geom.data.attributes.normals.normalized
-    )
-  );
-  // geometry.setAttribute(
-  //   "texCoords",
-  //   new THREE.BufferAttribute(
-  //     new Float32Array(geom.data.attributes.texCoords.array),
-  //     geom.data.attributes.texCoords.itemSize,
-  //     geom.data.attributes.texCoords.normalized
-  //   )
-  // );
+  if(geom.data.attributes['normals']){
+    geometry.setAttribute(
+      "normals",
+      new THREE.BufferAttribute(
+        new Float32Array(geom.data.attributes.normals.array),
+        geom.data.attributes.normals.itemSize,
+        geom.data.attributes.normals.normalized
+      )
+    );
+  }
+  else{
+    geometry.computeVertexNormals();
+    geometry.setAttribute("normals", geometry.getAttribute("normal"));
+  }
+  if(geom.data.attributes['texCoords']){
+    geometry.setAttribute(
+      "texCoords",
+      new THREE.BufferAttribute(
+        new Float32Array(geom.data.attributes.texCoords.array),
+        geom.data.attributes.texCoords.itemSize,
+        geom.data.attributes.texCoords.normalized
+      )
+    );
+  }
   geometry.name = geom.name;
   geometry.uuid = geom.uuid;
 
@@ -258,6 +266,7 @@ class Surface extends Container {
       chunk(Array.from((props.geometry.getAttribute("position") as THREE.BufferAttribute).array), 3),
       3
     );
+
     this._triangles = this.triangles.map(
       (x) =>
         new THREE.Triangle(
@@ -387,16 +396,12 @@ class Surface extends Container {
     const n0 = this.normal;
     const n1 = this.polygon.plane;
 
-    // console.log(n1);
-    // if (!eqeps(n0.x, n1[0]) || !eqeps(n0.y, n1[1]) || !eqeps(n0.z, n1[2])) {
-    //   this.polygon.plane[0] *= -1;
-    //   this.polygon.plane[1] *= -1;
-    //   this.polygon.plane[2] *= -1;
 
-    //   if (!eqeps(n0.x, n1[0]) || !eqeps(n0.y, n1[1]) || !eqeps(n0.z, n1[2])) {
-    //     console.error(new Error(`Surface '${this.name}' has a normal vector issue`));
-    //   }
-    // }
+      if (!eqeps(n0.x, n1[0]) || !eqeps(n0.y, n1[1]) || !eqeps(n0.z, n1[2])) {
+        console.warn(new Error(`Surface '${this.name}' has a normal vector issue`));
+      }
+    }
+
 
     // this.polygon.parentSurface = this;
     // this.eventDestructors.push(

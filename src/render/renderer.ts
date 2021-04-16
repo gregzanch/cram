@@ -1265,6 +1265,7 @@ on("MOVE_SELECTED_OBJECTS", () => {
     renderer.overlays.transform.show();
     renderer.currentlyMovingObjects = true;
     renderer.transformControls.attach([...selectedObjects]);
+    //@ts-ignore
     renderer.interactables.add(renderer.transformControls);
   }
   renderer.needsToRender = true;
