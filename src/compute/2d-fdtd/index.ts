@@ -38,7 +38,7 @@ import Surface from "../../objects/surface";
 import { KeyValuePair } from "../../common/key-value-pair";
 import { clamp } from "../../common/clamp";
 import { EditorModes } from "../../constants";
-import { addSolver, removeSolver, setSolverProperty } from "../../store";
+import { addSolver, removeSolver, setSolverProperty, useContainer } from "../../store";
 import { renderer } from "../../render/renderer";
 import { pickProps } from "../../common/helpers";
 
@@ -121,6 +121,18 @@ class FDTD_2D extends Solver {
     this.waveSpeed = 340.29;
     this.recording = false;
 
+    const surfaces = [...useContainer.getState().selectedObjects.values()].filter(x=>x.kind==="surface") as Surface[];
+    let surface: Surface|null = null;
+    props = props || {};
+    if (surfaces.length > 0) {
+      surface = surfaces.length > 1 ? surfaces[0].mergeSurfaces(surfaces) : surfaces[0];
+      const { max, min } = surface.mesh.geometry.boundingBox;
+      props.width = max.x - min.x;
+      props.height = max.y - min.y;
+      props.offsetX = min.x;
+      props.offsetY = min.y;
+    }
+
     const _width = (props && props.width) || FDTD_2D_Defaults.width;
     const _height = (props && props.height) || FDTD_2D_Defaults.height;
     
@@ -175,6 +187,10 @@ class FDTD_2D extends Solver {
     this.init();
     
     this.onModeChange(postMessage("GET_EDITOR_MODE")[0]);
+
+    if(surface){
+      this.addWallsFromSurfaceEdges(surface);
+    }
     
 
   }
@@ -561,8 +577,7 @@ declare global {
 
 }
 
+
 on("FDTD_2D_SET_PROPERTY", setSolverProperty);
 on("REMOVE_FDTD_2D", removeSolver);
 on("ADD_FDTD_2D", addSolver(FDTD_2D))
-
-

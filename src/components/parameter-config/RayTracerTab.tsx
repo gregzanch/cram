@@ -17,6 +17,7 @@ import PropertyRowLabel from "./property-row/PropertyRowLabel";
 import PropertyRowCheckbox from "./property-row/PropertyRowCheckbox";
 import PropertyButton from "./property-row/PropertyButton";
 import { PropertyRowTextInput } from "./property-row/PropertyRowTextInput";
+import { renderer } from "../../render/renderer";
 
 const { PropertyTextInput, PropertyNumberInput, PropertyCheckboxInput } = createPropertyInputs<RayTracer>(
   "RAYTRACER_SET_PROPERTY"
@@ -189,12 +190,19 @@ const Output = ({uuid}: {uuid: string}) => {
   return (
     <PropertyRowFolder label="Impulse Response" open={open} onOpenClose={toggle}>
       <PropertyButton event="RAYTRACER_PLAY_IR" args={uuid} label="Play" tooltip="Plays the calculated impulse response" disabled={impulseResponsePlaying} />
-      <PropertyButton event="RAYTRACER_DOWNLOAD_IR" args={uuid} label="Download" tooltip="Plays the calculated impulse response" />
+      <PropertyButton event="RAYTRACER_DOWNLOAD_IR" args={uuid} label="Download" tooltip="Downloads the calculated broadband impulse response" />
+      <PropertyButton event="RAYTRACER_DOWNLOAD_IR_OCTAVE" args={uuid} label="Download by Octave" tooltip="Downloads the impulse response in each octave" />  
     </PropertyRowFolder>
   );
 }
 
 export const RayTracerTab = ({ uuid }: { uuid: string }) => {
+  useEffect(() => {
+    const cells = renderer.overlays.global.cells;
+    const key = uuid + "-valid-ray-count";
+    if(cells.has(key)) cells.get(key)!.show();
+    return () => void cells.has(key) && cells.get(key)!.hide();
+  }, [uuid]);
   return (
     <div>
       <General uuid={uuid} />

@@ -3,7 +3,7 @@ import styled from 'styled-components';
 
 const PropertyRowContainer = styled.div`
   display: grid;
-  grid-template-columns: 1fr 2fr 1fr;
+  grid-template-columns: 3fr 8fr 2fr;
   user-select: none;
   font-size: 9pt;
   margin-bottom: .125em;

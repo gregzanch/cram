@@ -1,5 +1,6 @@
 // https://dsp.stackexchange.com/questions/17121/calculation-of-reverberation-time-rt60-from-the-impulse-response
 
+import FileSaver from "file-saver";
 import { uuid } from "uuidv4";
 import { audioEngine, FilteredSource } from "../audio-engine/audio-engine";
 import { emit, on } from "../messenger";
@@ -52,7 +53,7 @@ class EnergyDecay extends Solver{
 
     public filterTest: any; 
 
-    public T10: number[]; 
+    public T15: number[]; 
     public T20: number[];
     public T30: number[]; 
 
@@ -73,7 +74,7 @@ class EnergyDecay extends Solver{
 
         this.filterTest = null;
 
-        this.T10 = [];
+        this.T15 = [];
         this.T20 = [];
         this.T30 = []; 
     }
@@ -86,18 +87,20 @@ class EnergyDecay extends Solver{
         this.calculateOctavebandBackwardsIntegration();
 
         for(let f = 0; f<filterFreqs.length; f++){
-            this.T10[f] = calculateRTFromDecay(this.filteredEnergyDecayData[f],10,this.broadbandIRSampleRate);
+            this.T15[f] = calculateRTFromDecay(this.filteredEnergyDecayData[f],15,this.broadbandIRSampleRate);
             this.T20[f] = calculateRTFromDecay(this.filteredEnergyDecayData[f],20,this.broadbandIRSampleRate);
             this.T30[f] = calculateRTFromDecay(this.filteredEnergyDecayData[f],30,this.broadbandIRSampleRate);
         }
 
         console.log(filterFreqs); 
         console.log("T10 Values: ");
-        console.log(this.T10); 
+        console.log(this.T15); 
         console.log("T20 Values: ");
         console.log(this.T20); 
         console.log("T30 Values: ");
         console.log(this.T30); 
+
+        this.downloadResultsAsCSV(); 
 
     }
 
@@ -106,6 +109,24 @@ class EnergyDecay extends Solver{
             this.filteredEnergyDecayData[f] = schroederBackwardsIntegration(this.filteredData[f]); 
         }
     }
+
+    downloadResultsAsCSV(){
+
+        let precision = 4;
+        let freqlabel = "Octave Band (Hz),"
+        let t15label = "T15,";
+        let t20label = "T20,"; 
+        let t30label = "T30,"; 
+    
+        let CSV = [freqlabel.concat((filterFreqs).toString()),
+          t15label.concat((this.T15).map((n)=>n.toFixed(precision)).toString()),
+          t20label.concat((this.T20).map((n)=>n.toFixed(precision)).toString()),
+          t30label.concat((this.T30).map((n)=>n.toFixed(precision)).toString()),
+        ].join('\n');
+    
+        var csvFile = new Blob([CSV], {type: 'text/csv'});
+        FileSaver.saveAs(csvFile, `energy-decay-${this.uuid}.csv`);
+      }
 
     play(source){
         if (audioEngine.context.state === 'suspended') {

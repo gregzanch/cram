@@ -33,7 +33,7 @@ export function ThirdOctave(start?: number, end?: number): number[] {
  * @param {number | number[]} fc center frequency
  */
 export function Flower(k: number, fc: number | number[]) {
-  return nums((f: number) => f / Math.pow(2, 1 / (2 * k)), fc);
+  return nums((f: number) => f / Math.pow(2, 1 / (2 * k)), fc) as typeof fc;
 }
 
 /**
@@ -43,7 +43,7 @@ export function Flower(k: number, fc: number | number[]) {
  * @param {number | number[]} fc center frequency
  */
 export function Fupper(k: number, fc: number | number[]) {
-  return nums((f: number) => f * Math.pow(2, 1 / (2 * k)), fc);
+  return nums((f: number) => f * Math.pow(2, 1 / (2 * k)), fc) as typeof fc;
 }
 
 // const Bands = {

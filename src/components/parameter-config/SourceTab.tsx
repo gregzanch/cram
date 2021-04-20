@@ -1,5 +1,5 @@
 import React from "react";
-import Source, { SignalSource, SignalSourceOptions } from "../../objects/source";
+import Source, { DirectivityHandler, SignalSource, SignalSourceOptions } from "../../objects/source";
 import Container from "../../objects/container";
 import { useContainer } from "../../store";
 import { filteredMapObject, pickProps } from "../../common/helpers";
@@ -10,6 +10,7 @@ import useToggle from "../hooks/use-toggle";
 import PropertyRowLabel from "./property-row/PropertyRowLabel";
 import PropertyRowCheckbox from "./property-row/PropertyRowCheckbox";
 import PropertyButton from "./property-row/PropertyButton";
+import { CLFParser } from "../../import-handlers/CLFParser";
 
 const { PropertyTextInput, PropertyNumberInput, PropertyCheckboxInput, PropertyVectorInput, PropertySelect } = createPropertyInputs<Source>(
   "SOURCE_SET_PROPERTY"
@@ -106,6 +107,55 @@ const FDTDConfig =({ uuid }: { uuid: string }) => {
   )
 }
 
+const CLFConfig = ({uuid}: {uuid: string}) => {
+  const [open, toggle] = useToggle(true);
+  return (
+    <PropertyRowFolder label="CLF Config" open={open} onOpenClose={toggle}>
+      <PropertySelect 
+        uuid={uuid} 
+        label="Signal Source" 
+        tooltip="The source thats generating it's signal"
+        property="signalSource"
+        options={SignalSourceOptions}
+      />
+      <PropertyNumberInput uuid={uuid} label="Frequency" property="frequency" tooltip="The source's frequency" />
+      <PropertyNumberInput uuid={uuid} label="Amplitude" property="amplitude" tooltip="The source's amplitude" />
+      <PropertyButton label="Signal Data" tooltip="The source's signal data" event="SOURCE_CALL_METHOD" args={{ uuid, method: "saveSamples" }} />
+      <PropertyRow>
+        <PropertyRowLabel label="CLF Data" tooltip="Import CLF directivity text files"/>
+        <div>
+          <input
+          type = "file"
+          id = "clfinput"
+          accept = ".tab"
+          onChange={(e) => {
+              console.log(e.target.files);
+              const reader = new FileReader();
+              
+              reader.addEventListener('loadend', (loadEndEvent) => {
+                  let filecontents:string = reader.result as string; 
+                  let clf = new CLFParser(filecontents);
+                  let clf_results = clf.parse();
+                  const source = useContainer.getState().containers[uuid] as Source;
+                  source.directivityHandler = new DirectivityHandler(1,clf_results); 
+
+
+                  // display CLF parser object (debugging)
+                  console.log(clf);
+                  // display CLF parser results (debugging)
+                  console.log(clf_results);
+              });
+
+              reader.readAsText(e.target!.files![0]);
+              
+            }
+          }
+          />
+        </div>
+      </PropertyRow>
+    </PropertyRowFolder>
+  )
+}
 
 // const StyleProperties = ({ uuid }: { uuid: string }) => {
 //   const [open, toggle] = useToggle(true);
@@ -148,6 +198,8 @@ export const SourceTab = ({ uuid }: { uuid: string }) => {
       <General uuid={uuid} />
       <Visual uuid={uuid} />
       <Transform uuid={uuid} />
+      <Configuration uuid={uuid} />
+      <FDTDConfig uuid={uuid} />
     </div>
   );
 };

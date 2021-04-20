@@ -2,7 +2,7 @@ import React from "react";
 import styled from 'styled-components';
 
 const StyledInput = styled.input`
-  width: 20%;
+  width: 30%;
   margin-left: .5em;
   text-align: center;
   outline: none;
