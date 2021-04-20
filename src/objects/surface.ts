@@ -409,7 +409,7 @@ class Surface extends Container {
       //   }
       // })
     // );
-  // }
+  }
   dispose(){
     this.parent && this.parent.remove(this);
   }
