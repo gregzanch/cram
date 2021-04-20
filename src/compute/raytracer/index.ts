@@ -27,8 +27,9 @@ import { addSolver, removeSolver, setSolverProperty, useContainer, useSolver } f
 import {cramangle2threejsangle} from "../../common/dir-angle-conversions";
 import { audioEngine } from "../../audio-engine/audio-engine";
 import observe, { Observable } from "../../common/observable";
-import { coefs, filter } from "../../audio-engine/filter";
+import { coefs, compute_bandpass_biquad_coefficients, filter } from "../../audio-engine/filter";
 import {probability} from '../../common/probability';
+import { filterSignals } from "../../audio-engine/envelope";
 
 const {floor, random, abs, asin} = Math;
 const coinFlip = () => random() > 0.5;
@@ -405,8 +406,6 @@ class RayTracer extends Solver {
       })
     );
     this.step = this.step.bind(this);
-
-    this.setBVH().catch(console.error);
   }
   update = () => {};
   save() {
@@ -450,45 +449,7 @@ class RayTracer extends Solver {
     };
   }
 
-  async setBVH() {
-    // this.bsp = new BSP();
-    // Have an array of faces (array of stride 9)
 
-    const faces = this.room._surfaces.map((x: Surface) => x.triangles).flat(3);
-
-    // Generate  the Bounding Volume Hierachy from an array of faces
-    const maxTrianglesPerNode = 5;
-    const res = await BVHBuilderAsync(faces, maxTrianglesPerNode, { steps: 1 }, (obj: BVHProgress) => {});
-
-    this.bvh = new BVH(res.rootNode, res.bboxArray, res.trianglesArray);
-
-    // this.bvh.rootNode.extentsMin, this.bvh.rootNode.extentsMax;
-
-    //  this.bvh.rootNode.children = [vars.ra.bvh.rootNode.node0, vars.ra.bvh.rootNode.node1]
-
-    // let node = this.bvh.rootNode;
-    // while(node)
-
-    console.log(this.mapBVHTree());
-
-    // Find ray intersections
-    // const intersections = this.bvh.intersectRay(new BVHVector3(0.25, 1, 0.25), new BVHVector3(0, -1, 0));
-  }
-
-  mapBVHTree() {
-    function mapTree(node: BVHNode | null) {
-      if (node && node.children[0] && node.children[1]) {
-        return {
-          name: `${node.startIndex},${node.endIndex}`,
-          children: node.children.map((n: BVHNode | null) => mapTree(n)).filter((x) => x)
-        };
-      } else {
-        return null;
-      }
-    }
-    const mappedTree = mapTree(this.bvh.rootNode);
-    return mappedTree;
-  }
 
   removeMessageHandlers() {
     this.messageHandlerIDs.forEach((x) => {
@@ -709,7 +670,7 @@ class RayTracer extends Solver {
           intersections[0].face &&
           rd.clone().sub(normal.clone().multiplyScalar(rd.dot(normal.clone())).multiplyScalar(2));
         
-        const scattering = (intersections[0].object.parent as Surface).scatteringCoefficient;
+        const scattering = (intersections[0].object.parent as Surface)._scatteringCoefficient;
         if(probability(scattering)){
           rr = new THREE.Vector3(Math.random()-0.5, Math.random()-0.5, Math.random()-0.5).normalize();
           if(normal!.dot(rr) < 0){
@@ -1217,7 +1178,7 @@ class RayTracer extends Solver {
   //     FileSaver.saveAs(blob, `ir${index}-fs${sample_rate}hz-t${Date.now()}.txt`);
   //   } else return;
   // }
-  resampleResponse(index: number = 0, sampleRate: number = 44100) {
+  resampleResponse(index: number = 0, sampleRate: number = audioEngine.sampleRate) {
     // if response has been calculated
     if (this.allReceiverData && this.allReceiverData[index]) {
       // the receivers temporal data
@@ -1738,7 +1699,7 @@ class RayTracer extends Solver {
     // convert back to pressure
     return ac.Lp2P(arrivalLp) as number[]; 
   }
-  async calculateImpulseResponse(initialSPL = 100, frequencies = ac.Octave(125, 8000), sampleRate = 44100) {
+  async calculateImpulseResponse(initialSPL = 100, frequencies = ac.Octave(125, 8000), sampleRate = audioEngine.sampleRate) {
     if(this.receiverIDs.length == 0) throw Error("No receivers have been assigned to the raytracer");
     if(this.sourceIDs.length == 0) throw Error("No sources have been assigned to the raytracer");
     if(this.paths[this.receiverIDs[0]].length == 0) throw Error("No rays have been traced yet");
@@ -1747,9 +1708,11 @@ class RayTracer extends Solver {
     const totalTime = sorted[sorted.length - 1].time + 0.05; // end time is latest time of arrival plus 0.1 seconds for safety
 
     const spls = Array(frequencies.length).fill(initialSPL);
-    const numberOfSamples = floor(sampleRate * totalTime);
 
-    const samples: Array<Float32Array> = []; 
+    // doubled the number of samples to mitigate the signal reversing
+    const numberOfSamples = floor(sampleRate * totalTime) * 2;
+
+    let samples: Array<Float32Array> = []; 
     for(let f = 0; f<frequencies.length; f++){
       samples.push(new Float32Array(numberOfSamples));
     }
@@ -1761,31 +1724,65 @@ class RayTracer extends Solver {
       const roundedSample = floor(t * sampleRate);
 
       for(let f = 0; f<frequencies.length; f++){
-        samples[f][roundedSample] += p[f];
+          samples[f][roundedSample] += p[f];
       }
     }
 
+    const maxFrequency = frequencies.reduce((a,b)=>Math.max(a,b));
+    
+    //@ts-ignore
+    samples = filterSignals(samples);
+
+    // make the new signal's length half as long, we dont need the reversed part
+    const signal = new Float32Array(samples[0].length >> 1);
+
+    let max = 0;
+    for(let i = 0; i<samples.length; i++){
+      for(let j = 0; j<signal.length; j++){
+        signal[j] += samples[i][j];
+        if(abs(signal[j])>max){
+          max = abs(signal[j]);
+        }
+      }
+    }
+
+    // for(let i = 0; i<signal.length; i++){ 
+    //   signal[i]/=max;
+    // }
+    
+
+    console.log(signal);
     // samples.forEach((x,i,arr)=>{
-    //   const {b, a} = coefs.get(frequencies[i])!;
-    //   arr[i] = filter(b,a,x);
+    //   console.log(frequencies[i]/maxFrequency);
+    //   const low = ac.Flower(3, frequencies[i]) as number;
+    //   const high = ac.Fupper(3, frequencies[i]) as number;
+    //   const {b, a} = compute_bandpass_biquad_coefficients(low, high, sampleRate)
+    //   arr[i] = filter(b,a,x).map(val=>val*(frequencies[i]/maxFrequency)**2);
     // });
 
-    const offlineContext = audioEngine.createOfflineContext(1, numberOfSamples, sampleRate);
+    const offlineContext = audioEngine.createOfflineContext(1, signal.length, sampleRate);
 
-    const sources = Array(frequencies.length); 
-    for(let f = 0; f<frequencies.length; f++){
-      sources[f] = audioEngine.createFilteredSource(samples[f],frequencies[f],1.414,1,offlineContext); 
-    }
-    
-    //const sources = samples.map(x => audioEngine.createBufferSource(x, offlineContext));
-    const merger = audioEngine.createMerger(sources.length, offlineContext);
-    
-    for(let i = 0; i<sources.length; i++){
-      sources[i].source.connect(merger, 0, i);
-    }
 
-    merger.connect(offlineContext.destination);
-    sources.forEach(source=>source.source.start());
+
+    // const sources = audioEngine.createFilteredSources(samples, frequencies, offlineContext); 
+    const source = audioEngine.createBufferSource(normalize(signal), offlineContext)
+    
+    // const merger = audioEngine.createMerger(sources.length, offlineContext);
+    
+    // sources[0].gain.connect(offlineContext.destination);
+    // for(let i = 0; i<sources.length; i++){
+      // sources[i].gain.connect(merger, 0, i);
+      // sources[i].connect(merger, 0, i);
+    // }
+
+    source.connect(offlineContext.destination);
+    source.start();
+    // merger.connect(offlineContext.destination);
+    // for(let i = 0; i<sources.length; i++){
+      // sources[i].start();
+    // }
+    // sources.forEach(source=>source.source.start());
+    // sources.forEach(source=>source.start());
 
     this.impulseResponse = await offlineContext.startRendering();
     return this.impulseResponse;
@@ -1813,7 +1810,6 @@ class RayTracer extends Solver {
       emit("RAYTRACER_SET_PROPERTY", { uuid: this.uuid, property: "impulseResponsePlaying", value: false });
     };
   }
-
   downloadImpulses(filename: string, initialSPL = 100, frequencies = ac.Octave(125, 8000), sampleRate = 44100){
     if(this.receiverIDs.length == 0) throw Error("No receivers have been assigned to the raytracer");
     if(this.sourceIDs.length == 0) throw Error("No sources have been assigned to the raytracer");
@@ -1849,15 +1845,13 @@ class RayTracer extends Solver {
       FileSaver.saveAs(blob, `${frequencies[f]}_${filename}.wav`);
     }
   }
-
-  async downloadImpulseResponse(filename: string, sampleRate = 44100){
+  async downloadImpulseResponse(filename: string, sampleRate = audioEngine.sampleRate){
     if(!this.impulseResponse){
       await this.calculateImpulseResponse().catch(console.error);
     }
     const blob = ac.wavAsBlob([normalize(this.impulseResponse.getChannelData(0))], { sampleRate, bitDepth: 32 });
     const extension = !filename.endsWith(".wav") ? ".wav" : "";
     FileSaver.saveAs(blob, filename + extension);
-    //this.downloadImpulses(); 
   }
 
   get sources() {

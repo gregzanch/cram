@@ -1,13 +1,21 @@
 import { normalize, wavAsBlob } from '../compute/acoustics';
 import {saveAs} from 'file-saver';
+import {Flower, Fupper} from '../compute/acoustics';
+import { filterSignals } from './envelope';
+
+
+
 
 const throwif = (condition: boolean, message: string) => {
   if(!condition) throw Error(message);
 }
 
+type BiquadFilterType = "bandpass"|"lowpass"|"highpass"| "lowshelf"|"highshelf"|"peaking"|"notch"|"allpass";
+
 export type FilteredSource = {
   source: AudioBufferSourceNode;
-  filter: BiquadFilterNode;
+  lowpass: BiquadFilterNode;
+  highpass: BiquadFilterNode;
   gain: GainNode;
 }
 
@@ -53,8 +61,24 @@ export class AudioEngine {
   public createBandpassFilter(freq: number, Q: number = 1.414, context: AudioContext|OfflineAudioContext = this.context){
     const filter = context.createBiquadFilter();
     filter.type = "bandpass";
-    filter.Q.setValueAtTime(Q, context.currentTime);
-    filter.frequency.setValueAtTime(freq, context.currentTime);
+    filter.Q.value = Q;
+    filter.frequency.value = freq;
+    return filter;
+  }
+
+  /**
+   * Creates a bandpass filter node
+   * @param freq center frequency
+   * @param Q Q-factor (reciprocal of the fractional bandwidth)
+   * @param context audio context to use
+   * @returns a bandpass filter
+   */
+  public createBiquadFilter(type: BiquadFilterType, freq: number, Q: number = 1.414, gain: number = 1, context: AudioContext|OfflineAudioContext = this.context){
+    const filter = context.createBiquadFilter();
+    filter.type = type;
+    filter.Q.value = Q;
+    filter.frequency.value = freq;
+    filter.gain.value = gain;
     return filter;
   }
 
@@ -66,7 +90,7 @@ export class AudioEngine {
    */
   public createGainNode(value: number, context: AudioContext|OfflineAudioContext = this.context){
     const gain = context.createGain();
-    gain.gain.setValueAtTime(value, context.currentTime);
+    gain.gain.value = value;
     return gain;
   }
 
@@ -91,13 +115,18 @@ export class AudioEngine {
    * @returns a filtered source node
    */
   public createFilteredSource(buffer: Float32Array, freq: number, Q: number = 1.414, gain: number = 1, context: AudioContext|OfflineAudioContext = this.context){
+    const lower = Flower(1, freq) as number;
+    const upper = Fupper(1, freq) as number;
     const filteredSource = {
       source: this.createBufferSource(buffer, context),
-      filter: this.createBandpassFilter(freq, Q, context),
+      lowpass: this.createBiquadFilter("lowpass", upper, Q, 1, context),
+      highpass: this.createBiquadFilter("highpass", lower, Q, 1, context),
       gain: this.createGainNode(gain, context)
     }
-    filteredSource.source.connect(filteredSource.filter);
-    filteredSource.filter.connect(filteredSource.gain);
+    filteredSource.source.connect(filteredSource.lowpass);
+    filteredSource.lowpass.connect(filteredSource.highpass);
+    filteredSource.highpass.connect(filteredSource.gain);
+    // filteredSource.gain.connect(context.destination);
     return filteredSource as FilteredSource;
   }
 
@@ -111,8 +140,11 @@ export class AudioEngine {
   public createFilteredSources(dataBuffers: Float32Array[], frequencies: number[], context: AudioContext|OfflineAudioContext = this.context) {
     throwif(dataBuffers.length == frequencies.length, "There should be exactly one frequency for each data buffer.");
     const sources = [] as FilteredSource[];
-    for(let i = 0; i<frequencies.length; i++){
-      sources.push(this.createFilteredSource(dataBuffers[i], frequencies[i], 1.414, 1, context));
+
+    const maxFrequency = frequencies.reduce((a,b)=>Math.max(a,b));
+
+    for(let i = 0; i < frequencies.length; i++){
+      sources.push(this.createFilteredSource(dataBuffers[i], frequencies[i], 0.707, 1, context));
     }
     return sources;
   }
@@ -125,9 +157,9 @@ export class AudioEngine {
 
   async testFilters(frequencies, sampleRate=44100) {
 
-    const samples = this.diracDelta();
-    const offlineContext = this.createOfflineContext(1, samples.length, sampleRate);
-    const sources = this.createFilteredSources([samples], frequencies, offlineContext);
+    const samples = Array(frequencies.length).fill(0).map(x=>this.diracDelta());
+    const offlineContext = this.createOfflineContext(1, samples[0].length, sampleRate);
+    const sources = this.createFilteredSources(samples, frequencies, offlineContext);
     const merger = this.createMerger(sources.length, offlineContext);
     
     for(let i = 0; i<sources.length; i++){
@@ -135,13 +167,16 @@ export class AudioEngine {
     }
 
     merger.connect(offlineContext.destination);
-    sources.forEach(source=>source.source.start());
+    sources.forEach(source => source.source.start());
     const impulseResponse = await offlineContext.startRendering();
     const blob = wavAsBlob([normalize(impulseResponse.getChannelData(0))], { sampleRate, bitDepth: 32 });
     saveAs(blob, "testFilters.wav");
 
-    // this.impulseResponse = audioEngine.context.createBufferSource();
-    
+    // this.impulseResponse = audioEngine.context.createBufferSource(); 
+  }
+
+  public get sampleRate(){
+    return this.context.sampleRate;
   }
 
 

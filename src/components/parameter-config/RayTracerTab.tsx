@@ -17,6 +17,7 @@ import PropertyRowLabel from "./property-row/PropertyRowLabel";
 import PropertyRowCheckbox from "./property-row/PropertyRowCheckbox";
 import PropertyButton from "./property-row/PropertyButton";
 import { PropertyRowTextInput } from "./property-row/PropertyRowTextInput";
+import { renderer } from "../../render/renderer";
 
 const { PropertyTextInput, PropertyNumberInput, PropertyCheckboxInput } = createPropertyInputs<RayTracer>(
   "RAYTRACER_SET_PROPERTY"
@@ -196,6 +197,12 @@ const Output = ({uuid}: {uuid: string}) => {
 }
 
 export const RayTracerTab = ({ uuid }: { uuid: string }) => {
+  useEffect(() => {
+    const cells = renderer.overlays.global.cells;
+    const key = uuid + "-valid-ray-count";
+    if(cells.has(key)) cells.get(key)!.show();
+    return () => void cells.has(key) && cells.get(key)!.hide();
+  }, [uuid]);
   return (
     <div>
       <General uuid={uuid} />

@@ -408,71 +408,6 @@ messenger.addMessageHandler("SHOULD_ADD_ENERGYDECAY", (acc, ...args) => {
   return ed; 
 });
 
-messenger.addMessageHandler("SHOULD_ADD_FDTD_2D", (acc, args) => {
-  const defaults = FDTD_2D_Defaults;
-  const selection = messenger.postMessage("GET_SELECTED_OBJECTS")[0];
-  let width = (args && args.width) || defaults.width;
-  let height = (args && args.height) || defaults.height;
-  let offsetX = 0;
-  let offsetY = 0;
-  let cellSize = (args && args.cellSize) || Math.max(width, height) / 128;
-  const sources = [] as Source[];
-  const receivers = [] as Receiver[];
-  const surfaces = [] as Surface[];
-  let surface = undefined as Surface | undefined;
-  if (selection.length > 0) {
-    selection.forEach((obj) => {
-      switch (obj.kind) {
-        case "source":
-          {
-            sources.push(obj);
-          }
-          break;
-        case "receiver":
-          {
-            receivers.push(obj);
-          }
-          break;
-        case "surface":
-          {
-            surfaces.push(obj);
-          }
-          break;
-        default:
-          break;
-      }
-    });
-    if (surfaces.length > 0) {
-      surface = surfaces.length > 1 ? surfaces[0].mergeSurfaces(surfaces) : surfaces[0];
-      const { max, min } = surface.mesh.geometry.boundingBox;
-      width = max.x - min.x;
-      height = max.y - min.y;
-      offsetX = min.x;
-      offsetY = min.y;
-    }
-  }
-  const fdtd2d = new FDTD_2D({
-    width,
-    height,
-    offsetX,
-    offsetY,
-    cellSize
-  });
-  fdtd2d.name = "FDTD-2D";
-  if (surface) {
-    fdtd2d.addWallsFromSurfaceEdges(surface);
-  }
-  if (sources.length > 0) {
-    sources.forEach((src) => fdtd2d.addSource(src));
-  }
-  if (receivers.length > 0) {
-    receivers.forEach((rec) => fdtd2d.addReceiver(rec));
-  }
-  cram.state.solvers[fdtd2d.uuid] = fdtd2d;
-  emit("ADD_FDTD_2D", fdtd2d);
-  return cram.state.solvers[fdtd2d.uuid];
-});
-
 messenger.addMessageHandler("RAYTRACER_CALCULATE_RESPONSE", (acc, id, frequencies) => {
   cram.state.solvers[id] instanceof RayTracer &&
     (cram.state.solvers[id] as RayTracer).calculateReflectionLoss(frequencies);
@@ -867,9 +802,9 @@ messenger.addMessageHandler("ASSIGN_MATERIAL", (acc, material) => {
     if (cram.state.selectedObjects[i] instanceof Surface) {
       previousAcousticMaterials.push({
         uuid: cram.state.selectedObjects[i].uuid,
-        acousticMaterial: (cram.state.selectedObjects[i] as Surface).acousticMaterial
+        acousticMaterial: (cram.state.selectedObjects[i] as Surface)._acousticMaterial
       });
-      (cram.state.selectedObjects[i] as Surface).acousticMaterial = material;
+      (cram.state.selectedObjects[i] as Surface)._acousticMaterial = material;
       surfaceCount++;
     }
   }
@@ -883,7 +818,7 @@ messenger.addMessageHandler("ASSIGN_MATERIAL", (acc, material) => {
       )[0];
       for (let i = 0; i < previousAcousticMaterials.length; i++) {
         if (surfaces[i].uuid === previousAcousticMaterials[i].uuid) {
-          (surfaces[i] as Surface).acousticMaterial = previousAcousticMaterials[i].acousticMaterial;
+          (surfaces[i] as Surface)._acousticMaterial = previousAcousticMaterials[i].acousticMaterial;
         }
       }
     }

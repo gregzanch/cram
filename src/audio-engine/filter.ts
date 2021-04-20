@@ -50,6 +50,34 @@ export const filter = (b: number[], a: number[], x: Float32Array) => {
   return y;
 }
 
+const { sqrt, cos, sin, sinh, log2, log, PI: pi } = Math;
+
+export function compute_bandpass_biquad_coefficients(low: number, high: number, sampleRate: number) {
+  const c = sqrt(low * high);
+  const omega = 2 * pi * c / sampleRate;
+  const cs = cos(omega);
+  const sn = sin(omega);
+  const bandwidth = log2(high / low);
+  const Q = sn / (log(2) * bandwidth * omega);
+  const alpha = sn * sinh(1 / (2 * Q));
+  const a0 = 1 + alpha;
+  const nrm = 1 / a0;
+
+  return {
+    b: [
+      nrm * alpha,
+      nrm * 0, 
+      nrm * -alpha
+    ], 
+    a: [
+      nrm * (1 + alpha),
+      nrm * (-2 * cs), 
+      nrm * (1 - alpha)
+    ]
+  };
+}
+
+
 
 export const coefs = new Map<number, { b: number[], a: number[] }>([
   [31.5, {
@@ -89,7 +117,7 @@ export const coefs = new Map<number, { b: number[], a: number[] }>([
     a: [1, -1.14272700209755, 0.374087683657232]
   }],
   [16000, {
-    b: [0.314983642151612,-0.314983642151612],
-    a: [1.000000000000000,0.370032715696775]
+    b: [0.314983642151612, -0.314983642151612],
+    a: [1.000000000000000, 0.370032715696775]
   }]
 ]);
