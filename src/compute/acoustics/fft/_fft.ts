@@ -3,8 +3,8 @@
  * The vector can have any length. This is a wrapper function.
  */
 export function transform(
-  real: Array<number> | Float64Array,
-  imag: Array<number> | Float64Array
+  real: Array<number> | Float32Array,
+  imag: Array<number> | Float32Array
 ): void {
   const n: number = real.length;
   if (n != imag.length) throw 'Mismatched lengths';
@@ -21,8 +21,8 @@ export function transform(
  * The vector can have any length. This is a wrapper function. This transform does not perform scaling, so the inverse is not a true inverse.
  */
 export function inverseTransform(
-  real: Array<number> | Float64Array,
-  imag: Array<number> | Float64Array
+  real: Array<number> | Float32Array,
+  imag: Array<number> | Float32Array
 ): void {
   transform(imag, real);
 }
@@ -32,8 +32,8 @@ export function inverseTransform(
  * The vector's length must be a power of 2. Uses the Cooley-Tukey decimation-in-time radix-2 algorithm.
  */
 export function transformRadix2(
-  real: Array<number> | Float64Array,
-  imag: Array<number> | Float64Array
+  real: Array<number> | Float32Array,
+  imag: Array<number> | Float32Array
 ): void {
   // Length variables
   const n: number = real.length;
@@ -102,8 +102,8 @@ export function transformRadix2(
  * Uses Bluestein's chirp z-transform algorithm.
  */
 export function transformBluestein(
-  real: Array<number> | Float64Array,
-  imag: Array<number> | Float64Array
+  real: Array<number> | Float32Array,
+  imag: Array<number> | Float32Array
 ): void {
   // Find a power-of-2 convolution length m such that m >= n * 2 + 1
   const n: number = real.length;
@@ -152,9 +152,9 @@ export function transformBluestein(
  * Computes the circular convolution of the given real vectors. Each vector's length must be the same.
  */
 export function convolveReal(
-  x: Array<number> | Float64Array,
-  y: Array<number> | Float64Array,
-  out: Array<number> | Float64Array
+  x: Array<number> | Float32Array,
+  y: Array<number> | Float32Array,
+  out: Array<number> | Float32Array
 ): void {
   const n: number = x.length;
   if (n != y.length || n != out.length) throw 'Mismatched lengths';
@@ -172,12 +172,12 @@ export function convolveReal(
  * Computes the circular convolution of the given complex vectors. Each vector's length must be the same.
  */
 export function convolveComplex(
-  xreal: Array<number> | Float64Array,
-  ximag: Array<number> | Float64Array,
-  yreal: Array<number> | Float64Array,
-  yimag: Array<number> | Float64Array,
-  outreal: Array<number> | Float64Array,
-  outimag: Array<number> | Float64Array
+  xreal: Array<number> | Float32Array,
+  ximag: Array<number> | Float32Array,
+  yreal: Array<number> | Float32Array,
+  yimag: Array<number> | Float32Array,
+  outreal: Array<number> | Float32Array,
+  outimag: Array<number> | Float32Array
 ): void {
   const n: number = xreal.length;
   if (
