@@ -5,7 +5,7 @@ import { pickProps } from "../../common/helpers";
 import { ReceiverTab } from "../parameter-config/ReceiverTab";
 import { RoomTab } from "../parameter-config/RoomTab";
 import SurfaceTab from "../parameter-config/SurfaceTab";
-
+import PanelEmptyText from '../panel-container/PanelEmptyText';
 export interface ObjectPropertyInputEvent {
   name: string;
   type: string;
@@ -17,7 +17,7 @@ export interface ObjectPropertyInputEvent {
 export const ObjectProperties = () => {
   const containers = useContainer(state => state.selectedObjects);
   
-  if(containers.size == 0) return <div>Nothing Selected</div>
+  if(containers.size == 0) return <PanelEmptyText>Nothing Selected</PanelEmptyText>
 
   if(containers.size == 1) {
     const {uuid, kind} = [...containers.values()][0];

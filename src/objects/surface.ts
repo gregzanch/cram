@@ -389,16 +389,29 @@ class Surface extends Container {
 
     const points = this.edgeLoop.map((x) => csg.math.vec3.fromArray([x.x, x.y, x.z]));
     const plane = csg.math.plane.fromPoints(points[0], points[1], points[2]);
-
+    console.log("points", points);
+    console.log("plane", plane);
     this.polygon = csg.geometry.poly3.fromPointsAndPlane(points, plane);
 
-    const eqeps = numbersEqualWithinTolerence(1e-5);
-    const n0 = this.normal;
-    const n1 = this.polygon.plane;
+    const almostEquals = numbersEqualWithinTolerence(1e-6);
 
+    const normalAlmostEqualsPlane = (n0, n1) => !almostEquals(n0.x, n1[0]) || !almostEquals(n0.y, n1[1]) || !almostEquals(n0.z, n1[2])
 
-    if (!eqeps(n0.x, n1[0]) || !eqeps(n0.y, n1[1]) || !eqeps(n0.z, n1[2])) {
-      console.warn(new Error(`Surface '${this.name}' has a normal vector issue`));
+    if (normalAlmostEqualsPlane(this.normal, this.polygon.plane)) {
+      // console.warn(new Error(`Surface '${this.name}' has a normal vector issue`));
+      this.polygon = csg.geometry.poly3.fromPointsAndPlane(points, csg.math.plane.fromPoints(points[2], points[1], points[0]));
+      console.log("flipping", this.normal.toArray(), [...this.polygon.plane]);
+        if (normalAlmostEqualsPlane(this.normal, this.polygon.plane)) {
+          console.log("still not equal", this.normal.toArray(), [...this.polygon.plane]);
+          console.log("points", points);
+          console.log("plane", plane);
+          // console.log(this);
+          // console.warn(new Error(`Surface '${this.name}' has a normal vector issue`));
+    
+          // this.polygon = csg.geometry.poly3.fromPointsAndPlane(points, csg.math.plane.fromPoints(points[2], points[1], points[0]));
+    
+        }
+  
     }
 
     // this.polygon.parentSurface = this;
@@ -479,6 +492,7 @@ class Surface extends Container {
   }
   calculateEdgeLoop() {
     const verts = (this.edges.geometry as THREE.Geometry).vertices;
+    // const uniqVerts = [...new Set(verts.map(x=>JSON.stringify(x.toArray())))].map(x=>new THREE.Vector3().fromArray(JSON.parse(x)))
     const edgePairs = chunk(verts, 2);
     const edgeLoop = [] as THREE.Vector3[];
 

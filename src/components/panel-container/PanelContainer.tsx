@@ -9,10 +9,9 @@ export interface PanelContainerProps {
 
 export default function PanelContainer(props: PanelContainerProps) {
   const className = props.className || "panel full";
-  const innerClassName = props.margin ? "panel-content" : "panel-content-nomargin";
   return (
     <div className={className}>
-      <div className={innerClassName}>{props.children}</div>
+      {props.children}
     </div>
   );
 }
