@@ -209,7 +209,9 @@ export function ExamplesMenu(props: MenuProps) {
     )}
     content={
       <Menu>
-        <MenuItemWithMessenger label="Shoebox" message="OPEN_EXAMPLE_SHOEBOX" />
+        <MenuItemWithEmitter label="Shoebox" event="OPEN_EXAMPLE" args="shoebox" />
+        <MenuItemWithEmitter label="Concord" event="OPEN_EXAMPLE" args="concord" />
+        <MenuItemWithEmitter label="Auditorium" event="OPEN_EXAMPLE" args="auditorium" />
       </Menu>
     }
     placement="bottom-start"
@@ -223,7 +225,7 @@ export function ExamplesMenu(props: MenuProps) {
 const ProjectName = () => {
   const projectName = useAppStore(state=>state.projectName);
   return (
-    <Navbar.Group className="main-nav_bar-left_group main-nav_bar-projectname_text">{projectName}</Navbar.Group>
+    <Navbar.Group className="main-nav_bar-left_group main-nav_bar-projectname_text" style={{flex: 1, justifyContent: 'center'}}>{projectName}</Navbar.Group>
   )
 }
 
@@ -249,7 +251,7 @@ export function NavBarComponent() {
 
   return (
     <Navbar className="main-nav_bar">
-      <Navbar.Group className="main-nav_bar-left_group">
+      <Navbar.Group className="main-nav_bar-left_group" style={{flex: 1}}>
         <Navbar.Group className="main-nav_bar-logo_text">cram</Navbar.Group>
         <Navbar.Divider />
         <Menu className="main-nav_bar-left_menu">
@@ -264,7 +266,7 @@ export function NavBarComponent() {
         </Menu>
       </Navbar.Group>
       <ProjectName />
-      <Navbar.Group className="main-nav_bar-right_group">
+      <Navbar.Group className="main-nav_bar-right_group" style={{flex: 1}}>
         <Button
           icon="cog"
           minimal={true}

@@ -76,7 +76,7 @@ import './compute/events';
 
 expose({ omit, Container, audioEngine, useSolver, useContainer, useResult, useAppStore, useMaterial, produce, on, emit });
 
-import * as examples from './examples';
+import examples from './examples';
 import chroma from 'chroma-js';
 import EnergyDecay from "./compute/energy-decay";
 

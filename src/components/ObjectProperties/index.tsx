@@ -1,11 +1,11 @@
-import React, {useState} from "react";
+import React from "react";
 import { SourceTab } from "../parameter-config/SourceTab";
 import { useContainer } from "../../store";
-import { pickProps } from "../../common/helpers";
 import { ReceiverTab } from "../parameter-config/ReceiverTab";
 import { RoomTab } from "../parameter-config/RoomTab";
 import SurfaceTab from "../parameter-config/SurfaceTab";
 import PanelEmptyText from '../panel-container/PanelEmptyText';
+
 export interface ObjectPropertyInputEvent {
   name: string;
   type: string;
@@ -20,7 +20,7 @@ export const ObjectProperties = () => {
   if(containers.size == 0) return <PanelEmptyText>Nothing Selected</PanelEmptyText>
 
   if(containers.size == 1) {
-    const {uuid, kind} = [...containers.values()][0];
+    const { uuid, kind } = [...containers.values()][0];
     switch (kind) {
       case "source": return <SourceTab uuid={uuid} />
       case "receiver": return <ReceiverTab uuid={uuid} />
@@ -30,7 +30,7 @@ export const ObjectProperties = () => {
     }
   } 
 
-  else return <div>Multiple Items Selected</div>
+  else return <PanelEmptyText>Multiple Items Selected</PanelEmptyText>
 }
 
 export default ObjectProperties;

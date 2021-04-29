@@ -59,7 +59,7 @@ declare global {
   interface EventTypes {
     SAVE: () => void | undefined;
     OPEN: () => void | undefined;
-    NEW: () => void | undefined;
+    NEW: (success?: boolean) => void | undefined;
 
     RESTORE: {
       file?: File;
@@ -121,7 +121,8 @@ on("OPEN", async (callback) => {
 
 
 on("NEW", (callback) => {
-  if(confirm("Create a new project? Unsaved data will be lost.")){
+  const confirmed = confirm("Create a new project? Unsaved data will be lost.");
+  if(confirmed){
     const version = useAppStore.getState().version;
     const newSaveState = { 
       json: { 
@@ -136,12 +137,13 @@ on("NEW", (callback) => {
     };
     emit("RESTORE", newSaveState);
   }
-  if(callback) callback();
+  if(callback) callback(confirmed);
 });
 
 
 
 on("RESTORE", ({ file, json }) => {
+  emit("DESELECT_ALL_OBJECTS");
   emit("RESTORE_CONTAINERS", json.containers);
   emit("RESTORE_SOLVERS", json.solvers);
   useAppStore.getState().set((state) => { state.projectName = json.meta.name });
