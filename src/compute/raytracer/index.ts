@@ -23,13 +23,14 @@ import { BVH } from "./bvh/BVH";
 import { renderer } from "../../render/renderer";
 import { reverseTraverse } from "../../common/reverse-traverse";
 import { addSolver, removeSolver, setSolverProperty, useContainer, useSolver } from "../../store";
-
 import {cramangle2threejsangle} from "../../common/dir-angle-conversions";
 import { audioEngine } from "../../audio-engine/audio-engine";
 import observe, { Observable } from "../../common/observable";
 import { coefs, compute_bandpass_biquad_coefficients, filter } from "../../audio-engine/filter";
 import {probability} from '../../common/probability';
 import { filterSignals } from "../../audio-engine/envelope";
+
+import {ImageSourceSolver, ImageSourceSolverParams} from "./image-source/index"; 
 
 const {floor, random, abs, asin} = Math;
 const coinFlip = () => random() > 0.5;
@@ -251,6 +252,9 @@ class RayTracer extends Solver {
   plotStyle: Partial<PlotData>;
   bvh!: BVH;
   observed_name: Observable<string>;
+
+  hybrid: boolean; 
+  transitionOrder: number; 
   
   constructor(params?: RayTracerParams) {
     super(params);
@@ -303,9 +307,10 @@ class RayTracer extends Solver {
     this.colorBufferAttribute.setUsage(THREE.DynamicDrawUsage);
     this.rayBufferGeometry.setAttribute("color", this.colorBufferAttribute);
     this.chartdata = [] as ChartData[];
+
+    this.hybrid = false; 
+    this.transitionOrder = 2; 
     
-
-
     this.rays = new THREE.LineSegments(
       this.rayBufferGeometry,
       new THREE.LineBasicMaterial({
@@ -323,7 +328,6 @@ class RayTracer extends Solver {
     this.rays.renderOrder = -0.5;
     this.rays.frustumCulled = false;
     renderer.scene.add(this.rays);
-
 
     var shaderMaterial = new THREE.ShaderMaterial({
       fog: false,
@@ -1684,7 +1688,12 @@ class RayTracer extends Solver {
       const surface = useContainer.getState().containers[p.object] as Surface;
       // multiply intensities by the frequency dependant reflection coefficient
       intensities.forEach((I, i) => {
-        const R = 1 - surface.absorptionFunction(freqs[i]); // reflection coefficient
+        let R; 
+        if (freqs[i]==16000){
+            R = 1 - surface.absorptionFunction(freqs[8000]); // reflection coefficient
+        }else{
+            R = 1 - surface.absorptionFunction(freqs[i]); // reflection coefficient
+        }
         intensities[i] = I * R; // multiply the intensity by the reflection coefficient
       });
     });
@@ -1699,12 +1708,13 @@ class RayTracer extends Solver {
     // convert back to pressure
     return ac.Lp2P(arrivalLp) as number[]; 
   }
-  async calculateImpulseResponse(initialSPL = 100, frequencies = ac.Octave(125, 8000), sampleRate = audioEngine.sampleRate) {
+  async calculateImpulseResponse(initialSPL = 100, frequencies = ac.Octave(63, 16000), sampleRate = audioEngine.sampleRate) {
     if(this.receiverIDs.length == 0) throw Error("No receivers have been assigned to the raytracer");
     if(this.sourceIDs.length == 0) throw Error("No sources have been assigned to the raytracer");
     if(this.paths[this.receiverIDs[0]].length == 0) throw Error("No rays have been traced yet");
 
-    const sorted = this.paths[this.receiverIDs[0]].sort((a,b)=>a.time - b.time) as RayPath[];
+    let sorted = this.paths[this.receiverIDs[0]].sort((a,b)=>a.time - b.time) as RayPath[];
+
     const totalTime = sorted[sorted.length - 1].time + 0.05; // end time is latest time of arrival plus 0.1 seconds for safety
 
     const spls = Array(frequencies.length).fill(initialSPL);
@@ -1716,7 +1726,45 @@ class RayTracer extends Solver {
     for(let f = 0; f<frequencies.length; f++){
       samples.push(new Float32Array(numberOfSamples));
     }
+
+    if(this.hybrid){
+      console.log("Hybrid Calculation...");
+
+      // remove raytracer paths under transition order
+      for(let i=0; i<sorted.length; i++){
+        if(sorted[i].chainLength-1 <= this.transitionOrder){
+          sorted.splice(i,1); 
+        }
+      }
+
+      let isparams: ImageSourceSolverParams = {name: "HybridHelperIS", 
+        roomID: this.roomID, 
+        sourceIDs: this.sourceIDs,
+        surfaceIDs: this.surfaceIDs, 
+        receiverIDs: this.receiverIDs,
+        maxReflectionOrder: this.transitionOrder, 
+        imageSourcesVisible: false, 
+        rayPathsVisible: false, 
+        plotOrders: [0, 1, 2], // all paths
+        frequencies: [125,250,500,1000,2000,4000,8000],
+      }
+
+      let image_source_solver = new ImageSourceSolver(isparams, true); 
+      let is_raypaths = image_source_solver.returnSortedPathsForHybrid(343,spls,frequencies); 
+
+      // add in hybrid paths 
+      for(let i = 0; i<is_raypaths.length; i++){
+        const randomPhase = coinFlip() ? 1 : -1;
+        const t = is_raypaths[i].time; 
+        const roundedSample = floor(t * sampleRate);
   
+        for(let f = 0; f<frequencies.length; f++){
+            samples[f][roundedSample] += is_raypaths[i].pressure[f]*randomPhase;
+        }
+      }
+    }
+  
+    // add in raytracer paths 
     for(let i = 0; i<sorted.length; i++){
       const randomPhase = coinFlip() ? 1 : -1;
       const t = sorted[i].time; 
