@@ -184,6 +184,16 @@ const SolverControls = ({ uuid }: { uuid: string }) => {
   );
 };
 
+const Hybrid = ({ uuid }: { uuid: string}) => {
+  const [open, toggle] = useToggle(true);
+  return (
+    <PropertyRowFolder label="Hybrid Method" open={open} onOpenClose={toggle}> 
+      <PropertyCheckboxInput uuid={uuid} label="Use Hybrid Method" property="hybrid" tooltip="Enables Hybrid Calculation" />
+      <PropertyTextInput uuid={uuid} label="Transition Order" property="transitionOrder" tooltip="Delination between image source and raytracer" />
+    </PropertyRowFolder>
+  )
+}
+
 const Output = ({uuid}: {uuid: string}) => {
   const [open, toggle] = useToggle(true);
   const [impulseResponsePlaying, setImpulseResponsePlaying] = useSolverProperty<RayTracer, "impulseResponsePlaying">(uuid, "impulseResponsePlaying", "RAYTRACER_SET_PROPERTY");
@@ -211,6 +221,7 @@ export const RayTracerTab = ({ uuid }: { uuid: string }) => {
       <RecieverConfiguration uuid={uuid} />
       <StyleProperties uuid={uuid} />
       <SolverControls uuid={uuid} />
+      <Hybrid uuid={uuid} />
       <Output uuid={uuid} />
     </div>
   );

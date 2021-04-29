@@ -574,7 +574,6 @@ declare global {
     FDTD_2D_SET_PROPERTY: SetPropertyPayload<FDTD_2D>
   }
 
-
 }
 
 

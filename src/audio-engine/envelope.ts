@@ -117,8 +117,8 @@ export function filterSignals(samples: Float32Array[]) {
     const range = (n: number) => [...Array(n)].map((_,i)=>i);
     const bands = samples.length;
     const samplerate = 48000;
-    const minf = 125;
-    const maxf = 8000;
+    const minf = 63;
+    const maxf = 16000;
     const band_edges = range(bands+1).map(band => band_edge_frequency(band, bands, [minf, maxf])) 
     const lower_edges = band_edges.slice(0,-1);
     const upper_edges = band_edges.slice(1);

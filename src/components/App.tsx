@@ -8,7 +8,7 @@ import ObjectView from "./object-view/ObjectView";
 import Container from "../objects/container";
 import PanelContainer from "./panel-container/PanelContainer";
 import ObjectProperties from "./ObjectProperties";
-import Messenger, { emit, messenger } from "../messenger";
+import Messenger, { emit, messenger, on } from "../messenger";
 import { KeyValuePair } from "../common/key-value-pair";
 import SettingsDrawer from "./settings-drawer/SettingsDrawer";
 import { Report } from "../common/browser-report";
@@ -117,6 +117,7 @@ export default class App extends React.Component<AppProps, AppState> {
   bottomPanelSize = this.props.bottomPanelInitialSize;
   rightPanelSize = this.props.rightPanelInitialSize;
   leftPanelSize = this.props.leftPanelInitialSize;
+  editorResultSplitterRef: React.RefObject<SplitterLayout>;
   constructor(props: AppProps) {
     super(props);
     this.state = {
@@ -163,7 +164,7 @@ export default class App extends React.Component<AppProps, AppState> {
     this.canvasOverlay = React.createRef<HTMLDivElement>();
     this.orientationOverlay = React.createRef<HTMLDivElement>();
     this.statsCanvas = React.createRef<HTMLCanvasElement>();
-
+    this.editorResultSplitterRef = React.createRef<SplitterLayout>();
     this.showImportDialog = this.showImportDialog.bind(this);
     this.handleImportDialogClose = this.handleImportDialogClose.bind(this);
     this.handleObjectPropertyValueChangeAsNumber = this.handleObjectPropertyValueChangeAsNumber.bind(this);
@@ -486,6 +487,36 @@ export default class App extends React.Component<AppProps, AppState> {
 
   componentDidMount() {
     this.canvas.current && messenger.postMessage("APP_MOUNTED", this.canvas.current);
+    let lastPanelSize = 50;
+    if(this.editorResultSplitterRef.current){
+      //@ts-ignore
+      lastPanelSize = this.editorResultSplitterRef.current.state.secondaryPaneSize || 50;
+    }
+    const openPanel = () => {
+      if(lastPanelSize == 0){
+        lastPanelSize = 50;
+      }
+      this.editorResultSplitterRef.current!.setState({ secondaryPaneSize: lastPanelSize }, () => emit("RENDERER_SHOULD_ANIMATE", false));
+    }
+    const closePanel = () => {
+      //@ts-ignore
+      lastPanelSize = this.editorResultSplitterRef.current!.state.secondaryPaneSize;
+      this.editorResultSplitterRef.current!.setState({ secondaryPaneSize: 0 }, () => emit("RENDERER_SHOULD_ANIMATE", false));
+    }
+
+    on("TOGGLE_RESULTS_PANEL", (open) => {
+      console.log(this.editorResultSplitterRef.current);
+
+      if(this.editorResultSplitterRef.current){
+        emit("RENDERER_SHOULD_ANIMATE", true);
+        //@ts-ignore
+        if(this.editorResultSplitterRef.current.state.secondaryPaneSize == 0 || open){
+          openPanel();
+        } else {
+          closePanel();
+        }
+      }
+    })
   }
 
   showImportDialog() {
@@ -728,8 +759,11 @@ export default class App extends React.Component<AppProps, AppState> {
           >
             <SplitterLayout 
               vertical 
+              percentage
+              secondaryInitialSize={0}
               onDragStart={() => {emit("RENDERER_SHOULD_ANIMATE", true);}}
               onDragEnd={() => {emit("RENDERER_SHOULD_ANIMATE", false);}}
+              ref={this.editorResultSplitterRef}
             >
               {Editor}
               <PanelContainer>
@@ -763,5 +797,11 @@ export default class App extends React.Component<AppProps, AppState> {
         </SplitterLayout>
       </div>
     );
+  }
+}
+
+declare global {
+  interface EventTypes {
+    TOGGLE_RESULTS_PANEL: any
   }
 }

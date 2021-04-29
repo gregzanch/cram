@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-// import '../node_modules/react-vis/dist/style.css';
+
 import { useResult, getResultKeys, ResultStore } from "../store/result-store";
 
 import { uuid } from "uuidv4";
@@ -10,6 +10,9 @@ import { useState } from "react";
 import LTPChart from "./results/LTPChart";
 import RT60Chart from "./results/RT60Chart"; 
 import { ParentSize } from "@visx/responsive";
+import PanelEmptyText from "./panel-container/PanelEmptyText";
+
+
 
 const TabTitle = ({ uuid }) => {
   const name = useResult((state) => state.results[uuid].name);
@@ -52,7 +55,7 @@ export const ResultsPanel = () => {
         ))}
       </Tabs>
     </div>
-  ) : <div>No Results Yet!</div>;
+  ) : <PanelEmptyText>No Results Yet!</PanelEmptyText>;
 };
 
 const ChartSelect = (uuid) => {

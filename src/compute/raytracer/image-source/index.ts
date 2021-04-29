@@ -328,6 +328,11 @@ const defaults = {
   frequencies: [125,250,500,1000,2000,4000,8000],
 };
 
+export interface HybridRayPath {
+  time: number,
+  pressure: number[]
+}
+
 export class ImageSourceSolver extends Solver {
 
     sourceIDs: string[]; 
@@ -354,7 +359,9 @@ export class ImageSourceSolver extends Solver {
 
     private _plotFrequency: number; 
 
-    constructor(params: ImageSourceSolverParams = defaults){
+    isHybrid: boolean; 
+
+    constructor(params: ImageSourceSolverParams = defaults,isHybrid:boolean = false){
         super(params);
         this.uuid = uuid(); 
         this.kind = "image-source";
@@ -368,23 +375,26 @@ export class ImageSourceSolver extends Solver {
         this._rayPathsVisible = params.rayPathsVisible; 
         this._plotOrders = params.plotOrders; 
         this.levelTimeProgression = uuid();
+        this.isHybrid = isHybrid; 
 
         this.impulseResponsePlaying = false; 
 
         this._plotFrequency = 1000; 
 
-        emit("ADD_RESULT", {
-          kind: ResultKind.LevelTimeProgression, 
-          data: [],
-          info: {
-            initialSPL: [100],
-            frequency: [this._plotFrequency],
-            maxOrder: this.maxReflectionOrder,
-          },
-          name: `LTP - ${this.name}`,
-          uuid: this.levelTimeProgression,
-          from: this.uuid
-        } as Result<ResultKind.LevelTimeProgression>);
+        if(!this.isHybrid){
+          emit("ADD_RESULT", {
+            kind: ResultKind.LevelTimeProgression, 
+            data: [],
+            info: {
+              initialSPL: [100],
+              frequency: [this._plotFrequency],
+              maxOrder: this.maxReflectionOrder,
+            },
+            name: `LTP - ${this.name}`,
+            uuid: this.levelTimeProgression,
+            from: this.uuid
+          } as Result<ResultKind.LevelTimeProgression>);
+        }
 
         this.surfaceIDs = []; 
         
@@ -400,7 +410,6 @@ export class ImageSourceSolver extends Solver {
         // //@ts-ignore
         this.selectedImageSourcePath = createLine();
         renderer.markup.add(this.selectedImageSourcePath);
-
     }
 
     save(){
@@ -477,7 +486,32 @@ export class ImageSourceSolver extends Solver {
       (this._imageSourcesVisible) && (this.drawImageSources());
       (this._rayPathsVisible) && (this.drawRayPaths()); 
 
-      this.calculateLTP(343); 
+      if(!this.isHybrid){
+        this.calculateLTP(343); 
+      }
+    }
+
+    // hybrid solver use only
+    returnSortedPathsForHybrid(c: number, initialSPLs: number[], freqs: number[]){
+      this.updateImageSourceCalculation(); 
+
+      let sortedPath: ImageSourcePath[] | null = this.validRayPaths; 
+      sortedPath?.sort((a, b) => (a.arrivalTime(c) > b.arrivalTime(c)) ? 1 : -1); 
+
+      let result: HybridRayPath[] = [];
+
+      if(sortedPath != undefined){
+        for(let i = 0; i<sortedPath?.length; i++){
+          let t = sortedPath[i].arrivalTime(c); 
+          let p = sortedPath[i].arrivalPressure(initialSPLs, freqs); 
+          let path: HybridRayPath = {
+            time: t, 
+            pressure: p,
+          }
+          result.push(path);
+        }
+      }
+      return result;
     }
 
     calculateLTP(c: number, consoleOutput: boolean = false){

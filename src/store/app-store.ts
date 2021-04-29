@@ -19,6 +19,7 @@ export type AppStore = {
   importDialogVisible: boolean,
   selectedObjects: string | undefined;
   settingsDrawerVisible: boolean,
+  resultsPanelOpen: boolean;
   canUndo: boolean,
   canRedo: boolean,
   set: (fn: (draft: AppStore) => void) => void;
@@ -41,6 +42,7 @@ export const useAppStore = create<AppStore>((set) => ({
   canUndo: false,
   materialDrawerOpen: false,
   settingsDrawerVisible: false,
+  resultsPanelOpen: false,
   set: (fn: (draft: AppStore) => void) => set(produce(fn))
 }));
 
@@ -60,6 +62,16 @@ on("OPEN_MATERIAL_DRAWER", (surface) => {
 on("TOGGLE_MATERIAL_SEARCH", () => {
   useAppStore.getState().set(draft => {
     draft.materialDrawerOpen = true;
+  })
+})
+
+on("TOGGLE_RESULTS_PANEL", (open) => {
+  useAppStore.getState().set(draft => {
+    if(typeof open !== "undefined"){
+      draft.resultsPanelOpen = open;
+    } else {
+      draft.resultsPanelOpen = !draft.resultsPanelOpen;
+    }
   })
 })
 

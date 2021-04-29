@@ -83,7 +83,7 @@ export class RT60 extends Solver{
     this.ap_rt = this.arauPuchades(this.room,this.frequencies); 
 
     if(!this.resultExists){
-      emit("ADD_RESULT",{
+      emit("ADD_RESULT", {
         kind: ResultKind.StatisticalRT60, 
         data: [],
         info: {
