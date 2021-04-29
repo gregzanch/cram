@@ -1,9 +1,10 @@
 import create from "zustand";
 import produce from "immer";
 import { KeyValuePair } from "../common/key-value-pair";
-import { on } from '../messenger';
+import { emit, on } from '../messenger';
 import { result } from "lodash";
 import { omit } from "../common/helpers";
+import useAppStore from "./app-store";
 // import { ChartDataSets } from 'chart.js';
 
 
@@ -93,10 +94,12 @@ declare global {
 
 on("ADD_RESULT", (result) => {
   useResult.getState().set((store) => void (store.results[result.uuid] = result));
+  if(!useAppStore.getState().resultsPanelOpen) emit("TOGGLE_RESULTS_PANEL", true);
 });
 
 on("UPDATE_RESULT", ({ uuid, result }) => {
   useResult.getState().set((store) => void (store.results[result.uuid] = result));
+  if(!useAppStore.getState().resultsPanelOpen) emit("TOGGLE_RESULTS_PANEL", true);
 });
 
 on("REMOVE_RESULT", ( uuid ) => {

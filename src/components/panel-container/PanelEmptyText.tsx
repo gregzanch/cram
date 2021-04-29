@@ -6,6 +6,7 @@ export const PanelEmptyText = styled.div`
     display: flex;
     justify-content: center;
     align-items: center;
+    color: #b4b8bb;
 `;
 
 export default PanelEmptyText;
