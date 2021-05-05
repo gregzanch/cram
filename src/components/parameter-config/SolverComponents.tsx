@@ -49,17 +49,20 @@ type Props<T extends RayTracer | FDTD_2D|ImageSourceSolver|RT60|EnergyDecay, K e
   property: K;
   label: string;
   tooltip: string;
+  elementProps?: {
+    [key: string]: any
+  }
 };
 
 export const createPropertyInput = <T extends RayTracer | FDTD_2D|ImageSourceSolver|RT60|EnergyDecay>(
   event: SetPropertyEventTypes,
   Element: PropertyRowInputElement
-) => <K extends keyof T>({ uuid, property, label, tooltip }: Props<T, K>) => {
+) => <K extends keyof T>({ uuid, property, label, tooltip, elementProps }: Props<T, K>) => {
   const [state, changeHandler] = useSolverProperty<T, K>(uuid, property, event);
   return (
     <PropertyRow>
       <PropertyRowLabel label={label} hasToolTip tooltip={tooltip} />
-      <Element value={state} onChange={changeHandler} />
+      <Element value={state} onChange={changeHandler} {...elementProps} />
     </PropertyRow>
   );
 };

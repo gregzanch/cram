@@ -12,6 +12,7 @@ import { uuid } from "uuidv4";
 import Container from "../../objects/container";
 import { KVP } from "../../common/key-value-pair";
 import FileSaver from 'file-saver'; 
+import roundTo from "../../common/round-to";
 
 export interface RT60Props extends SolverParams{
   //uuid?: string;
@@ -25,7 +26,7 @@ export type RT60SaveObject = {
 }
 
 const defaults = {
-  name: "RT60",
+  name: "RT",
 };
 
 export class RT60 extends Solver{
@@ -92,7 +93,7 @@ export class RT60 extends Solver{
           temperature: 20, 
           humidity: 40, 
         },
-        name: `Statistical RT60 Results`,
+        name: `Statistical RT Results`,
         uuid: this.resultID,
         from: this.uuid
       } as Result<ResultKind.StatisticalRT60>);
@@ -262,6 +263,13 @@ export class RT60 extends Solver{
     }else{
       return false; 
     }
+  }
+  get displayVolume(){
+    return roundTo(this.volume, 2);
+  }
+
+  set displayVolume(volume: number){
+    this.volume = volume;
   }
 }
 

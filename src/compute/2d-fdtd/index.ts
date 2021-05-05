@@ -132,7 +132,6 @@ class FDTD_2D extends Solver {
       props.offsetX = min.x;
       props.offsetY = min.y;
     }
-
     const _width = (props && props.width) || FDTD_2D_Defaults.width;
     const _height = (props && props.height) || FDTD_2D_Defaults.height;
     

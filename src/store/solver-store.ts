@@ -21,14 +21,17 @@ export const useSolver = create<SolverStore>((set) => ({
 
 
 export const addSolver = <T extends Solver>(SolverClass: new() => T) => (solver: T|undefined) => {
-const s = solver || new SolverClass() as T;
-  useSolver.setState((state) => ({ 
-    ...state, 
-    solvers: {
-      ...state.solvers, 
-      [s!.uuid]: s
-    } 
-  }), true);
+  const s = solver || new SolverClass() as T;
+  useSolver.getState().set(draft=>{
+    draft.solvers[s!.uuid] = s;
+  });
+  // useSolver.setState((state) => ({ 
+  //   ...state, 
+  //   solvers: {
+  //     ...state.solvers, 
+  //     [s!.uuid]: s
+  //   } 
+  // }), true);
 };
 
 

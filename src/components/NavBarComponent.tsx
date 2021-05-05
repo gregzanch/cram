@@ -143,8 +143,8 @@ export function AddMenu(props: MenuProps) {
       <MenuDivider />
       <MenuItemWithMessenger label="Ray Tracer" message="SHOULD_ADD_RAYTRACER" />
       <MenuItemWithMessenger label="Image Source" message="SHOULD_ADD_IMAGE_SOURCE"/>
-      <MenuItemWithMessenger label="2D-FDTD" message="SHOULD_ADD_FDTD_2D" />
-      <MenuItemWithMessenger label="RT60" message="SHOULD_ADD_RT60" />
+      <MenuItemWithEmitter label="2D-FDTD" event="ADD_FDTD_2D" />
+      <MenuItemWithMessenger label="Statistical RT" message="SHOULD_ADD_RT60" />
       <MenuItemWithMessenger label="Energy Decay" message="SHOULD_ADD_ENERGYDECAY"/>
     </Menu>
     }

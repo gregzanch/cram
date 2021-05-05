@@ -367,6 +367,8 @@ messenger.addMessageHandler("SHOULD_ADD_RAYTRACER", (acc, ...args) => {
   return raytracer;
 });
 
+
+
 messenger.addMessageHandler("SHOULD_ADD_IMAGE_SOURCE", (acc, ...args) => {
   const defaults: ImageSourceSolverParams = {
     name: "Image Source",
