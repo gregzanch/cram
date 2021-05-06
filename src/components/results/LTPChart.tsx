@@ -127,7 +127,7 @@ const Chart = ({ uuid, width = 400, height = 200, events = false }: LTPChartProp
       () =>
         scaleLinear<number>({
           range: [scaleHeight, 0],
-          domain: [0, Math.max(...data.map(getPressure))],
+          domain: [Math.min(...data.map(getPressure))*0.75, Math.max(...data.map(getPressure))],
         }),
       [height, data],
     );
@@ -163,7 +163,7 @@ const Chart = ({ uuid, width = 400, height = 200, events = false }: LTPChartProp
               key={`bar-${d.arrival}`}
               x={barX}
               y={barY}
-              width={4}
+              width={3}
               height={barHeight}
               fill={ordinalColorScale(d.order)}
               className="test-bar-class"
