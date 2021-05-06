@@ -33,9 +33,10 @@ export const StyledInput = styled.input`
 interface Props {
   value: number;
   onChange: ({ value }: {value: number }) => void;
+  step?: number
 }
 
-export const PropertyRowNumberInput = ({ value, onChange }: Props) => {
+export const PropertyRowNumberInput = ({ value, onChange, step }: Props) => {
   const [_value, setValue] = useState(value);
   return (
     <StyledInput
@@ -49,6 +50,7 @@ export const PropertyRowNumberInput = ({ value, onChange }: Props) => {
       }}
       onChange={(e) => setValue(e.currentTarget.valueAsNumber) }
       value={_value}
+      step={step}
     />
   )
 }

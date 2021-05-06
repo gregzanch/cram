@@ -60,8 +60,11 @@ const Settings = ({ uuid }: { uuid: string }) => {
     <PropertyNumberInput
         uuid={uuid}
         label="Room Volume"
-        property="volume"
+        property="displayVolume"
         tooltip="Overrides the calculated room volume"
+        elementProps={{
+          step: 0.01
+        }}
       />
     </PropertyRowFolder>
   );
@@ -79,7 +82,7 @@ const Export = ({uuid}: { uuid: string }) => {
 
   return(
     <PropertyRowFolder label="Export" open={open} onOpenClose={toggle}>
-      <PropertyButton event="DOWNLOAD_RT60_RESULTS" args={uuid} label="Download RT60 Results" disabled={noResults} tooltip="Download RT60 Results as CSV File"/>
+      <PropertyButton event="DOWNLOAD_RT60_RESULTS" args={uuid} label="Download RT Results" disabled={noResults} tooltip="Download RT Results as CSV File"/>
     </PropertyRowFolder>
   )
 }
