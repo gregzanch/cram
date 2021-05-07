@@ -5,7 +5,6 @@ import { filterSignals } from './envelope';
 
 
 
-
 const throwif = (condition: boolean, message: string) => {
   if(!condition) throw Error(message);
 }
@@ -21,6 +20,8 @@ export type FilteredSource = {
 
 //@ts-ignore
 const AudioContext = (window.AudioContext || window.webkitAudioContext);
+//@ts-ignore
+const OfflineAudioContext = (window.OfflineAudioContext || window.webkitOfflineAudioContext);
 
 export class AudioEngine {
   context: AudioContext
