@@ -1775,8 +1775,6 @@ class RayTracer extends Solver {
           samples[f][roundedSample] += p[f];
       }
     }
-
-    const maxFrequency = frequencies.reduce((a,b)=>Math.max(a,b));
     
     //@ts-ignore
     samples = filterSignals(samples);
@@ -1794,45 +1792,17 @@ class RayTracer extends Solver {
       }
     }
 
-    // for(let i = 0; i<signal.length; i++){ 
-    //   signal[i]/=max;
-    // }
-    
 
-    console.log(signal);
-    // samples.forEach((x,i,arr)=>{
-    //   console.log(frequencies[i]/maxFrequency);
-    //   const low = ac.Flower(3, frequencies[i]) as number;
-    //   const high = ac.Fupper(3, frequencies[i]) as number;
-    //   const {b, a} = compute_bandpass_biquad_coefficients(low, high, sampleRate)
-    //   arr[i] = filter(b,a,x).map(val=>val*(frequencies[i]/maxFrequency)**2);
-    // });
 
     const offlineContext = audioEngine.createOfflineContext(1, signal.length, sampleRate);
 
-
-
-    // const sources = audioEngine.createFilteredSources(samples, frequencies, offlineContext); 
     const source = audioEngine.createBufferSource(normalize(signal), offlineContext)
-    
-    // const merger = audioEngine.createMerger(sources.length, offlineContext);
-    
-    // sources[0].gain.connect(offlineContext.destination);
-    // for(let i = 0; i<sources.length; i++){
-      // sources[i].gain.connect(merger, 0, i);
-      // sources[i].connect(merger, 0, i);
-    // }
 
     source.connect(offlineContext.destination);
     source.start();
-    // merger.connect(offlineContext.destination);
-    // for(let i = 0; i<sources.length; i++){
-      // sources[i].start();
-    // }
-    // sources.forEach(source=>source.source.start());
-    // sources.forEach(source=>source.start());
 
-    this.impulseResponse = await offlineContext.startRendering();
+
+    this.impulseResponse = await audioEngine.renderContextAsync(offlineContext);
     return this.impulseResponse;
   }
 
