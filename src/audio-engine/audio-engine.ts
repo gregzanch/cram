@@ -5,7 +5,6 @@ import { filterSignals } from './envelope';
 
 
 
-
 const throwif = (condition: boolean, message: string) => {
   if(!condition) throw Error(message);
 }
@@ -21,6 +20,8 @@ export type FilteredSource = {
 
 //@ts-ignore
 const AudioContext = (window.AudioContext || window.webkitAudioContext);
+//@ts-ignore
+const OfflineAudioContext = (window.OfflineAudioContext || window.webkitOfflineAudioContext);
 
 export class AudioEngine {
   context: AudioContext
@@ -39,6 +40,25 @@ export class AudioEngine {
   }
 
   /**
+   * Renders an offline audio context in a more browser agnostic way.
+   * neither Safari or Edge like `await context.startRendering()`
+   * @param context offline audio context
+   * @returns {Promise<AudioBuffer>} the rendered buffer
+   */
+  public async renderContextAsync(context: OfflineAudioContext): Promise<AudioBuffer> {
+    return new Promise((resolve, reject) => {
+      context.oncomplete = function(event: OfflineAudioCompletionEvent) {
+        if(!event.renderedBuffer){
+          reject("failed to get renderedBuffer after context completed rendering");
+        } else {
+          resolve(event.renderedBuffer);
+        }
+      };
+      context.startRendering();
+    });
+  }
+
+  /**
    * Creates a buffer source node filled with the supplied data
    * @param buffer The buffer of samples in a Float32Array
    * @param context audio context to use
@@ -46,8 +66,9 @@ export class AudioEngine {
    */
   public createBufferSource(buffer: Float32Array, context: AudioContext|OfflineAudioContext = this.context){
     const source = context.createBufferSource();
-    source.buffer = context.createBuffer(1, buffer.length, this.context.sampleRate) 
-    source.buffer.copyToChannel(buffer, 0);
+    source.buffer = context.createBuffer(1, buffer.length, this.context.sampleRate);
+    const sourceBuffer = source.buffer.getChannelData(0);
+    sourceBuffer.set(buffer, 0);
     return source;
   }
 
@@ -168,7 +189,7 @@ export class AudioEngine {
 
     merger.connect(offlineContext.destination);
     sources.forEach(source => source.source.start());
-    const impulseResponse = await offlineContext.startRendering();
+    const impulseResponse = await this.renderContextAsync(offlineContext);
     const blob = wavAsBlob([normalize(impulseResponse.getChannelData(0))], { sampleRate, bitDepth: 32 });
     saveAs(blob, "testFilters.wav");
 

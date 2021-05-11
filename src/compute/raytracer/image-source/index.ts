@@ -732,7 +732,7 @@ export class ImageSourceSolver extends Solver {
         merger.connect(offlineContext.destination);
         sources.forEach(source=>source.source.start());
 
-        this.impulseResponse = await offlineContext.startRendering();
+        this.impulseResponse = await audioEngine.renderContextAsync(offlineContext);
 
         return this.impulseResponse;
 

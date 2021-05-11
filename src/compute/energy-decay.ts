@@ -167,7 +167,7 @@ class EnergyDecay extends Solver{
                 filteredsource.gain.connect(offlineContext.destination);
                 filteredsource.source.start(); 
 
-                let data = await offlineContext.startRendering(); 
+                let data = await audioEngine.renderContextAsync(offlineContext);
                 self.filteredData.push(data.getChannelData(0)); 
             }
 
