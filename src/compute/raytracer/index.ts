@@ -22,7 +22,7 @@ import { BVHBuilderAsync, BVHVector3, BVHNode } from "./bvh";
 import { BVH } from "./bvh/BVH";
 import { renderer } from "../../render/renderer";
 import { reverseTraverse } from "../../common/reverse-traverse";
-import { addSolver, removeSolver, setSolverProperty, useContainer, useSolver } from "../../store";
+import { addSolver, callSolverMethod, removeSolver, setSolverProperty, useContainer, useSolver } from "../../store";
 import {cramangle2threejsangle} from "../../common/dir-angle-conversions";
 import { audioEngine } from "../../audio-engine/audio-engine";
 import observe, { Observable } from "../../common/observable";
@@ -410,6 +410,7 @@ class RayTracer extends Solver {
       })
     );
     this.step = this.step.bind(this);
+    this.calculateImpulseResponse = this.calculateImpulseResponse.bind(this);
   }
   update = () => {};
   save() {
@@ -943,8 +944,6 @@ class RayTracer extends Solver {
 
       (this.stats.numRaysShot.value as number)++;
     }
-
-    messenger.postMessage("RAYTRACER_RESULTS_SHOULD_UPDATE");
   }
 
   start() {
@@ -983,7 +982,7 @@ class RayTracer extends Solver {
       });
     });
     this.mapIntersectableObjects();
-    this.calculateImpulseResponse().catch(console.error);
+    
   }
   clearRays() {
     if (this.room) {
@@ -1984,11 +1983,12 @@ declare global {
     RAYTRACER_SET_PROPERTY: SetPropertyPayload<RayTracer>
     RAYTRACER_PLAY_IR: string;
     RAYTRACER_DOWNLOAD_IR: string;
-    RAYTRACER_DOWNLOAD_IR_OCTAVE: string; 
+    RAYTRACER_DOWNLOAD_IR_OCTAVE: string;
+    RAYTRACER_CALL_METHOD: CallSolverMethod<RayTracer>;
   }
 }
 
-
+on("RAYTRACER_CALL_METHOD", callSolverMethod);
 on("RAYTRACER_SET_PROPERTY", setSolverProperty);
 on("REMOVE_RAYTRACER", removeSolver);
 on("ADD_RAYTRACER", addSolver(RayTracer))

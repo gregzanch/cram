@@ -70,3 +70,16 @@
   -webkit-user-select: none;
   -o-user-select: none;
 }
+
+.parameter-config-tabs-container > .bp3-tab-list {
+  /* justify-content: space-evenly; */
+  background: #f4f4f4;
+  padding-left: 1em;
+}
+.parameter-config-tabs-container > .bp3-tab-list > .bp3-tab {
+  /* flex: 1; */
+}
+
+.bp3-tab-panel {
+  margin-top: 1em;
+}

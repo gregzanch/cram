@@ -18,6 +18,8 @@ import PropertyRowCheckbox from "./property-row/PropertyRowCheckbox";
 import PropertyButton from "./property-row/PropertyButton";
 import { PropertyRowTextInput } from "./property-row/PropertyRowTextInput";
 import { renderer } from "../../render/renderer";
+import { compareArrays } from "../../common/compare";
+
 
 const { PropertyTextInput, PropertyNumberInput, PropertyCheckboxInput } = createPropertyInputs<RayTracer>(
   "RAYTRACER_SET_PROPERTY"
@@ -30,7 +32,7 @@ export const ReceiverSelect = ({ uuid }: { uuid: string }) => {
     return filteredMapObject(state.containers, (container) =>
       container.kind === "receiver" ? pickProps(["uuid", "name"], container) : undefined
     ) as { uuid: string; name: string }[];
-  });
+  }, (state, newState) => compareArrays(state, newState, (a, b) => a.uuid === b.uuid));
 
   const [receiverIDs, setReceiverIDs] = useSolverProperty<RayTracer, "receiverIDs">(
     uuid,
@@ -62,7 +64,7 @@ export const SourceSelect = ({ uuid }: { uuid: string }) => {
     return filteredMapObject(state.containers, (container) =>
       container.kind === "source" ? pickProps(["uuid", "name"], container) : undefined
     ) as { uuid: string; name: string }[];
-  });
+  }, (state, newState) => compareArrays(state, newState, (a, b) => a.uuid === b.uuid));
 
   const [sourceIDs, setSourceIDs] = useSolverProperty<RayTracer, "sourceIDs">(
     uuid,
@@ -199,6 +201,7 @@ const Output = ({uuid}: {uuid: string}) => {
   const [impulseResponsePlaying, setImpulseResponsePlaying] = useSolverProperty<RayTracer, "impulseResponsePlaying">(uuid, "impulseResponsePlaying", "RAYTRACER_SET_PROPERTY");
   return (
     <PropertyRowFolder label="Impulse Response" open={open} onOpenClose={toggle}>
+      <PropertyButton event="RAYTRACER_CALL_METHOD" args={{method: "calculateImpulseResponse", uuid, isAsync: true, args: undefined}} label="Calculate" tooltip="Calculates the impulse response" />
       <PropertyButton event="RAYTRACER_PLAY_IR" args={uuid} label="Play" tooltip="Plays the calculated impulse response" disabled={impulseResponsePlaying} />
       <PropertyButton event="RAYTRACER_DOWNLOAD_IR" args={uuid} label="Download" tooltip="Downloads the calculated broadband impulse response" />
       <PropertyButton event="RAYTRACER_DOWNLOAD_IR_OCTAVE" args={uuid} label="Download by Octave" tooltip="Downloads the impulse response in each octave" />  

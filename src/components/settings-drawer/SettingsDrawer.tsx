@@ -1,11 +1,13 @@
-import React from "react";
+import React, { useState } from "react";
 
 import { Drawer, Position, InputGroup, Button } from "@blueprintjs/core";
-import { Setting } from "../../setting";
 
 import { KeyValuePair } from "../../common/key-value-pair";
 
 import "./SettingsDrawer.css";
+import Tabs from "@material-ui/core/Tabs/Tabs";
+import { useAppStore } from "../../store";
+import { useSetting } from "../../store/settings-store";
 
 export interface SettingsDrawerProps {
   size: number | string;
@@ -18,15 +20,22 @@ export interface SettingsDrawerProps {
 }
 
 
+
 export default function SettingsDrawer(props: SettingsDrawerProps) {
+  const [selectedTabId, setSelectedTabId] = useState("renderer");
+  const isOpen = useAppStore(store => store.settingsDrawerVisible);
+  const set = useAppStore(store => store.set);
+  // const {settings, set} = useSetting(state=>state);
+
   return (
     <Drawer
       position={Position.RIGHT}
-      size={props.size || "35%"}
+      size="55%"
       autoFocus={true}
       enforceFocus={true}
       hasBackdrop={true}
-      onClose={props.onClose}
+      onClose={e=>set(draft=>{ draft.settingsDrawerVisible = false })}
+      isOpen={isOpen}
       canOutsideClickClose={true}
       canEscapeKeyClose={true}
       isCloseButtonShown={true}
@@ -40,8 +49,24 @@ export default function SettingsDrawer(props: SettingsDrawerProps) {
 					</div>
         </div>
       }
-      isOpen={props.isOpen}>
-      {props.children}
+      
+      >
+      {/* <Tabs selectedIndex={selectedIndex} onSelect={e=>setSelectedIndex(e)}>
+        <TabList>
+          <Tab disabled />
+          {Object.keys(this.state.settings).map((key) => {
+            return <Tab key={"settings-tabname-" + key}>{properCase(key)}</Tab>;
+          })}
+        </TabList>
+        <TabPanel />
+        {Object.keys(this.state.settings).map((key) => {
+          return (
+            <TabPanel key={"settings-tabpanel-" + key}>
+              <SettingsPanel messenger={messenger} category={key} />
+            </TabPanel>
+          );
+        })}
+      </Tabs> */}
     </Drawer>
   );
 }

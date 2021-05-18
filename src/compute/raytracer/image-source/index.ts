@@ -299,11 +299,13 @@ export type ImageSourceSaveObject = {
   rayPathsVisible: boolean;
   plotOrders: number[];
   frequencies: number[];
+  levelTimeProgression: string;
 }
 
 
 export interface ImageSourceSolverParams {
   name: string;
+  uuid?: string;
   roomID: string;
   sourceIDs: string[];
   surfaceIDs: string[];
@@ -313,10 +315,11 @@ export interface ImageSourceSolverParams {
   rayPathsVisible: boolean;
   plotOrders: number[];
   frequencies: number[];
+  levelTimeProgression?: string;
 }
 
 const defaults = {
-  name: "image-source-class",
+  name: "Image Source",
   roomID: "",
   sourceIDs: [] as string[],
   surfaceIDs: [] as string[],
@@ -361,9 +364,9 @@ export class ImageSourceSolver extends Solver {
 
     isHybrid: boolean; 
 
-    constructor(params: ImageSourceSolverParams = defaults,isHybrid:boolean = false){
+    constructor(params: ImageSourceSolverParams = defaults, isHybrid:boolean = false){
         super(params);
-        this.uuid = uuid(); 
+        this.uuid = params.uuid || uuid(); 
         this.kind = "image-source";
         this.name = params.name;
         this.roomID = params.roomID;
@@ -374,7 +377,7 @@ export class ImageSourceSolver extends Solver {
         this._imageSourcesVisible = params.imageSourcesVisible; 
         this._rayPathsVisible = params.rayPathsVisible; 
         this._plotOrders = params.plotOrders; 
-        this.levelTimeProgression = uuid();
+        this.levelTimeProgression = params.levelTimeProgression || uuid();
         this.isHybrid = isHybrid; 
 
         this.impulseResponsePlaying = false; 
@@ -425,7 +428,8 @@ export class ImageSourceSolver extends Solver {
         "imageSourcesVisible",
         "rayPathsVisible",
         "plotOrders",
-      ], this);
+        "levelTimeProgression"
+      ], this) as ImageSourceSaveObject;
     }
 
     dispose(){
@@ -1060,6 +1064,7 @@ function reflectPointAcrossSurface(point: Vector3, surface: Surface): Vector3{
   b_global.normalize(); 
   let normal_calc = b_global; 
 
+  // TODO: may want to change this, making some changes in the surface class
   let normal = surface.normal.clone();
   let negnormal = normal.clone(); 
   negnormal.multiplyScalar(-1);
