@@ -128,5 +128,11 @@ dist
 .pnp.*
 
 # blender files
-.blend
-.blend1
+src/res/models/*/*.blend
+src/res/models/*/*.blend1
+src/res/models/half-torus/half-torus.blend
+src/res/models/half-torus/half-torus.blend1
+src/res/models/semi/semi.blend
+src/res/models/semi/semi.blend1
+src/res/models/semi/semi.blend
+src/res/models/semi/semi.blend1

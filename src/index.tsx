@@ -937,9 +937,7 @@ messenger.addMessageHandler("RESTORE", (acc, ...args) => {
 
 hotkeys.setScope("NORMAL");
 
-window.addEventListener("resize", () => {
-  cram.state.renderer.needsToRender = true;
-});
+window.addEventListener("resize", () => emit("RENDER"));
 
 registerAllEvents();
 
@@ -964,7 +962,11 @@ async function finishedLoading() {
   });
   emit("ADD_IMAGESOURCE");
   emit("ADD_RT60");
-  setTimeout(()=>emit("TOGGLE_RESULTS_PANEL", false), 150);
+  setTimeout(()=>{
+    emit("TOGGLE_RESULTS_PANEL", false);
+    emit("RENDER");
+  }, 150);
+
 }
 
 // the main app

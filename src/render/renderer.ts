@@ -1079,8 +1079,13 @@ declare global {
     TOGGLE_CAMERA_ORTHO: undefined;
     FOCUS_ON_SELECTED_OBJECTS: undefined;
     FOCUS_ON_CURSOR: undefined;
+    RENDER: undefined;
   }
 }
+
+on("RENDER", () => {
+  renderer.needsToRender = true;
+});
 
 on("RENDERER_SHOULD_ANIMATE", shouldAnimate => {
   renderer.shouldAnimate = shouldAnimate;
