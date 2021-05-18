@@ -1,4 +1,4 @@
-import { ensureArray } from "./helpers";
+
 
 type Destructor = () => void;
 type Watcher<T> = (value: T, previousValue: T) => void;
@@ -29,9 +29,11 @@ export class Observable<T = any> {
   }
 }
 
+const ensureArray = <T>(value: T|T[]) => value instanceof Array ? value : [value];
 
 export default function observe<T = any>(value: T, watchers?: Watcher<T>[] | Watcher<T>){
   const observable = new Observable(value); 
   watchers && ensureArray(watchers).forEach(watcher => observable.watch(watcher));
   return observable;
 }
+

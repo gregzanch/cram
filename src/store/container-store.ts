@@ -5,6 +5,7 @@ import Container from "../objects/container";
 import { AllowedNames, omit, filterObjectToArray, reach } from '../common/helpers';
 import {renderer} from '../render/renderer';
 import { Room } from "../objects";
+import Solver from "../compute/solver";
 
 export type ContainerStore = {
   containers: KeyValuePair<Container>;
@@ -12,6 +13,8 @@ export type ContainerStore = {
   set: SetFunction<ContainerStore>;
   getWorkspace: () => THREE.Object3D | null;
   getRooms: () => Room[];
+  withProperties: (propertiesGetter: (container: Container) => Partial<Container>) => Map<string, Partial<Container>>
+  withProperty: <T>(propertyGetter: (container: Container) => T) => Map<string, T>
 };
 
 const getWorkspace = (containers: KeyValuePair<Container>) => {
@@ -40,6 +43,22 @@ export const useContainer = create<ContainerStore>((set, get) => ({
   set: (fn) => set(produce(fn)),
   getWorkspace: () => getWorkspace(get().containers),
   getRooms: () => getRooms(get().containers),
+  withProperties: (propertiesGetter: (container: Container) => Partial<Container> ) => {
+    const containers = get().containers;
+    const containerMap = new Map<string, Partial<Container>>();
+    Object.keys(containers).forEach(key=>{
+      containerMap.set(key, propertiesGetter(containers[key]))
+    });
+    return containerMap;
+  },
+  withProperty:  <T>(propertyGetter: (container: Container) => T) => {
+    const containers = get().containers;
+    const containerMap = new Map<string, T>();
+    Object.keys(containers).forEach(key=>{
+      containerMap.set(key, propertyGetter(containers[key]))
+    });
+    return containerMap;
+  },
 }));
 
 export const addContainer = <T extends Container>(ContainerClass: new(...args) => T) => (container: T|undefined) => {
@@ -98,8 +117,10 @@ declare global {
   type CallMethodArgs<T extends Object, K extends AllowedNames<T, Function>> = {
     uuid: string;
     method: K;
+    isAsync?: boolean;
     args?: Parameters<T[K]>
   }
   type CallContainerMethod<T extends Container> = CallMethodArgs<T, AllowedNames<T, Function>>;
+  type CallSolverMethod<T extends Solver> = CallMethodArgs<T, AllowedNames<T, Function>>;
 }
 

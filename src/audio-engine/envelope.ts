@@ -111,10 +111,16 @@ function diracDelta(length: number = 8192, offset: number = 0){
     return samples;
   }
 
+const range = (n: number) => [...Array(n)].map((_,i)=>i);
 
+
+/**
+ * Perfect reconstruction filter for banded signals
+ * @param samples banded signals
+ * @returns 
+ */
 export function filterSignals(samples: Float32Array[]) {
 
-    const range = (n: number) => [...Array(n)].map((_,i)=>i);
     const bands = samples.length;
     const samplerate = 48000;
     const minf = 63;
@@ -153,6 +159,7 @@ export function filterSignals(samples: Float32Array[]) {
 
     return filteredSamples;
 }
+
 
 
 

@@ -42,10 +42,12 @@ import { addSolver, removeSolver, setSolverProperty, useContainer } from "../../
 import { renderer } from "../../render/renderer";
 import { pickProps } from "../../common/helpers";
 
+const CELL_RESOLUTION = 256;
+
 export const FDTD_2D_Defaults = {
   width: 10,
   height: 10,
-  cellSize: 10 / 128,
+  cellSize: 10 / CELL_RESOLUTION,
   offsetX: 0,
   offsetY: 0
 };
@@ -138,7 +140,7 @@ class FDTD_2D extends Solver {
     this.offsetX = (props && props.offsetX) || FDTD_2D_Defaults.offsetX;
     this.offsetY = (props && props.offsetY) || FDTD_2D_Defaults.offsetY;
     
-    this.cellSize = (props && props.cellSize) || Math.max(_width, _height) / 128;
+    this.cellSize = (props && props.cellSize) || Math.max(_width, _height) / CELL_RESOLUTION;
 
     this.nx = Math.ceil(_width / this.cellSize);
     this.ny = Math.ceil(_height / this.cellSize);
@@ -564,18 +566,3 @@ export { FDTD_2D };
 
 export default FDTD_2D;
 
-
-// this allows for nice type checking with 'on' and 'emit' from messenger
-declare global {
-  interface EventTypes {
-    ADD_FDTD_2D: FDTD_2D | undefined,
-    REMOVE_FDTD_2D: string;
-    FDTD_2D_SET_PROPERTY: SetPropertyPayload<FDTD_2D>
-  }
-
-}
-
-
-on("FDTD_2D_SET_PROPERTY", setSolverProperty);
-on("REMOVE_FDTD_2D", removeSolver);
-on("ADD_FDTD_2D", addSolver(FDTD_2D))

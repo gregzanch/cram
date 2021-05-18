@@ -19,13 +19,6 @@ body {
 * {
   font-family: "Lato";
 }
-.webgl-canvas {
-    /* width: calc(100% - 1em); */
-    /* height: calc(100% - 1em); */
-    /* margin: .5em .5em; */
-    height: 100%;
-    width: 100%;
-}
 
 #renderer-canvas{
   width: 100% !important;

@@ -40,6 +40,7 @@ import TreeViewComponent from "../components/TreeViewComponent";
 
 import {ResultsPanel} from './ResultsPanel';
 import { MaterialSearch } from "./MaterialSearch";
+import EditorContainer from "./EditorContainer";
 
 const AppToaster = Toaster.create({
   className: "app-toaster",
@@ -659,7 +660,7 @@ export default class App extends React.Component<AppProps, AppState> {
 
 
     const Editor = (
-      <div className="webgl-canvas">
+        <EditorContainer>
               <div
                 id="response-overlay"
                 className={"response_overlay response_overlay-hidden"}
@@ -673,7 +674,7 @@ export default class App extends React.Component<AppProps, AppState> {
               <div id="canvas_overlay" ref={this.canvasOverlay}></div>
               <div id="orientation-overlay" ref={this.orientationOverlay}></div>
               <canvas id="renderer-canvas" ref={this.canvas} />
-            </div>
+          </EditorContainer>
     )
 
     return (
@@ -713,36 +714,11 @@ export default class App extends React.Component<AppProps, AppState> {
 
         <ImportDialog />
         <SaveDialog />
-
-        <SplitterLayout
-          secondaryMinSize={5}
-          primaryMinSize={50}
-          secondaryInitialSize={this.props.leftPanelInitialSize}
-          primaryIndex={1}
-          customClassName="modified-splitter-layout"
-          onDragStart={() => {
-            messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", true);
-          }}
-          onDragEnd={() => {
-            messenger.postMessage("SET_RENDERER_SHOULD_ANIMATE", false);
-            this.saveLayout();
-          }}
-          onSecondaryPaneSizeChange={(value: number) => {
-            this.leftPanelSize = value;
-            // this.setState({ leftPanelSize: value });
-          }}
-        >
-          {
-            <>
-              {ObjectViewPanel}
-              {/* {ObjectViewPanel2} */}
-            </>
-          }
-
-          {/* center and right */}
-          <SplitterLayout
+ {/* center and right */}
+ <SplitterLayout
             secondaryMinSize={0}
             primaryMinSize={50}
+            customClassName={"modified-splitter-layout"}
             secondaryInitialSize={this.props.rightPanelInitialSize}
             primaryIndex={0}
             onDragStart={() => {
@@ -786,7 +762,7 @@ export default class App extends React.Component<AppProps, AppState> {
               }}
             >
               <PanelContainer>
-                <ObjectProperties />
+                <>{ObjectViewPanel}</>
               </PanelContainer>
 
               <PanelContainer className="panel full parameter-config-panel">
@@ -794,7 +770,6 @@ export default class App extends React.Component<AppProps, AppState> {
               </PanelContainer>
             </SplitterLayout>
           </SplitterLayout>
-        </SplitterLayout>
       </div>
     );
   }

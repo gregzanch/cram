@@ -19,7 +19,7 @@ declare global {
   }
 }
 
-
+export default function registerObjectEvents(){
 on("REMOVE_CONTAINERS", (uuids) => {
   const containers = useContainer.getState().containers;
   const ids = typeof uuids === "string" ? [uuids] : uuids;
@@ -90,3 +90,5 @@ on("APPEND_SELECTION", (containers) => {
     })
   });
 });
+
+}

@@ -38,6 +38,11 @@ export default abstract class Solver {
       uuid
     };
   }
+  restore(state) {
+    this.name = state.name;
+    this.uuid = state.uuid;
+    return this;
+  }
   dispose() {
     console.log("disposed from abstract...");
   }

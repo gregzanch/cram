@@ -74,7 +74,7 @@ export class GlobalOverlay {
   constructor(parent: HTMLElement) {
     this.cells = new Map<string, GlobalOverlayCell<AllowedType>>();
     this.elt = document.createElement("div");
-    this.parent = parent || document.querySelector(".webgl-canvas") || document.body;
+    this.parent = parent || document.querySelector("#editor-container") || document.body;
     this.parent.appendChild(this.elt);
     this.elt.className = "canvas_overlay canvas_overlay-global_overlay";
 

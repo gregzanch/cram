@@ -19,7 +19,7 @@ export class TransformOverlay {
   constructor(selector: string) {
     this.cells = new Map<string, HTMLElement>();
     this.elt = document.createElement('div');
-    this.parent = document.querySelector(selector) || document.querySelector(".webgl-canvas") || document.body;
+    this.parent = document.querySelector(selector) || document.querySelector("#editor-container") || document.body;
     this.parent.appendChild(this.elt);
     this.elt.className = "canvas_overlay canvas_overlay-transform_overlay hidden";
     const table = document.createElement('table');

@@ -4,6 +4,22 @@
 
 cram (computational room acoustic module) is an application that allows users to simulate and explore various acoustic properties of a modeled space.
 
+### Features
+- Interactive model editor with navigation controls
+- Free and open-source (MIT License)
+- Cross platform
+- Diverse set of solvers
+- Comprehensive material library
+- Project saving
+- Result export
+
+### Solvers
+- Statistical Reverberation time using Sabine, Eyring, and Arau-Puchades methods
+- Stochastic Ray Tracing to produce an impulse response
+- Image Source Method for early reflection analysis
+- Finite Difference Time Domain (2D) for modal analysis 
+
+
 ## Design Goals
 
 ### Intuitive

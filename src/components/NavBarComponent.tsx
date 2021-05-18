@@ -40,7 +40,10 @@ const MenuItemWithEmitter = ({ label, hotkey, disabled, event, args }: MenuItemW
     <MenuItem
       className={Classes.POPOVER2_DISMISS}
       text={<MenuItemText text={label} hotkey={hotkey || [""]} />}
-      onClick={(e) => emit(event, args)}
+      onClick={(e) => {
+        console.log(event, args);
+        emit(event, args)
+      }}
       disabled={disabled}
     />
   );

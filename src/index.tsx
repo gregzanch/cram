@@ -71,14 +71,15 @@ import { useContainer, useSolver, useResult, useAppStore, useMaterial, SaveState
 import { audioEngine } from './audio-engine/audio-engine';
 enableMapSet();
 
-import './objects/events';
-import './compute/events';
+
 
 expose({ omit, Container, audioEngine, useSolver, useContainer, useResult, useAppStore, useMaterial, produce, on, emit });
 
 import examples from './examples';
 import chroma from 'chroma-js';
 import EnergyDecay from "./compute/energy-decay";
+
+import registerAllEvents from './events';
 
 const materialsIndex = {} as KeyValuePair<AcousticMaterial>;
 
@@ -1113,6 +1114,9 @@ window.addEventListener("resize", () => {
   cram.state.renderer.needsToRender = true;
 });
 
+registerAllEvents();
+
+
 
 async function finishedLoading() {
   // const filepath = "/res/saves/concord2.json";
@@ -1131,6 +1135,9 @@ async function finishedLoading() {
     ac,
     THREE,
   });
+  emit("ADD_IMAGESOURCE");
+  emit("ADD_RT60");
+  setTimeout(()=>emit("TOGGLE_RESULTS_PANEL", false), 150);
 }
 
 // the main app

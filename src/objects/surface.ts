@@ -241,29 +241,43 @@ class Surface extends Container {
     }
   }
   init(props: SurfaceProps, fromConstructor: boolean = false) {
-    if (!fromConstructor) {
+
+    // if the call isn't coming from the constructor it's probably being restored
+    if (!fromConstructor) { 
       this.remove(this.mesh);
       this.remove(this.wire);
       this.remove(this.edges);
       this.remove(this.vertexNormals);
       this.destroyEvents();
     }
-    this.fillSurface = props.fillSurface || defaults.fillSurface;
-    this.wire = new THREE.Mesh(props.geometry, defaults.materials.wire);
-    this.wire.geometry.name = "surface-wire-geometry";
+
+    // merge the incoming props with the default props
+    const mergedProps = {...defaults, ...props};
+    
+
     this.numHits = 0;
-    this.mesh = new THREE.Mesh(props.geometry, defaults.materials.mesh);
+    this.fillSurface = mergedProps.fillSurface;
+    
+    this.wire = new THREE.Mesh(mergedProps.geometry, mergedProps.materials.wire);
+    this.wire.geometry.name = "surface-wire-geometry";
+
+    this.mesh = new THREE.Mesh(mergedProps.geometry, mergedProps.materials.mesh);
     this.mesh.geometry.name = "surface-geometry";
     this.mesh.geometry.computeBoundingBox();
     this.mesh.geometry.computeBoundingSphere();
+    this.mesh.geometry.computeVertexNormals();
 
     // this.mesh.geometry.computeVertexNormals();
-    const tempmesh = new THREE.Mesh(props.geometry.clone(), undefined);
-    tempmesh.geometry.computeVertexNormals();
-    this.vertexNormals = new THREE.VertexNormalsHelper(tempmesh, 0.25, 0xff0000, 1);
+    // const tempmesh = new THREE.Mesh(mergedProps.geometry.clone(), undefined);
+    // tempmesh.geometry.computeVertexNormals();
+    this.vertexNormals = new THREE.VertexNormalsHelper(this.mesh, 0.25, 0xff0000, 1);
     this.vertexNormals.geometry.name = "surface-vertex-normals-geometry";
+
+    // console.log(mergedProps.geometry.getIndex());
+    // console.log(mergedProps.geometry.getAttribute("position"));
+
     this.triangles = chunk(
-      chunk(Array.from((props.geometry.getAttribute("position") as THREE.BufferAttribute).array), 3),
+      chunk(Array.from((mergedProps.geometry.getAttribute("position") as THREE.BufferAttribute).array), 3),
       3
     );
 
@@ -276,26 +290,10 @@ class Surface extends Container {
         )
     );
 
-    this.isPlanar = this._triangles
-      .map((x) => x.getNormal(new THREE.Vector3()))
-      .reduce((a, b, i, arr) => a && v3eq(b, arr[0]), true);
-
-    if (!this.isPlanar) {
-      console.error(new Error(`Surface '${this.name}' is not planar`));
-      // debugger;
-    }
-
-    let largest_area = 0;
-    let largest_index = 0;
-    for(let i = 0; i<this._triangles.length; i++){
-      if (this._triangles[i].getArea() > largest_area){
-        largest_area = this._triangles[i].getArea();
-        largest_index = i; 
-      }
-    }
+    
 
     this.normal = new THREE.Vector3();
-    this._triangles[largest_index].getNormal(this.normal);
+    this._triangles[0].getNormal(this.normal);
 
     this.center = new THREE.Vector3();
     let area = 0;
@@ -389,8 +387,8 @@ class Surface extends Container {
 
     const points = this.edgeLoop.map((x) => csg.math.vec3.fromArray([x.x, x.y, x.z]));
     const plane = csg.math.plane.fromPoints(points[0], points[1], points[2]);
-    console.log("points", points);
-    console.log("plane", plane);
+    // console.log("points", points);
+    // console.log("plane", plane);
     this.polygon = csg.geometry.poly3.fromPointsAndPlane(points, plane);
 
     const almostEquals = numbersEqualWithinTolerence(1e-6);
@@ -400,11 +398,11 @@ class Surface extends Container {
     if (normalAlmostEqualsPlane(this.normal, this.polygon.plane)) {
       // console.warn(new Error(`Surface '${this.name}' has a normal vector issue`));
       this.polygon = csg.geometry.poly3.fromPointsAndPlane(points, csg.math.plane.fromPoints(points[2], points[1], points[0]));
-      console.log("flipping", this.normal.toArray(), [...this.polygon.plane]);
+      // console.log("flipping", this.normal.toArray(), [...this.polygon.plane]);
         if (normalAlmostEqualsPlane(this.normal, this.polygon.plane)) {
-          console.log("still not equal", this.normal.toArray(), [...this.polygon.plane]);
-          console.log("points", points);
-          console.log("plane", plane);
+          // console.log("still not equal", this.normal.toArray(), [...this.polygon.plane]);
+          // console.log("points", points);
+          // console.log("plane", plane);
           // console.log(this);
           // console.warn(new Error(`Surface '${this.name}' has a normal vector issue`));
     
@@ -447,7 +445,7 @@ class Surface extends Container {
 
   restore(surfaceState: SurfaceSaveObject) {
 
-    console.log(surfaceState)
+    // console.log(surfaceState)
 
     this.init({
       acousticMaterial: surfaceState.acousticMaterial,
