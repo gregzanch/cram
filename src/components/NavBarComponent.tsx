@@ -41,7 +41,6 @@ const MenuItemWithEmitter = ({ label, hotkey, disabled, event, args }: MenuItemW
       className={Classes.POPOVER2_DISMISS}
       text={<MenuItemText text={label} hotkey={hotkey || [""]} />}
       onClick={(e) => {
-        console.log(event, args);
         emit(event, args)
       }}
       disabled={disabled}
@@ -84,11 +83,6 @@ export function FileMenu(props: MenuProps) {
 }
 
 export function EditMenu(props: MenuProps) {
-  const canUndo = postMessage("CAN_UNDO")[0];
-  const canRedo = postMessage("CAN_REDO")[0];
-  const canDuplicate = postMessage("CAN_DUPLICATE")[0];
-
-
   return (
 
     <Popover2
@@ -101,19 +95,19 @@ export function EditMenu(props: MenuProps) {
       )}
       content={
         <Menu>
-        <MenuItemWithMessenger label="Undo" message="UNDO" hotkey={[Characters.COMMAND, "Z"]} disabled={!canUndo} />
+        <MenuItemWithMessenger label="Undo" message="UNDO" hotkey={[Characters.COMMAND, "Z"]} disabled />
         <MenuItemWithMessenger
           label="Redo"
           message="REDO"
           hotkey={[Characters.SHIFT, Characters.COMMAND, "Z"]}
-          disabled={!canRedo}
+          disabled
         />
         <MenuDivider />
         <MenuItemWithMessenger
           label="Duplicate"
           message="SHOULD_DUPLICATE_SELECTED_OBJECTS"
           hotkey={[Characters.SHIFT, "D"]}
-          disabled={!canDuplicate}
+          disabled
         />
         <MenuDivider />
         <MenuItemWithMessenger label="Cut" message="CUT" hotkey={[Characters.COMMAND, "X"]} disabled />

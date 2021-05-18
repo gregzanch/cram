@@ -62,7 +62,7 @@ export default class Messenger{
     postMessage(message: string, ...args) {
         if (message != this.lastMessage) {
             this.lastMessage = message;
-            // console.log(message);
+            console.log(message);
         }
         // if message exists
         if (this.dictionary[message]) {

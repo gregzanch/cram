@@ -38,9 +38,6 @@ import { fileType, allowed } from "./common/file-type";
 // data structures / storage
 import { uuid } from "uuidv4";
 import { KeyValuePair } from "./common/key-value-pair";
-import { Setting } from "./setting";
-import { defaultSettings, ApplicationSettings, SettingsCategories } from "./default-settings";
-import { SettingsManager, StoredSetting } from "./settings-manager";
 import { layout as defaultLayout } from "./default-storage";
 
 // constants
@@ -126,25 +123,9 @@ export interface State {
   sketches: KeyValuePair<Sketch>;
   solvers: KeyValuePair<Solver>;
   renderer: Renderer;
-  settings: {
-    general: {
-      fog_color: Setting<string>;
-      default_save_name: Setting<string>;
-    };
-    editor: {
-      transform_snap_fine: Setting<number>;
-      transform_snap_normal: Setting<number>;
-      transform_snap_coarse: Setting<number>;
-    };
-    keybindings: {
-      SHOW_IMPORT_DIALOG: Setting<string>;
-    };
-  };
-  settingsManagers: KeyValuePair<SettingsManager>;
   editorMode: EditorModes;
   currentProcess: Processes;
   browser: Report;
-  projectName: string;
   //clfviewer: CLFViewer;
 }
 
@@ -185,12 +166,9 @@ export class Cram implements Cram {
       sketches: {} as KeyValuePair<Sketch>,
       solvers: {} as KeyValuePair<Solver>,
       renderer: {} as Renderer,
-      settings: defaultSettings as ApplicationSettings,
-      settingsManagers: {} as KeyValuePair<SettingsManager>,
       editorMode: EditorModes.OBJECT as EditorModes,
       currentProcess: Processes.NONE as Processes,
       browser: browserReport(navigator.userAgent),
-      projectName: defaultSettings.general.default_save_name.value,
       //clfviewer: new CLFViewer(),
     };
     this.messenger = messenger;
@@ -204,80 +182,7 @@ expose({
   cram
 });
 
-Object.keys(defaultSettings).map(async (category) => {
-  cram.state.settingsManagers[category] = new SettingsManager(
-    category,
-    defaultSettings[category],
-    async () => {
-      const settings = (await cram.state.settingsManagers[category].read()) as StoredSetting[];
-      settings.forEach((setting) => {
-        cram.state.settings[category][setting.id].value = setting.value;
-        cram.state.settings[category][setting.id].default_value = setting.default_value;
-        cram.state.settings[category][setting.id].setStagedValue(setting.value);
-      });
-      cram.state.projectName = cram.state.settings.general.default_save_name.value;
-    },
-    (event) => {
-      console.log(event);
-    }
-  );
-});
-
 cram.state.renderer = renderer;
-
-messenger.addMessageHandler("ADD_CONSTRUCTION", (acc, ...args) => {
-  if (args && args[0]) {
-    const construction = args[0] as Container;
-    cram.state.constructions[construction.uuid] = construction;
-  }
-});
-
-messenger.addMessageHandler("REMOVE_CONSTRUCTION", (acc, id) => {
-  if (id) {
-    if (cram.state.constructions[id]) {
-      delete cram.state.constructions[id];
-    }
-  }
-});
-
-messenger.addMessageHandler("GET_CONSTRUCTIONS", () => {
-  return cram.state.constructions;
-});
-
-messenger.addMessageHandler("SET_SELECTION", (acc, objects) => {
-  messenger.postMessage("DESELECT_ALL_OBJECTS");
-  messenger.postMessage("APPEND_SELECTION", objects);
-});
-
-messenger.addMessageHandler("APPEND_SELECTION", (acc, objects) => {
-  hotkeys.setScope("EDITOR");
-  if (objects instanceof Array) {
-    for (let i = 0; i < objects.length; i++) {
-      if (objects[i] instanceof Container) {
-        objects[i].select();
-        cram.state.selectedObjects.push(objects[i]);
-      }
-    }
-  }
-});
-
-
-messenger.addMessageHandler("DESELECT_ALL_OBJECTS", () => {
-  Object.keys(cram.state.containers).forEach((x) => {
-    cram.state.containers[x].deselect();
-  });
-  cram.state.selectedObjects = [] as Container[];
-});
-
-
-
-//messenger.addMessageHandler("OPEN_CLF_VIEWER", () => {
-//  console.log("will open CLF viewer");
-//});
-
-//messenger.addMessageHandler("CLOSE_CLF_VIEWER", () => {
-//  console.log("will close CLF viewer");
-//})
 
 messenger.addMessageHandler("GET_SELECTED_OBJECTS", () => {
   return cram.state.selectedObjects;
@@ -300,51 +205,6 @@ messenger.addMessageHandler("FETCH_CONTAINER", (acc, ...args) => {
   return args && args[0] && cram.state.containers[args[0]];
 });
 
-messenger.addMessageHandler("FETCH_ALL_SETTINGS", () => {
-  return cram.state.settings;
-});
-
-messenger.addMessageHandler("FETCH_SETTINGS__GENERAL", () => {
-  return cram.state.settings.general;
-});
-
-messenger.addMessageHandler("FETCH_SETTINGS__EDITOR", () => {
-  return cram.state.settings.editor;
-});
-
-messenger.addMessageHandler("FETCH_SETTINGS__KEYBINDINGS", () => {
-  return cram.state.settings.keybindings;
-});
-
-messenger.addMessageHandler("SUBMIT_ALL_SETTINGS", () => {
-  for (const key in cram.state.settings) {
-    let changedSettings = [] as Setting<number | string | boolean>[];
-    for (const subkey in cram.state.settings[key]) {
-      if (cram.state.settings[key][subkey].edited) {
-        cram.state.settings[key][subkey].submit();
-        changedSettings.push(cram.state.settings[key][subkey]);
-      }
-    }
-    if (changedSettings.length > 0) {
-      cram.state.settingsManagers[key].update(changedSettings);
-    }
-  }
-  return cram.state.settings;
-});
-
-messenger.addMessageHandler("SUBMIT_SETTINGS__GENERAL", () => {
-  for (const key in cram.state.settings.general) {
-    cram.state.settings.general[key].submit();
-  }
-  return cram.state.settings;
-});
-
-messenger.addMessageHandler("SUBMIT_SETTINGS__EDITOR", () => {
-  for (const key in cram.state.settings.editor) {
-    cram.state.settings.editor[key].submit();
-  }
-  return cram.state.settings;
-});
 
 messenger.addMessageHandler("FETCH_ALL_MATERIALS", () => {
   return cram.state.materials;
@@ -447,6 +307,10 @@ messenger.addMessageHandler("FETCH_ALL_RECEIVERS", (acc, ...args) => {
 messenger.addMessageHandler("FETCH_SOURCE", (acc, ...args) => {
   return cram.state.containers[args[0]];
 });
+
+
+
+
 
 messenger.addMessageHandler("SHOULD_ADD_SOURCE", (acc, ...args) => {
   const source = new Source("new source");
@@ -741,7 +605,7 @@ messenger.addMessageHandler("IMPORT_FILE", (acc, ...args) => {
 });
 
 messenger.addMessageHandler("APP_MOUNTED", (acc, ...args) => {
-  cram.state.renderer.init(args[0], (cateogry: SettingsCategories) => cram.state.settings[cateogry]);
+  cram.state.renderer.init(args[0]);
 });
 
 messenger.addMessageHandler("RENDERER_UPDATED", () => {
@@ -948,14 +812,7 @@ messenger.addMessageHandler("SAVE_SOLVERS", () => {
   return saveObjects;
 });
 
-messenger.addMessageHandler("SET_PROJECT_NAME", (acc, ...args) => {
-  cram.state.projectName = (args && args[0]) || cram.state.projectName;
-  document.title = cram.state.projectName + " | cram.ui";
-});
 
-messenger.addMessageHandler("GET_PROJECT_NAME", () => {
-  return cram.state.projectName;
-});
 
 messenger.addMessageHandler("RESTORE_CONTAINERS", (acc, ...args) => {
   const keys = Object.keys(cram.state.containers);
@@ -1032,27 +889,6 @@ messenger.addMessageHandler("RESTORE_SOLVERS", (acc, ...args) => {
   }
 });
 
-messenger.addMessageHandler("SAVE", (acc, ...args) => {
-  const savedState = {
-    meta: {
-      version: cram.meta.version,
-      name: cram.state.projectName,
-      timestamp: new Date().toISOString()
-    },
-    containers: messenger.postMessage("SAVE_CONTAINERS")[0],
-    solvers: messenger.postMessage("SAVE_SOLVERS")[0]
-  };
-  // console.log(savedState);
-  // return;
-  const blob = new Blob([JSON.stringify(savedState)], {
-    type: "text/plain;charset=utf-8"
-  });
-  cram.state.projectName = (args && args[0] && args[0].filename) || cram.state.projectName;
-  FileSaver.saveAs(blob, `${cram.state.projectName}.json`);
-  if (args && args[0] && args[0].callback) {
-    args[0].callback();
-  }
-});
 
 messenger.addMessageHandler("OPEN", () => {
   const tempinput = document.createElement("input");
@@ -1095,15 +931,6 @@ messenger.addMessageHandler("RESTORE", (acc, ...args) => {
   } else {
     messenger.postMessage("RESTORE_CONTAINERS", json);
     messenger.postMessage("SET_PROJECT_NAME", file.name.replace(".json", ""));
-  }
-});
-
-messenger.addMessageHandler("ADD_SELECTED_OBJECTS_TO_GLOBAL_VARIABLES", () => {
-  const selectedObjects = messenger.postMessage("GET_SELECTED_OBJECTS")[0];
-  if (selectedObjects && selectedObjects.length) {
-    selectedObjects.forEach((x, i, a) => {
-      addToGlobalVars(a[i], a[i].name);
-    });
   }
 });
 

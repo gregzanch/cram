@@ -33,7 +33,6 @@ import { addMoment, Directions } from "../history";
 import PickHelper from "./pick-helper";
 
 import { TransformOverlay, GlobalOverlay } from "./overlays";
-import { SettingsCategories, SettingsCategory, EditorSettings } from "../default-settings";
 import hotkeys from "hotkeys-js";
 
 import {
@@ -44,14 +43,12 @@ import {
 } from "./orientation-control/orientation-control";
 
 import Cursor from "./Cursor";
-import ConstructionPlane from "../objects/construction-plane";
-import ConstructionAxis from "../objects/construction-axis";
-import ConstructionPoint from "../objects/construction-point";
 import { Processes } from "../constants/processes";
 
 import { Markup } from "./Markup";
 import Model from "../objects/model";
 import { useContainer } from "../store";
+import { useSetting } from "../store/settings-store";
 
 
 
@@ -141,10 +138,6 @@ export default class Renderer {
   sketches!: Container;
   markup!: Markup;
 
-  /** Container for constructions (axis, planes, points) */
-  constructions!: Container;
-  hoveredConstruction!: Container | undefined;
-
   lights!: Lights;
   axes!: Axes;
   grid!: Grid;
@@ -185,7 +178,6 @@ export default class Renderer {
   fdtd2drunning!: boolean;
   fdtd3drunning!: boolean;
 
-  settingsGetter!: (category: SettingsCategories) => SettingsCategory;
 
   needsToRender!: boolean;
 
@@ -204,10 +196,9 @@ export default class Renderer {
     this.currentProcess = Processes.NONE;
   }
 
-  init(elt: HTMLCanvasElement, settingsGetter: (category: SettingsCategories) => SettingsCategory) {
-    this.settingsGetter = settingsGetter;
+  init(elt: HTMLCanvasElement) {
 
-    const editorSettings = settingsGetter("editor") as EditorSettings;
+    const editorSettings = useSetting.getState().settings.editor;
 
     this.fdtd2drunning = false;
     this.fdtd3drunning = false;
@@ -234,14 +225,7 @@ export default class Renderer {
     this.workspace.userData.isWorkspace = true;
     this.interactables = new Container("interactables");
     this.sketches = new Container("sketches");
-    this.constructions = new Container("constructions");
     this.markup = new Markup();
-
-
-
-
-    this.addDefaultConstructions();
-    this.hoveredConstruction = undefined;
 
     this.workspaceCursor = this.workspace;
 
@@ -271,7 +255,6 @@ export default class Renderer {
       this.interactables,
       this.fdtdItems,
       this.sketches,
-      this.constructions,
       this.markup
     );
 
@@ -501,80 +484,6 @@ export default class Renderer {
     });
 
     this.renderer.domElement.addEventListener("mousemove", (e) => {
-      if (this.currentProcess.startsWith("PICKING")) {
-        let selectables = [] as any[];
-        switch (this.currentProcess) {
-          case Processes.PICKING_AXIS:
-            {
-              const constructionAxis = this.constructions.children.filter((x) => x["kind"] === "construction-axis");
-              if (constructionAxis.length > 0) {
-                selectables.push(...constructionAxis);
-              }
-            }
-            break;
-          case Processes.PICKING_PLANAR_SURFACE:
-            {
-              const constructionPlanes = this.constructions.children.filter((x) => x["kind"] === "construction-plane");
-              if (constructionPlanes.length > 0) {
-                selectables.push(...constructionPlanes);
-              }
-              const surfs = this.workspace.children.filter((x) => !x["kind"].match(/source|receiver/gim));
-              if (surfs.length > 0) {
-                selectables.push(...surfs);
-              }
-            }
-            break;
-          case Processes.PICKING_RECEIVER:
-            {
-              const receivers = this.workspace.children.filter((x) => x["kind"] === "receiver");
-              if (receivers.length > 0) {
-                selectables.push(...receivers);
-              }
-            }
-            break;
-          case Processes.PICKING_SOURCE:
-            {
-              const sources = this.workspace.children.filter((x) => x["kind"] === "source");
-              if (sources.length > 0) {
-                selectables.push(...sources);
-              }
-            }
-            break;
-          case Processes.PICKING_SURFACE:
-            {
-              const surfs = this.workspace.children.filter((x) => !x["kind"].match(/source|receiver/gim));
-              if (surfs.length > 0) {
-                selectables.push(...surfs);
-              }
-            }
-            break;
-          case Processes.PICKING_VERTEX:
-            {
-              const pts = this.constructions.children.filter((x) => x["kind"] === "construction-point");
-              if (pts.length > 0) {
-                selectables.push(...pts);
-              }
-            }
-            break;
-          default:
-            break;
-        }
-        if (selectables.length > 0) {
-          const selection = this.pickHelper.pick(e, selectables);
-          if (selection.pickedObject) {
-            if (this.hoveredConstruction) {
-              this.hoveredConstruction.deselect();
-            }
-            selection.pickedObject.select();
-            this.hoveredConstruction = selection.pickedObject;
-          } else {
-            if (this.hoveredConstruction) {
-              this.hoveredConstruction.deselect();
-              this.hoveredConstruction = undefined;
-            }
-          }
-        }
-      }
       this.needsToRender = true;
     });
 
@@ -967,65 +876,7 @@ export default class Renderer {
     var triangleShape = new THREE.Shape().moveTo(80, 20).lineTo(40, 80).lineTo(120, 80).lineTo(80, 20); // close path
   }
 
-  addDefaultConstructions() {
-    const origin = new ConstructionPoint("Origin", {
-      point: new THREE.Vector3(0, 0, 0)
-    });
-    origin.visible = false;
 
-    messenger.postMessage("ADD_CONSTRUCTION", origin);
-    this.constructions.add(origin);
-
-    const xAxis = new ConstructionAxis("X-Axis", {
-      p0: new THREE.Vector3(0.25, 0, 0),
-      p1: new THREE.Vector3(3, 0, 0),
-      color: 0xff0000
-    });
-    xAxis.visible = false;
-    const yAxis = new ConstructionAxis("Y-Axis", {
-      p0: new THREE.Vector3(0, 0.25, 0),
-      p1: new THREE.Vector3(0, 3, 0),
-      color: 0x00ff00
-    });
-    yAxis.visible = false;
-    const zAxis = new ConstructionAxis("Z-Axis", {
-      p0: new THREE.Vector3(0, 0, 0.25),
-      p1: new THREE.Vector3(0, 0, 3),
-      color: 0x0000ff
-    });
-    zAxis.visible = false;
-
-    messenger.postMessage("ADD_CONSTRUCTION", xAxis);
-    messenger.postMessage("ADD_CONSTRUCTION", yAxis);
-    messenger.postMessage("ADD_CONSTRUCTION", zAxis);
-    this.constructions.add(xAxis, yAxis, zAxis);
-
-    const xyPlane = new ConstructionPlane("XY-Plane", {
-      normal: new THREE.Vector3(0, 0, 1),
-      point: new THREE.Vector3(1.25, 1.25, 0),
-      width: 2,
-      height: 2
-    });
-    xyPlane.visible = false;
-    const zyPlane = new ConstructionPlane("ZY-Plane", {
-      normal: new THREE.Vector3(1, 0, 0),
-      point: new THREE.Vector3(0, 1.25, 1.25),
-      width: 2,
-      height: 2
-    });
-    zyPlane.visible = false;
-    const xzPlane = new ConstructionPlane("XZ-Plane", {
-      normal: new THREE.Vector3(0, 1, 0),
-      point: new THREE.Vector3(1.25, 0, 1.25),
-      width: 2,
-      height: 2
-    });
-    xzPlane.visible = false;
-    messenger.postMessage("ADD_CONSTRUCTION", xyPlane);
-    messenger.postMessage("ADD_CONSTRUCTION", zyPlane);
-    messenger.postMessage("ADD_CONSTRUCTION", xzPlane);
-    this.constructions.add(xyPlane, zyPlane, xzPlane);
-  }
 
   update() {
     if (this.smoothingCamera) {

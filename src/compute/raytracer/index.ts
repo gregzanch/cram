@@ -944,8 +944,6 @@ class RayTracer extends Solver {
 
       (this.stats.numRaysShot.value as number)++;
     }
-
-    messenger.postMessage("RAYTRACER_RESULTS_SHOULD_UPDATE");
   }
 
   start() {
