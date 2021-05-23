@@ -74,8 +74,8 @@ export class Source extends Container {
   mesh: THREE.Mesh;
   selectedMaterial: THREE.MeshMatcapMaterial;
   normalMaterial: THREE.MeshMatcapMaterial;
-  amplitude: number;
-  frequency: number;
+  amplitude: number; // for FDTD only 
+  frequency: number; // for FDTD only 
   phase: number;
   value: number;
   previousValue: number;
@@ -90,6 +90,8 @@ export class Source extends Container {
   private _initialSPL: number;
   private _initialIntensity: number;
   fdtdSamples: number[];
+
+  public input_power: number; 
   public directivityHandler: DirectivityHandler; 
 
   constructor(name?: string, props?: SourceProps) {
@@ -110,6 +112,8 @@ export class Source extends Container {
     this.velocity = 0;
     this.rgba = [0, 0, 0, 1];
     this.fdtdSamples = [] as number[];
+    
+    this.input_power = 1; 
     this.directivityHandler = new DirectivityHandler(0); // assume omni source 
 
     this.selectedMaterial = new THREE.MeshMatcapMaterial({
@@ -384,7 +388,6 @@ on("SOURCE_SET_PROPERTY", setContainerProperty);
 on("SOURCE_CALL_METHOD", callContainerMethod);
 
 export const getSources = () => getContainersOfKind<Source>("source");
-
 export default Source;
 
 
@@ -403,6 +406,7 @@ export class DirectivityHandler {
 
   constructor(sourceType: number, importData?: CLFResult){ 
     // if we add more input types, make corresponding result types acceptable as importData type
+    // note: if this.frequencies = [0] ... data is same at all frequencies (e.g. ideal omni source)
 
     this.sourceDirType = sourceType; 
 
@@ -412,7 +416,7 @@ export class DirectivityHandler {
         this.dirDataList = []; 
         this.phi = []; 
         this.theta = []; 
-        this.sensitivity = [90]; // placeholder (90 dBSPL on-axis 1m away at all frequencies)
+        this.sensitivity = [100]; // placeholder (100 dBSPL on-axis @ 1m @ 1W input @ all frequencies)
 
         break; 
       
@@ -450,13 +454,13 @@ export class DirectivityHandler {
 
   } 
 
-  getPressureAtPosition(gain: number,frequency:number,phi:number,theta:number){
+  getPressureAtPosition(power_input: number,frequency:number,phi:number,theta:number){
     // returns relative Pa of source at a position w.r.t on-axis value 
 
     switch(this.sourceDirType){
 
       case 0: // omni
-        return ac.Lp2P(this.sensitivity[0]+gain); 
+        return ac.Lp2P(this.sensitivity[0]+(10*Math.log10(power_input))); 
 
       case 1: // CLF defined
 
@@ -523,11 +527,11 @@ export class DirectivityHandler {
         console.log(p3);
         console.log(p4);
 
-        let interp_pressure = ac.Lp2P(dirinterp(phi,theta,p1,p2,p3,p4)+this.sensitivity[f_index]+gain)
+        let interp_pressure = ac.Lp2P(dirinterp(phi,theta,p1,p2,p3,p4)+this.sensitivity[f_index]+10*Math.log10(power_input))
         return interp_pressure;
 
       default: // behave as omni
-        return ac.Lp2P(this.sensitivity[0]+gain);;
+        return ac.Lp2P(this.sensitivity[0]+(10*Math.log10(power_input)));;
     
     }
 

@@ -862,8 +862,6 @@ class RayTracer extends Solver {
       const direction = new THREE.Vector3().setFromSphericalCoords(1, threeJSAngles[0], threeJSAngles[1]);
       direction.applyEuler(rotation);
 
-      // assign source energy as a function of direction 
-      let sourceDH = (useContainer.getState().containers[this.sourceIDs[i]] as Source).directivityHandler;
       let initialEnergy = 1; // used for plotting
 
       // get the path traced by the ray
@@ -1675,11 +1673,15 @@ class RayTracer extends Solver {
     return pathsObj;
   }
 
-  arrivalPressure(initialSPL: number[], freqs: number[], path: RayPath): number[]{
+  arrivalPressure(freqs: number[], path: RayPath): number[]{
 
-    const intensities = ac.P2I(ac.Lp2P(initialSPL)) as number[];  
-  
-  
+    let source = (useContainer.getState().containers[this.sourceIDs[0]] as Source)
+    let sourceDH = source.directivityHandler;
+
+    let intensities: number[] = []; 
+    for(let f=0; f<freqs.length; f++){
+      intensities.push(ac.P2I(sourceDH.getPressureAtPosition(source.input_power,freqs[f],path.initialPhi,path.initialTheta)) as number)
+    }
   
     // for each surface that the ray intersected
     path.chain.slice(0,-1).forEach(p => {
@@ -1689,7 +1691,7 @@ class RayTracer extends Solver {
       intensities.forEach((I, i) => {
         let R; 
         if (freqs[i]==16000){
-            R = 1 - surface.absorptionFunction(freqs[8000]); // reflection coefficient
+            R = 1 - surface.absorptionFunction(freqs[8000]); // reflection coefficient @ 16k = 8k 
         }else{
             R = 1 - surface.absorptionFunction(freqs[i]); // reflection coefficient
         }
@@ -1707,7 +1709,8 @@ class RayTracer extends Solver {
     // convert back to pressure
     return ac.Lp2P(arrivalLp) as number[]; 
   }
-  async calculateImpulseResponse(initialSPL = 100, frequencies = ac.Octave(63, 16000), sampleRate = audioEngine.sampleRate) {
+
+  async calculateImpulseResponse(frequencies = ac.Octave(63, 16000), sampleRate = audioEngine.sampleRate) {
     if(this.receiverIDs.length == 0) throw Error("No receivers have been assigned to the raytracer");
     if(this.sourceIDs.length == 0) throw Error("No sources have been assigned to the raytracer");
     if(this.paths[this.receiverIDs[0]].length == 0) throw Error("No rays have been traced yet");
@@ -1715,8 +1718,6 @@ class RayTracer extends Solver {
     let sorted = this.paths[this.receiverIDs[0]].sort((a,b)=>a.time - b.time) as RayPath[];
 
     const totalTime = sorted[sorted.length - 1].time + 0.05; // end time is latest time of arrival plus 0.1 seconds for safety
-
-    const spls = Array(frequencies.length).fill(initialSPL);
 
     // doubled the number of samples to mitigate the signal reversing
     const numberOfSamples = floor(sampleRate * totalTime) * 2;
@@ -1749,7 +1750,7 @@ class RayTracer extends Solver {
       }
 
       let image_source_solver = new ImageSourceSolver(isparams, true); 
-      let is_raypaths = image_source_solver.returnSortedPathsForHybrid(343,spls,frequencies); 
+      let is_raypaths = image_source_solver.returnSortedPathsForHybrid(343,frequencies); // TODO: FIX phi / theta detection in returnSortedPathsForHybrid(...) function! 
 
       // add in hybrid paths 
       for(let i = 0; i<is_raypaths.length; i++){
@@ -1767,7 +1768,9 @@ class RayTracer extends Solver {
     for(let i = 0; i<sorted.length; i++){
       const randomPhase = coinFlip() ? 1 : -1;
       const t = sorted[i].time; 
-      const p = this.arrivalPressure(spls, frequencies, sorted[i]).map(x => x * randomPhase); 
+
+      const p = this.arrivalPressure(frequencies, sorted[i]).map(x => x * randomPhase); 
+
       const roundedSample = floor(t * sampleRate);
 
       for(let f = 0; f<frequencies.length; f++){
@@ -1791,15 +1794,12 @@ class RayTracer extends Solver {
       }
     }
 
-
-
     const offlineContext = audioEngine.createOfflineContext(1, signal.length, sampleRate);
 
     const source = audioEngine.createBufferSource(normalize(signal), offlineContext)
 
     source.connect(offlineContext.destination);
     source.start();
-
 
     this.impulseResponse = await audioEngine.renderContextAsync(offlineContext);
     return this.impulseResponse;
@@ -1846,7 +1846,7 @@ class RayTracer extends Solver {
     for(let i = 0; i<sorted.length; i++){
       const randomPhase = coinFlip() ? 1 : -1;
       const t = sorted[i].time; 
-      const p = this.arrivalPressure(spls, frequencies, sorted[i]).map(x => x * randomPhase); 
+      const p = this.arrivalPressure(frequencies, sorted[i]).map(x => x * randomPhase); 
       const roundedSample = floor(t * sampleRate);
 
       for(let f = 0; f<frequencies.length; f++){

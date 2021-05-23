@@ -75,6 +75,12 @@ const Configuration = ({ uuid }: { uuid: string }) => {
     <PropertyRowFolder label="Configuration" open={open} onOpenClose={toggle}>
       <PropertyNumberInput
         uuid={uuid}
+        label="Power Input (W)"
+        property="input_power"
+        tooltip="Sets electrical power input to source"
+      /> 
+      <PropertyNumberInput
+        uuid={uuid}
         label="θ Theta"
         property="theta"
         tooltip="Sets theta" 

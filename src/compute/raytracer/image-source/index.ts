@@ -248,6 +248,7 @@ class ImageSourcePath{
   
   public arrivalPressure(initialSPL: number[], freqs: number[]): number[]{
 
+
     let intensity = ac.P2I(ac.Lp2P(initialSPL)) as number[];  
     let arrivalPressure = []; 
 
@@ -496,13 +497,21 @@ export class ImageSourceSolver extends Solver {
     }
 
     // hybrid solver use only
-    returnSortedPathsForHybrid(c: number, initialSPLs: number[], freqs: number[]){
+    returnSortedPathsForHybrid(c: number, freqs: number[]){
       this.updateImageSourceCalculation(); 
 
       let sortedPath: ImageSourcePath[] | null = this.validRayPaths; 
       sortedPath?.sort((a, b) => (a.arrivalTime(c) > b.arrivalTime(c)) ? 1 : -1); 
 
       let result: HybridRayPath[] = [];
+
+      let source = (useContainer.getState().containers[this.sourceIDs[0]] as Source)
+      let sourceDH = source.directivityHandler;
+
+      let initialSPLs: number[] = []; 
+      for(let f=0; f<freqs.length; f++){
+        initialSPLs.push(ac.P2Lp(sourceDH.getPressureAtPosition(source.input_power,freqs[f],0,0)) as number) // PLACEHOLDER
+      }
 
       if(sortedPath != undefined){
         for(let i = 0; i<sortedPath?.length; i++){
