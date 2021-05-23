@@ -751,7 +751,7 @@ class RayTracer extends Solver {
 
     let angle = 0;
 
-    const intensities = Array(frequencies.length).fill(source.initialIntensity);
+    const intensities = Array(frequencies.length).fill(120); //placeholder
 
     let iter = 0;
     const maxOrder = 1000;
@@ -792,7 +792,7 @@ class RayTracer extends Solver {
           }
           intensities[f] *= coefficient;
           // const level = (ac.P2Lp(ac.I2P()) as number) - airAttenuationdB[f];
-          const freqDoneDecaying = source.initialIntensity / intensities[f] > 1000000;
+          const freqDoneDecaying = 120 / intensities[f] > 1000000; //placeholder
           if (freqDoneDecaying) {
             rt60s[f] = distance / soundSpeed;
           }
@@ -1291,7 +1291,7 @@ class RayTracer extends Solver {
         };
 
         // source total intensity
-        const Itotal = ac.P2I(ac.Lp2P((useContainer.getState().containers[sourceKey] as Source).initialSPL)) as number;
+        const Itotal = ac.P2I(ac.Lp2P(120)) as number; // placeholder
 
         // for each path
         for (let i = 0; i < paths[receiverKey][sourceKey].length; i++) { 

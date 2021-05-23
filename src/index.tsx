@@ -308,10 +308,6 @@ messenger.addMessageHandler("FETCH_SOURCE", (acc, ...args) => {
   return cram.state.containers[args[0]];
 });
 
-
-
-
-
 messenger.addMessageHandler("SHOULD_ADD_SOURCE", (acc, ...args) => {
   const source = new Source("new source");
   let shouldAddMoment = true;

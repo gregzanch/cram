@@ -11,6 +11,7 @@ import PropertyRowLabel from "./property-row/PropertyRowLabel";
 import PropertyRowCheckbox from "./property-row/PropertyRowCheckbox";
 import PropertyButton from "./property-row/PropertyButton";
 import { CLFParser } from "../../import-handlers/CLFParser";
+import { emit } from "../../messenger";
 
 const { PropertyTextInput, PropertyNumberInput, PropertyCheckboxInput, PropertyVectorInput, PropertySelect } = createPropertyInputs<Source>(
   "SOURCE_SET_PROPERTY"
@@ -79,17 +80,37 @@ const Configuration = ({ uuid }: { uuid: string }) => {
         property="input_power"
         tooltip="Sets electrical power input to source"
       /> 
+      <PropertyRow>
+        <PropertyRowLabel label="CLF Data" tooltip="Import CLF tab-delimited directivity files"/>
+        <div>
+          <input
+          type = "file"
+          id = "clfinput"
+          accept = ".tab"
+          onChange={(e) => {
+              console.log(e.target.files);
+              const reader = new FileReader();
+              reader.addEventListener('loadend', (loadEndEvent) => {
+                  let filecontents:string = reader.result as string; 
+                  emit("LOAD_CLF_DATA",{uuid: uuid, clffiledata: filecontents})
+              });
+              reader.readAsText(e.target!.files![0]);
+            }
+          }
+          />
+        </div>
+      </PropertyRow>
       <PropertyNumberInput
         uuid={uuid}
-        label="θ Theta"
+        label="Maximum θ Theta"
         property="theta"
-        tooltip="Sets theta" 
+        tooltip="Sets maximum theta" 
       />
       <PropertyNumberInput
         uuid={uuid}
-        label="φ Phi"
+        label="Maximum φ Phi"
         property="phi"
-        tooltip="Sets phi" 
+        tooltip="Sets maximum phi" 
       />
     </PropertyRowFolder>
   );
@@ -144,7 +165,6 @@ const CLFConfig = ({uuid}: {uuid: string}) => {
                   let clf_results = clf.parse();
                   const source = useContainer.getState().containers[uuid] as Source;
                   source.directivityHandler = new DirectivityHandler(1,clf_results); 
-
 
                   // display CLF parser object (debugging)
                   console.log(clf);

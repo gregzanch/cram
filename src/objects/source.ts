@@ -8,8 +8,8 @@ import { EditorModes } from "../constants/editor-modes";
 import { P2I, Lp2P } from "../compute/acoustics";
 import FileSaver from "file-saver";
 import { on } from "../messenger";
-import { addContainer, callContainerMethod, removeContainer, setContainerProperty, useContainer } from "../store";
-import {CLFResult} from "../import-handlers/CLFParser";
+import { addContainer, callContainerMethod, removeContainer, setContainerProperty, useContainer, useSolver } from "../store";
+import {CLFParser, CLFResult} from "../import-handlers/CLFParser";
 import {dirinterp, dirDataPoint} from "../common/dir-interpolation";
 import { AllowedNames, FilterFlags, filterObjectToArray } from "../common/helpers";
 import { renderer } from "../render/renderer";
@@ -87,8 +87,6 @@ export class Source extends Container {
   shouldClearPreviousPosition: boolean;
   pinkNoiseSamples: Float32Array;
   public signalSource: SignalSource;
-  private _initialSPL: number;
-  private _initialIntensity: number;
   fdtdSamples: number[];
 
   public input_power: number; 
@@ -102,8 +100,6 @@ export class Source extends Container {
     this.previousY = this.position.y;
     this.previousZ = this.position.z;
     this.shouldClearPreviousPosition = false;
-    this._initialSPL = 120;
-    this._initialIntensity = P2I(Lp2P(this._initialSPL)) as number;
     this.amplitude = 1;
     this.frequency = 100;
     this.phase = 0;
@@ -336,6 +332,15 @@ export class Source extends Container {
     }
   }
 
+  loadCLFData(filecontents:string){
+    let clf = new CLFParser(filecontents);
+    let clf_results = clf.parse();
+    this.directivityHandler = new DirectivityHandler(1,clf_results); 
+    
+    let alert_text = "CLF Directivity Data for " + clf_results.speakerName + " successfully loaded into " + this.name; 
+    alert(alert_text)
+  }
+
   get color() {
     return String.fromCharCode(35) + (this.mesh.material as THREE.MeshBasicMaterial).color.getHexString();
   }
@@ -349,15 +354,6 @@ export class Source extends Container {
       (this.normalMaterial as THREE.MeshMatcapMaterial).color.setHex(col);
       (this.selectedMaterial as THREE.MeshMatcapMaterial).color.setHex(col);
     }
-  }
-  get initialSPL() {
-    return this._initialSPL;
-  }
-  set initialSPL(spl: number) {
-    this._initialSPL = spl;
-  }
-  get initialIntensity() {
-    return this._initialIntensity;
   }
   get brief() {
     return {
@@ -378,12 +374,17 @@ declare global {
     SOURCE_SET_PROPERTY: SetPropertyPayload<Source>;
     REMOVE_SOURCE: string;
     SOURCE_CALL_METHOD: CallContainerMethod<Source>;
+    LOAD_CLF_DATA: {
+      uuid: string; 
+      clffiledata: string; 
+    } 
   }
 }
 
 
 on("ADD_SOURCE", addContainer(Source));
 on("REMOVE_SOURCE", removeContainer);
+on("LOAD_CLF_DATA", (e: {uuid: string, clffiledata: string}) => void (useContainer.getState().containers[e.uuid] as Source).loadCLFData(e.clffiledata));
 on("SOURCE_SET_PROPERTY", setContainerProperty);
 on("SOURCE_CALL_METHOD", callContainerMethod);
 
