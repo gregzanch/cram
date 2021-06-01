@@ -185,7 +185,6 @@ export function ToolMenu(props: MenuProps) {
     content={
       <Menu>
         <MenuItemWithMessenger label="CLF Viewer" message="OPEN_CLF_VIEWER" />
-        <MenuItemWithMessenger label="Image Source Test" message="SHOULD_ADD_IMAGE_SOURCE" />
       </Menu>
     }
     placement="bottom-start"
