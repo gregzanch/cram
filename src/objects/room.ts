@@ -11,6 +11,8 @@ import { emit, on } from "../messenger";
 import { addContainer, removeContainer, setContainerProperty, useContainer } from "../store";
 import { renderer } from "../render/renderer";
 import { filterObjectToArray } from "../common/helpers";
+import { TessellateModifier } from "../compute/radiance/TessellateModifier";
+import { Mesh } from "three";
 
 export interface RoomProps extends ContainerProps {
   surfaces: (Surface|Container)[];
@@ -42,15 +44,18 @@ export class Room extends Container {
   originalFileName!: string;
   originalFileData!: string;
   surfaceMap!: KVP<Surface>;
+
   constructor(name?: string, props?: RoomProps) {
     super(name || "new room");
     this.kind = "room";
+
     props && this.init(props, true);
   }
   init(props: RoomProps, fromConstructor: boolean = false) {
     if (!fromConstructor) {
       this.remove(this.surfaces);
     }
+    
     
     this.surfaces = new Container("surfaces");
     this.originalFileName = props.originalFileName || "";
@@ -70,7 +75,7 @@ export class Room extends Container {
     this.add(this.surfaces);
     this.calculateBoundingBox();
     this.volume = this.volumeOfMesh();
-    this.surfaceMap = this._surfaces.reduce((a, b) => {
+    this.surfaceMap = this.allSurfaces.reduce((a, b) => {
       a[b.uuid] = b as Surface;
       return a;
     }, {} as KVP<Surface>);
@@ -78,7 +83,7 @@ export class Room extends Container {
   }
   dispose(){
     renderer.remove(this);
-    this._surfaces.forEach(surface=>{
+    this.allSurfaces.forEach(surface=>{
       emit("REMOVE_SURFACE", surface.uuid);
     })
   }
@@ -134,7 +139,7 @@ export class Room extends Container {
   }
 
   calculateBoundingBox() {
-    this.boundingBox = this._surfaces.reduce((a: THREE.Box3, b: Container) => {
+    this.boundingBox = this.allSurfaces.reduce((a: THREE.Box3, b: Container) => {
       (b as Surface).geometry.computeBoundingBox();
       return (a as THREE.Box3).union((b as Surface).geometry.boundingBox);
     }, new THREE.Box3());
@@ -145,7 +150,7 @@ export class Room extends Container {
   }
   volumeOfMesh() {
     let sum = 0;
-    this._surfaces.forEach((surface: Surface) => {
+    this.allSurfaces.forEach((surface: Surface) => {
       surface._triangles.forEach((triangle: THREE.Triangle) => {
         sum += this.signedVolumeOfTriangle(triangle.a, triangle.b, triangle.c);
       });
@@ -155,10 +160,10 @@ export class Room extends Container {
   calculateMeanAbsorptionCoefficientFromHits(frequencies: number[] = third_octave) {
     let totalHits = 0;
     const ha = [] as number[][];
-    for (let i = 0; i < this._surfaces.length; i++) {
-      const numHits = (this._surfaces[i] as Surface).numHits;
+    for (let i = 0; i < this.allSurfaces.length; i++) {
+      const numHits = (this.allSurfaces[i] as Surface).numHits;
       totalHits += numHits;
-      ha.push(frequencies.map((freq) => (this._surfaces[i] as Surface).absorptionFunction(freq) * numHits));
+      ha.push(frequencies.map((freq) => (this.allSurfaces[i] as Surface).absorptionFunction(freq) * numHits));
     }
     if (totalHits > 0) {
       console.log(ha);
@@ -185,7 +190,7 @@ export class Room extends Container {
     this.volume = this.volumeOfMesh();
     const unitsConstant = RT_CONSTANTS[this.units] || RT_CONSTANTS[UNITS.METERS];
     const { totalHits, meanAbsorption } = this.calculateMeanAbsorptionCoefficientFromHits(frequencies);
-    const totalSurfaceArea = this._surfaces.reduce((a, b) => a + (b as Surface).getArea(), 0);
+    const totalSurfaceArea = this.allSurfaces.reduce((a, b) => a + (b as Surface).getArea(), 0);
     if (totalHits > 0) {
       const t60 = meanAbsorption.map((alpha) => {
         return (unitsConstant * this.volume) / (alpha * totalSurfaceArea);
@@ -197,7 +202,15 @@ export class Room extends Container {
     }
   }
 
-  get _surfaces(){
+  tessellateSurfaces(maxEdgeLength = 0.1, maxIterations = 6){
+    const tessellateModifier = new TessellateModifier(maxEdgeLength, maxIterations);
+    this.allSurfaces.forEach(surface=>surface.tessellate(tessellateModifier));
+  }
+
+  /**
+   * an array surfaces that make up this room
+   */
+  get allSurfaces(){
     const surfaces = [] as Surface[];
     this.surfaces.traverse((container)=>{
       if(container["kind"] && container["kind"] === "surface"){
@@ -207,13 +220,15 @@ export class Room extends Container {
     return surfaces;
   }
 
+
+
   get brief() {
     return {
       uuid: this.uuid,
       name: this.name,
       selected: this.selected,
       //@ts-ignore
-      children: this._surfaces.map((x) => x.brief),
+      children: this.allSurfaces.map((x) => x.brief),
       kind: this.kind
     };
   }

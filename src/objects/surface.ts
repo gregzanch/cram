@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import Container, { ContainerProps } from "./container";
-import { chunk } from "../common/chunk";
+import { chunk, chunkf32 } from "../common/chunk";
 import roundTo from "../common/round-to";
 import { KeyValuePair } from "../common/key-value-pair";
 import interpolateAlpha from "../compute/acoustics/interpolate-alpha";
@@ -13,6 +13,9 @@ import { numbersEqualWithinTolerence, equalWithinTolerenceFactory } from "../com
 import { addContainer, removeContainer, setContainerProperty, setNestedContainerProperty } from "../store";
 import { on } from "../messenger";
 import {scatteringFunction} from '../compute/acoustics/scattering-function';
+import { TessellateModifier } from "../compute/radiance/TessellateModifier";
+import { Float32BufferAttribute } from "three";
+import SurfaceElement from "./surface-element";
 
 const v3eq = equalWithinTolerenceFactory(["x", "y", "z"])(csg.math.constants.EPS as number);
 
@@ -23,7 +26,7 @@ export type Vector3A = [number, number, number];
 export type TriangleA= [Vector3A, Vector3A, Vector3A];
 
 /** Triangle Array */
-export type Triangles = TriangleA[];
+export type Triangles = number[][][];
 
 
 const defaults = {
@@ -200,9 +203,7 @@ class Surface extends Container {
   mesh!: THREE.Mesh;
   wire!: THREE.Mesh;
   edges!: THREE.LineSegments;
-
   center!: THREE.Vector3;
-
   triangles!: Triangles;
   fillSurface!: boolean;
   vertexNormals!: THREE.VertexNormalsHelper;
@@ -210,6 +211,9 @@ class Surface extends Container {
   selectedMaterial!: THREE.MeshLambertMaterial;
   normalMaterial!: THREE.MeshLambertMaterial;
   normalColor!: THREE.Color;
+
+  /** tessellation of this surface (used for ART) */
+  tessellatedMesh = null as THREE.Mesh|null;
 
   // for acoustics
   numHits!: number;
@@ -227,7 +231,7 @@ class Surface extends Container {
   polygon!: poly3type;
   normal!: THREE.Vector3;
   eventDestructors!: Array<() => void>;
-  // renderer: Renderer;
+
   constructor(name: string, props?: SurfaceProps) {
     super(name);
     this.kind = "surface";
@@ -551,6 +555,27 @@ class Surface extends Container {
     return surface;
   }
 
+
+  tessellate(tessellateModifier: TessellateModifier){
+    if(this.tessellatedMesh){
+      this.remove(this.tessellatedMesh);
+    }
+    const geometry = tessellateModifier.modify( this.geometry );
+    this.tessellatedMesh = new THREE.Mesh(geometry, this.wire.material);
+    this.add(this.tessellatedMesh);
+
+    const position = geometry.getAttribute('position') as Float32BufferAttribute;
+    const array = position.array as Float32Array;
+    const surfaceElements = [] as SurfaceElement[];
+    for(let i = 0; i<position.count; i+=3){
+      const element = new SurfaceElement(position, i+0, i+1, i+2);
+      surfaceElements.push(element);
+    }
+    
+
+    return this.tessellatedMesh;
+  }
+
   get edgesVisible() {
     return this.edges.visible;
   }
@@ -595,6 +620,20 @@ class Surface extends Container {
   set wireframeVisible(visible: boolean) {
     this.wire.visible = visible;
   }
+  get tessellatedMeshVisible(){
+    return this.tessellatedMesh ? this.tessellatedMesh.visible : false;
+  }
+
+  set tessellatedMeshVisible(visible: boolean) {
+    if(this.tessellatedMesh){
+      this.tessellatedMesh.visible = visible;
+    }
+  }
+
+  get isTessellated(){
+    return this.tessellatedMesh !== null;
+  }
+
   get room() {
     return this.parent!.parent! as Room;
   }

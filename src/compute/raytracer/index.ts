@@ -483,21 +483,18 @@ class RayTracer extends Solver {
   }
 
   mapIntersectableObjects() {
-    function mapSurfaces(container: Container, surfaces: THREE.Mesh[] = [] as THREE.Mesh[]) {
-      if (container instanceof Surface) {
-        surfaces.push(container.mesh);
-      } else {
-        container.children.forEach((x: Container) => {
-          mapSurfaces(x, surfaces);
-        });
+    const surfaces = [] as THREE.Mesh[];
+
+    this.room.surfaces.traverse((container)=>{
+      if(container["kind"] && container["kind"] === "surface"){
+        surfaces.push((container as Surface).mesh);
       }
-      return surfaces;
-    }
+    });
 
     if (this.runningWithoutReceivers) {
-      this.intersectableObjects = mapSurfaces(this.room.surfaces);
+      this.intersectableObjects = surfaces;
     } else {
-      this.intersectableObjects = mapSurfaces(this.room.surfaces).concat(this.receivers);
+      this.intersectableObjects = surfaces.concat(this.receivers);
     }
   }
 
@@ -986,8 +983,8 @@ class RayTracer extends Solver {
   }
   clearRays() {
     if (this.room) {
-      for (let i = 0; i < this.room._surfaces.length; i++) {
-        (this.room._surfaces[i] as Surface).resetHits();
+      for (let i = 0; i < this.room.allSurfaces.length; i++) {
+        (this.room.allSurfaces[i] as Surface).resetHits();
       }
     }
     this.validRayCount = 0;
@@ -1547,7 +1544,7 @@ class RayTracer extends Solver {
     //             sources[nofSources++] = newSource
     //             if (maxOrder > 0)
     //                 computeImageSources(newSource, surface, maxOrder - 1)
-    for(const surface of this.room._surfaces){
+    for(const surface of this.room.allSurfaces){
       if(surface.uuid !== previousReflector.uuid){
         
       }

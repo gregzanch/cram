@@ -15,6 +15,7 @@ import RoomTab from './RoomTab';
 import SourceTab from './SourceTab';
 import ReceiverTab from './ReceiverTab';
 import SurfaceTab from './SurfaceTab';
+import ARTTab from './ARTTab';
 
 
 const SelectContainer = styled.div`
@@ -39,7 +40,8 @@ const SolverComponentMap = new Map<string, ({ uuid }) => JSX.Element>([
   ["ray-tracer", RayTracerTab],
   ["rt60", RT60Tab],
   ["fdtd-2d", FDTD_2DTab],
-  ["energydecay", EnergyDecayTab]
+  ["energydecay", EnergyDecayTab],
+  ["art", ARTTab]
 ]);
 
 const ObjectComponentMap = new Map<string, ({ uuid }) => JSX.Element>([
