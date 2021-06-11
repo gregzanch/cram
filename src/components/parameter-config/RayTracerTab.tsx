@@ -182,6 +182,7 @@ const SolverControls = ({ uuid }: { uuid: string }) => {
     <PropertyRowFolder label="Solver Controls" open={open} onOpenClose={toggle}>
       <PropertyCheckboxInput uuid={uuid} label="Running" property="isRunning" tooltip="Starts/stops the raytracer" />
       <PropertyButton event="RAYTRACER_CLEAR_RAYS" args={uuid} label="Clear Rays" tooltip="Clears all of the rays" />
+      <PropertyButton event="START_BILLIARD" args={uuid} label="Billiard" tooltip="Billiard Test"/>
     </PropertyRowFolder>
   );
 };
