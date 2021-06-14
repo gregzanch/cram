@@ -15,6 +15,7 @@ import RoomTab from './RoomTab';
 import SourceTab from './SourceTab';
 import ReceiverTab from './ReceiverTab';
 import SurfaceTab from './SurfaceTab';
+import BouncyBallSolverTab from './BouncyBallSolverTab';
 
 
 const SelectContainer = styled.div`
@@ -38,8 +39,9 @@ const SolverComponentMap = new Map<string, ({ uuid }) => JSX.Element>([
   ["image-source", ImageSourceTab],
   ["ray-tracer", RayTracerTab],
   ["rt60", RT60Tab],
+  ["bouncy-ball-solver", BouncyBallSolverTab],
   ["fdtd-2d", FDTD_2DTab],
-  ["energydecay", EnergyDecayTab]
+  ["energydecay", EnergyDecayTab],
 ]);
 
 const ObjectComponentMap = new Map<string, ({ uuid }) => JSX.Element>([
@@ -55,8 +57,6 @@ const SolverOptionTitle = ({ uuid }) => {
     <option value={uuid}>{name}</option>
   );
 };
-
-
 
 export const SolversTab = () => {
   const solvers = useSolver(state=>state.withProperty(solver=>solver.kind))

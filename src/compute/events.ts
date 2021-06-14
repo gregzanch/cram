@@ -6,10 +6,12 @@ import RT60, { RT60SaveObject } from "./rt";
 import Solver from "./solver";
 import ImageSourceSolver, { ImageSourceSaveObject } from "./raytracer/image-source";
 import registerFDTDEvents from './2d-fdtd/events';
+import { BouncyBallSaveObject, BouncyBallSolver } from "./bouncyball";
+import { BREADCRUMBS_COLLAPSED } from "@blueprintjs/core/lib/esm/common/classes";
 
 declare global {
   interface EventTypes {
-    RESTORE_SOLVERS: (RayTracerSaveObject | RT60SaveObject | ImageSourceSaveObject)[];
+    RESTORE_SOLVERS: (RayTracerSaveObject | RT60SaveObject | ImageSourceSaveObject | BouncyBallSaveObject)[];
     REMOVE_SOLVERS: string|string[];
     LOG_SOLVER: string;
   }
@@ -57,6 +59,9 @@ export default function registerSolverEvents(){
             draft.solvers[s!.uuid] = s;
           });
           // emit("ADD_IMAGESOURCE", restore(ImageSourceSolver, solver));
+          break;
+        case "bouncy-ball-solver":
+          emit("ADD_BOUNCYBALLSOLVER",restore(BouncyBallSolver,solver));
           break;
       }
     });

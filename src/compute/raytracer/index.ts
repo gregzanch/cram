@@ -207,36 +207,6 @@ export interface DrawStyle {
   ANGLE_ENERGY: 2.0;
 }
 
-class BilliardBall extends Container {
-
-  source: Source; 
-  initial_direction: Vector3; 
-
-  constructor(source: Source,  initial_direction: Vector3){
-    super("billiard_ball")
-    
-    this.kind = "billiard"
-    
-    let mesh = new THREE.Mesh(
-      new THREE.SphereGeometry(0.1, 32, 16),
-      new THREE.MeshBasicMaterial({color: 0xff0000})
-    );
-    mesh.userData["kind"] = "billiard";
-    this.add(mesh);
-
-    this.source = source; 
-    this.x = source.x; 
-    this.y = source.y; 
-    this.z = source.z 
-
-    this.initial_direction = initial_direction; 
-
-    this.renderCallback = (time?: number) => {};
-    renderer.add(this);
-  }
-}
-export const getBilliards = () => getContainersOfKind<BilliardBall>("billiard");
-
 class RayTracer extends Solver {
   roomID: string;
   sourceIDs: string[];
@@ -483,43 +453,6 @@ class RayTracer extends Solver {
       plotStyle,
       paths
     };
-  }
-
-  billiard(){
-    console.log("Billiard Start")
-
-    // random theta within the sources theta limits (0 to 180)
-    const theta = (Math.random()) * (useContainer.getState().containers[this.sourceIDs[0]] as Source).theta;
-
-    // random phi within the sources phi limits (0 to 360)
-    const phi = (Math.random()) * (useContainer.getState().containers[this.sourceIDs[0]] as Source).phi;
-
-    // random direction
-    let threeJSAngles: number[] = cramangle2threejsangle(phi, theta); // [phi, theta]
-    const direction = new THREE.Vector3().setFromSphericalCoords(1, threeJSAngles[0], threeJSAngles[1]);
-
-    let b = new BilliardBall(useContainer.getState().containers[this.sourceIDs[0]] as Source, direction)
-
-    emit("ADD_BILLIARD", b);
-    console.log(useContainer.getState().containers)
-
-    let uuid = b.uuid
-    let position = 0 
-
-    let i = 0 
-
-    setInterval(function(){ 
-       useContainer.getState().set(store => {
-         let bb = store.containers[uuid] as BilliardBall
-
-         bb.x = bb.x + bb.initial_direction.x*i; 
-         bb.y = bb.y + bb.initial_direction.y*i;
-         bb.z = bb.z + bb.initial_direction.z*i;
-
-         renderer.needsToRender = true 
-         i = i+0.1
-       });
-     }, 33.3);
   }
 
   removeMessageHandlers() {
@@ -2062,13 +1995,3 @@ on("RAYTRACER_CLEAR_RAYS", (uuid: string) => void (useSolver.getState().solvers[
 on("RAYTRACER_PLAY_IR", (uuid: string) => void (useSolver.getState().solvers[uuid] as RayTracer).playImpulseResponse().catch(console.error));
 on("RAYTRACER_DOWNLOAD_IR", (uuid: string) => void (useSolver.getState().solvers[uuid] as RayTracer).downloadImpulseResponse(`ir-${uuid}`).catch(console.error));
 on("RAYTRACER_DOWNLOAD_IR_OCTAVE", (uuid: string) => void (useSolver.getState().solvers[uuid] as RayTracer).downloadImpulses(uuid));
-
-declare global {
-  interface EventTypes {
-    ADD_BILLIARD: BilliardBall | undefined,
-    START_BILLIARD: String; 
-  }
-}
-
-on("ADD_BILLIARD", addContainer(BilliardBall));
-on("START_BILLIARD", (uuid: string) => void (useSolver.getState().solvers[uuid] as RayTracer).billiard());
