@@ -1,10 +1,13 @@
 import * as THREE from "three"
 import { Vector3 } from "three";
 import { uuid } from "uuidv4";
+import { omit } from "../../common/helpers";
+import { on } from "../../messenger";
 import Container, { getContainersOfKind } from "../../objects/container";
 import Source from "../../objects/source";
 import Surface from "../../objects/surface";
 import { renderer } from "../../render/renderer";
+import { addContainer, removeContainer, useContainer } from "../../store";
 
 export class BouncyBall extends Container {
 
@@ -15,6 +18,8 @@ export class BouncyBall extends Container {
     next_intersectionPoint: Vector3; 
 
     intersectableObjects: Array<THREE.Mesh | THREE.Object3D | Container>;
+
+    order: number;
 
     constructor(source: Source,  initial_direction: Vector3, intersectableObjects: Array<THREE.Mesh | THREE.Object3D | Container>){
         super("billiard_ball")
@@ -42,6 +47,8 @@ export class BouncyBall extends Container {
         this.current_direction = initial_direction; 
         this.next_direction = new Vector3; // placeholder
         this.next_intersectionPoint = new Vector3; // placeholder
+
+        this.order = 0; // direct sound
 
         this.detectNextIntersection(); 
 
@@ -83,6 +90,10 @@ export class BouncyBall extends Container {
 
         renderer.needsToRender = true 
     }
+
+    public incrementOrder(){
+
+    }
 }
 
 function vectorsEqualWithinTolerance(a: Vector3, b: Vector3, tolerance: number){
@@ -106,3 +117,21 @@ function numbersEqualWithinTolerance(a: number, b: number, tolerance: number){
 }
 
 export const getBilliards = () => getContainersOfKind<BouncyBall>("bouncyball");
+
+declare global{
+    interface EventTypes{
+        ADD_BOUNCYBALL: BouncyBall | undefined;
+        REMOVE_BOUNCYBALL: string; 
+    }
+}
+
+on("ADD_BOUNCYBALL", addContainer(BouncyBall));
+on("REMOVE_BOUNCYBALL", (uuid) => {
+    const containers = useContainer.getState().containers;
+    const bb = containers[uuid]; 
+    bb.dispose();
+    renderer.remove(bb);
+    useContainer.getState().set((state) => {
+        state.containers = omit([uuid], containers);
+    });
+}); 

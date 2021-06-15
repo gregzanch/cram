@@ -37,13 +37,16 @@ export class BouncyBallSolver extends Solver {
     sourceIDs: string[];
     roomID: string;
 
-    total_number_balls: number; 
+    public total_number_balls: number; 
     public distance_per_frame: number; 
     public framerate: number; 
 
     intersectableObjects: Array<THREE.Mesh | THREE.Object3D | Container>;
 
     bouncy_ball_uuids: string[];
+
+    running: boolean; 
+    interval_id: any; 
 
     constructor(params: BouncyBallSolverParams = defaults){
         super(params);
@@ -64,6 +67,9 @@ export class BouncyBallSolver extends Solver {
         this.total_number_balls = 1; 
         this.distance_per_frame = 0.1;
         this.framerate = 30; 
+
+        this.running = false; 
+        this.interval_id = null; 
 
         this.intersectableObjects = [] as Array<THREE.Mesh | THREE.Object3D | Container>;
         this.mapIntersectableObjects(); 
@@ -91,6 +97,8 @@ export class BouncyBallSolver extends Solver {
 
     start(){
 
+        this.running = true; 
+
         for(let i = 0; i<this.total_number_balls; i++){
             // random theta within the sources theta limits (0 to 180)
             const theta = Math.random() * (useContainer.getState().containers[this.sourceIDs[0]] as Source).theta;
@@ -113,7 +121,7 @@ export class BouncyBallSolver extends Solver {
         let bb_array = this.bouncy_ball_uuids; 
         let intlist = this.intersectableObjects;
 
-        setInterval(function(){ 
+        this.interval_id = setInterval(function(){ 
             for(let i = 0; i<bb_array.length; i++){
                 useContainer.getState().set(store => {
                     let bb = store.containers[bb_array[i]] as BouncyBall
@@ -121,6 +129,17 @@ export class BouncyBallSolver extends Solver {
                 });
             }
         }, (1/this.framerate)*1000)
+    }
+
+    reset(){
+      this.running = false; 
+      clearInterval(this.interval_id);
+      for(let i = 0; i<this.bouncy_ball_uuids.length; i++){
+        let bb = useContainer.getState().containers[this.bouncy_ball_uuids[i]] as BouncyBall
+        emit("REMOVE_BOUNCYBALL",bb.uuid)
+        renderer.needsToRender = true; 
+      }
+      this.bouncy_ball_uuids = [];
     }
     
 }
@@ -134,11 +153,11 @@ declare global {
         value: BouncyBallSolver[EventTypes["BOUNCYBALLSOLVER_SET_PROPERTY"]["property"]]; 
       }
       START_BOUNCYBALL: string,
-      ADD_BOUNCYBALL: BouncyBall | undefined 
+      RESET_BOUNCYBALLSOLVER: string 
     }
 }
 
-on("ADD_BOUNCYBALL", addContainer(BouncyBall));
 on("ADD_BOUNCYBALLSOLVER", addSolver(BouncyBallSolver))
 on("BOUNCYBALLSOLVER_SET_PROPERTY", setSolverProperty);
 on("START_BOUNCYBALL", (uuid: string) => void (useSolver.getState().solvers[uuid] as BouncyBallSolver).start());
+on("RESET_BOUNCYBALLSOLVER", (uuid: string) => void (useSolver.getState().solvers[uuid] as BouncyBallSolver).reset())

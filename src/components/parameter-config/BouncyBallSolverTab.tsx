@@ -35,13 +35,22 @@ const { PropertyTextInput, PropertyNumberInput, PropertyCheckboxInput } = create
 
 const General = ({ uuid }: { uuid: string }) => {
     const [open, toggle] = useToggle(true);
+    const {running} = useSolver(state=>pickProps(["running"], state.solvers[uuid] as BouncyBallSolver));
+    const [, forceUpdate] = useReducer((c) => c + 1, 0) as [never, () => void]
+    useEffect(()=>on("START_BOUNCYBALL", (e)=>{
+      forceUpdate(); 
+    }))
+    useEffect(()=>on("RESET_BOUNCYBALLSOLVER", (e)=> {
+      forceUpdate(); 
+    }))
     return (
         <PropertyRowFolder label="General" open={open} onOpenClose={toggle}>
             <PropertyTextInput uuid={uuid} label="Name" property="name" tooltip="Sets the name of this solver" />
             <PropertyNumberInput uuid={uuid} label="Total Balls" property="total_number_balls" tooltip="Sets total number balls"/>
             <PropertyNumberInput uuid={uuid} label="Speed" property="distance_per_frame" tooltip="Sets the ball travel distance per frame"/>
             <PropertyNumberInput uuid={uuid} label="Framerate" property="framerate" tooltip="Sets framerate"/>
-            <PropertyButton event="START_BOUNCYBALL" args={uuid} label="Start" tooltip="Starts Bouncy (Billiard) Ball Simulation"/>
+            <PropertyButton disabled={running} event="START_BOUNCYBALL" args={uuid} label="Start" tooltip="Starts Bouncy (Billiard) Ball Simulation"/>
+            <PropertyButton disabled={!running} event="RESET_BOUNCYBALLSOLVER" args={uuid} label="Reset" tooltip="Reset Bouncy (Billiard) Ball Simulation"/>
         </PropertyRowFolder>
     );
 };
