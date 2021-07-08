@@ -1,0 +1,13 @@
+diff --git a/node_modules/@tauri-apps/api/window.ts b/node_modules/@tauri-apps/api/window.ts
+index 1edb744..379b64d 100644
+--- a/node_modules/@tauri-apps/api/window.ts
++++ b/node_modules/@tauri-apps/api/window.ts
+@@ -443,7 +443,7 @@ class WindowManager {
+   async requestUserAttention(
+     requestType: UserAttentionType | null
+   ): Promise<void> {
+-    let requestType_ = null
++    let requestType_: { type: string } | null = null
+     if (requestType) {
+       if (requestType === UserAttentionType.Critical) {
+         requestType_ = { type: 'Critical' }
