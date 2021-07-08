@@ -6,13 +6,41 @@
 pub mod objects;
 
 use tauri::{CustomMenuItem, Menu, MenuItem, Submenu};
-use objects::scene::Scene;
+use objects::scene::{BufferGeometry, Material, Object3D, Scene};
+use std::collections::HashMap;
+use std::sync::Mutex;
+
+#[derive(Debug)]
+struct AppState {
+  geometries: Mutex<HashMap<String, BufferGeometry>>,
+  materials: Mutex<HashMap<String, Material>>,
+  objects: Mutex<Vec<Object3D>>
+}
 
 
 
 #[tauri::command]
-fn print_scene(scene: Scene) {
-  println!("passed in {:#?}", scene);
+fn add_scene(scene: Scene, state: tauri::State<AppState>) {
+
+  for geometry in scene.geometries.iter() {
+    state.geometries.lock().unwrap().insert(geometry.uuid.clone(), geometry.clone());
+  }
+  for material in scene.materials.iter() {
+    state.materials.lock().unwrap().insert(material.uuid.clone(), material.clone());
+  }
+
+  if scene.object.children.is_some() {
+    for object in scene.object.children.expect("wasnt some").iter() {
+      state.objects.lock().unwrap().push(object.clone());
+    }
+  }
+}
+
+#[tauri::command]
+fn print_state(state: tauri::State<AppState>) {
+  println!("geometries: {:#?}", state.geometries.lock().unwrap());
+  println!("materials: {:#?}", state.materials.lock().unwrap());
+  println!("objects: {:#?}", state.objects.lock().unwrap());
 }
 
 pub fn create_custom_menu_item(name: &str) -> CustomMenuItem<String> {
@@ -83,8 +111,13 @@ fn main() {
     .add_submenu(examples);
 
   tauri::Builder::default()
+    .manage(AppState { 
+      geometries: Mutex::new(HashMap::new()),
+      materials: Mutex::new(HashMap::new()),
+      objects: Mutex::new(Vec::new()),
+     })
     .menu(menu)
-    .invoke_handler(tauri::generate_handler![print_scene])
+    .invoke_handler(tauri::generate_handler![add_scene, print_state])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }

@@ -13,7 +13,7 @@
 
 use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Scene {
     #[serde(rename = "metadata")]
     pub metadata: Metadata,
@@ -28,7 +28,7 @@ pub struct Scene {
     pub object: Object3D,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BufferGeometry {
     #[serde(rename = "uuid")]
     pub uuid: String,
@@ -40,7 +40,7 @@ pub struct BufferGeometry {
     pub data: Data,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Data {
     #[serde(rename = "attributes")]
     pub attributes: Attributes,
@@ -52,7 +52,7 @@ pub struct Data {
     pub bounding_sphere: BoundingSphere,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Attributes {
     #[serde(rename = "position")]
     pub position: Normal,
@@ -64,7 +64,7 @@ pub struct Attributes {
     pub uv: Normal,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Normal {
     #[serde(rename = "itemSize")]
     pub item_size: i64,
@@ -79,7 +79,7 @@ pub struct Normal {
     pub normalized: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BoundingSphere {
     #[serde(rename = "center")]
     pub center: Vec<f64>,
@@ -88,7 +88,7 @@ pub struct BoundingSphere {
     pub radius: f64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Index {
     #[serde(rename = "type")]
     pub index_type: IndexType,
@@ -97,7 +97,7 @@ pub struct Index {
     pub array: Vec<i64>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Material {
     #[serde(rename = "uuid")]
     pub uuid: String,
@@ -157,7 +157,7 @@ pub struct Material {
     pub stencil_z_pass: i64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Metadata {
     #[serde(rename = "version")]
     pub version: f64,
@@ -169,7 +169,7 @@ pub struct Metadata {
     pub generator: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Object3D {
     #[serde(rename = "uuid")]
     pub uuid: String,
@@ -181,7 +181,7 @@ pub struct Object3D {
     pub name: String,
 
     #[serde(rename = "userData")]
-    pub user_data: ObjectUserData,
+    pub user_data: Option<ObjectUserData>,
 
     #[serde(rename = "layers")]
     pub layers: i64,
@@ -190,121 +190,75 @@ pub struct Object3D {
     pub matrix: Vec<f32>,
 
     #[serde(rename = "children")]
-    pub children: Vec<ObjectChild>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ObjectChild {
-    #[serde(rename = "uuid")]
-    pub uuid: String,
-
-    #[serde(rename = "type")]
-    pub child_type: String,
-
-    #[serde(rename = "name")]
-    pub name: String,
-
-    #[serde(rename = "userData")]
-    pub user_data: ChildUserData,
-
-    #[serde(rename = "layers")]
-    pub layers: i64,
-
-    #[serde(rename = "matrix")]
-    pub matrix: Vec<f32>,
-
-    #[serde(rename = "children")]
-    pub children: Vec<ChildChild>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ChildChild {
-    #[serde(rename = "uuid")]
-    pub uuid: String,
-
-    #[serde(rename = "type")]
-    pub child_type: ChildType,
-
-    #[serde(rename = "name")]
-    pub name: String,
-
-    #[serde(rename = "layers")]
-    pub layers: i64,
-
-    #[serde(rename = "matrix")]
-    pub matrix: Vec<f32>,
+    pub children: Option<Vec<Object3D>>,
 
     #[serde(rename = "geometry")]
-    pub geometry: String,
+    pub geometry: Option<String>,
 
     #[serde(rename = "material")]
-    pub material: String,
+    pub material: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ChildUserData {
-    #[serde(rename = "name")]
-    pub name: String,
-}
 
-#[derive(Debug, Serialize, Deserialize)]
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ObjectUserData {
     #[serde(rename = "glTF2ExportSettings")]
-    pub gl_tf2_export_settings: GlTf2ExportSettings,
+    pub gl_tf2_export_settings: Option<GlTf2ExportSettings>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct GlTf2ExportSettings {
     #[serde(rename = "export_animations")]
-    pub export_animations: i64,
+    pub export_animations: Option<i64>,
 
     #[serde(rename = "export_apply")]
-    pub export_apply: i64,
+    pub export_apply: Option<i64>,
 
     #[serde(rename = "export_extras")]
-    pub export_extras: i64,
+    pub export_extras: Option<i64>,
 
     #[serde(rename = "export_format")]
-    pub export_format: String,
+    pub export_format: Option<String>,
 
     #[serde(rename = "export_morph")]
-    pub export_morph: i64,
+    pub export_morph: Option<i64>,
 
     #[serde(rename = "export_skins")]
-    pub export_skins: i64,
+    pub export_skins: Option<i64>,
 
     #[serde(rename = "export_yup")]
-    pub export_yup: i64,
+    pub export_yup: Option<i64>,
 
     #[serde(rename = "use_selection")]
-    pub use_selection: i64,
+    pub use_selection: Option<i64>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum NormalType {
     #[serde(rename = "Float32Array")]
     Float32Array,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum IndexType {
     #[serde(rename = "Uint16Array")]
     Uint16Array,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum GeometryType {
     #[serde(rename = "BufferGeometry")]
     BufferGeometry,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum MaterialType {
     #[serde(rename = "MeshStandardMaterial")]
     MeshStandardMaterial,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ChildType {
     #[serde(rename = "Mesh")]
     Mesh,

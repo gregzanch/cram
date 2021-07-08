@@ -10,12 +10,13 @@ import {
 
 import { messenger, emit, on } from '../messenger';
 import { useAppStore } from '../store/app-store';
-import { pickProps } from '../common/helpers';
+import { ensureArray, pickProps } from '../common/helpers';
 import { mmm_dd_yyyy } from "../common/dayt"; 
-import FileTypes from '../common/file-type';
+import FileTypes, { AllowedFiles, fileName } from '../common/file-type';
 import { DialogActions } from "@material-ui/core";
-
-
+import { dialog, fs } from '@tauri-apps/api';
+import { allowed, fileType } from '../common/file-type';
+import { createFileFromData } from "../common/file";
 
 export const ACCEPTED_FILE_TYPES = [
     ""
@@ -39,21 +40,29 @@ export interface FileWithCheckbox{
 }
 
 
-const upload = (callback: (files?: File[]) => void) => {
-  const input = (document.querySelector("#temp-file-import") as HTMLInputElement) || document.createElement("input");
-  input.type = "file";
-  input.setAttribute("style", "display: none;");
-  input.setAttribute("id", "temp-file-import");
-  document.body.appendChild(input);
-  input.addEventListener("change", (e: Event) => {
-    const target = e.target as HTMLInputElement;
-    if (target && target.files) {
-      const files = Array.from(target.files) as File[];
-      callback(files);
-    }
-    input.remove();
-  });
-  input.click();
+async function openFileDialog(callback: (files?: File[]) => void) {
+	const dialogResult = await dialog.open({ multiple: true, filters: [{name: "file-filter", extensions: Object.keys(allowed)}] });
+	const filepaths = ensureArray(dialogResult);
+	const files = [] as File[];
+	for(const filepath of filepaths) {
+		const filename = fileName(filepath);
+		switch(fileType(filepath)) {
+			case AllowedFiles.DAE:
+			case AllowedFiles.DXF:
+			case AllowedFiles.OBJ:
+			case AllowedFiles.STL:
+			case AllowedFiles.GLTF: {
+				const filedata = await fs.readTextFile(filepath);
+				files.push(createFileFromData(filename, [filedata], { type: "text/plain" }));
+			} break;
+			case AllowedFiles.WAV: {
+				const filedata = await fs.readBinaryFile(filepath);
+				files.push(createFileFromData(filename, [Buffer.from(filedata)], { type: "audio/wav" }));
+			} break;
+			
+		}
+	}
+	callback(files);
 }
 
 
@@ -107,7 +116,7 @@ export default function ImportDialog() {
 					style={{ backgroundColor: backgroundColors[dropAllowed] }}
 					className={"drop-zone"}
 					onClick={() =>
-            upload((files)=>{
+            openFileDialog((files)=>{
               setFilelist(files!);
               setDropAllowed(DROP_ALLOWED.IDK);
             })

@@ -78,6 +78,8 @@ import EnergyDecay from "./compute/energy-decay";
 
 import registerAllEvents from './events';
 
+import { invoke, dialog } from '@tauri-apps/api';
+
 const materialsIndex = {} as KeyValuePair<AcousticMaterial>;
 
 materials.forEach((x) => {
@@ -575,7 +577,17 @@ messenger.addMessageHandler("IMPORT_FILE", (acc, ...args) => {
             console.log("load gltf")
             const result = await (await fetch(objectURL)).arrayBuffer(); 
             const gltf = await importHandlers.gltf(result);
-            console.log(gltf); 
+            const scene = gltf.scene.toJSON()
+            console.log(scene);
+            
+            
+            await invoke("add_scene", { scene });
+            await invoke("print_state");
+
+
+            // gltf.scene.children.forEach(child => renderer.workspace.add(child));
+
+
           }
           break; 
         case "wav":

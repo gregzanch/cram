@@ -22,6 +22,17 @@ export const allowed = {
 	dxf: true,
 	gltf: true
 }
+export type AllowedFileTypes = keyof typeof allowed;
+
+export enum AllowedFiles {
+	WAV="wav",
+	STL="stl",	
+	OBJ="obj",	
+	DAE="dae",
+	DXF="dxf",	
+	GLTF="gltf",
+}
+
 export const assoc = {
 	html: ICONS.CODE,
 	js: ICONS.CODE,
@@ -412,9 +423,14 @@ export function fileType(name: string) {
   return name.split('.').slice(-1)[0];
 }
 
+export function fileName(path: string) {
+  return path.split('/').slice(-1)[0];
+}
+
 export default {
 	ICONS,
 	assoc,
   allowed,
-  fileType
+  fileType,
+	AllowedFiles,
 };
