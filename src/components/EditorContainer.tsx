@@ -5,7 +5,7 @@ const EditorContainer = styled.div`
     /* width: calc(100% - 1em); */
     /* height: calc(100% - 1em); */
     /* margin: .5em .5em; */
-    height: 100%;
+    height: calc(100vh - var(--main-nav_bar__height));
     width: 100%;
     -moz-user-select: none;
     -webkit-user-select: none;

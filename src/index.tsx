@@ -570,6 +570,14 @@ messenger.addMessageHandler("IMPORT_FILE", (acc, ...args) => {
             console.log(models); 
           }
           break; 
+        case "gltf":
+          {
+            console.log("load gltf")
+            const result = await (await fetch(objectURL)).arrayBuffer(); 
+            const gltf = await importHandlers.gltf(result);
+            console.log(gltf); 
+          }
+          break; 
         case "wav":
           {
             try {

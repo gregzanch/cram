@@ -1,5 +1,6 @@
 {
     "files.associations": {
         "*.as.ts": "assemblyscript"
-    }
+    },
+    "rust-analyzer.diagnostics.disabled": ["unresolved-macro-call"]
 }

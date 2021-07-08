@@ -7,6 +7,7 @@ import { TGALoader } from "./tga";
 import { DAELoader } from "./dae";
 import { chunk } from "../common/chunk";
 import roundTo from "../common/round-to";
+export { gltf } from './gltf';
 
 
 
@@ -45,7 +46,7 @@ export function stl(data) {
       new THREE.BufferAttribute(new Float32Array(positionsVertices[i].map((x) => roundTo(x, 6))), 3, false)
     );
     geometry.setAttribute(
-      "normals",
+      "normal",
       new THREE.BufferAttribute(new Float32Array(normalsVertices[i].map((x) => roundTo(x, 6))), 3, false)
     );
     const name = "triangle-" + String(i);
@@ -89,7 +90,7 @@ export function obj(data) {
       });
     });
     buffer.setAttribute("position", new THREE.BufferAttribute(new Float32Array(verts), 3, false));
-    buffer.setAttribute("normals", new THREE.BufferAttribute(new Float32Array(vertNormals), 3, false));
+    buffer.setAttribute("normal", new THREE.BufferAttribute(new Float32Array(vertNormals), 3, false));
     buffer.setAttribute("texCoords", new THREE.BufferAttribute(new Float32Array(texCoords), 3, false));
     const newModel = {
       name: model.name,

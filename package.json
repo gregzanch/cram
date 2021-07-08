@@ -17,7 +17,8 @@
   "scripts": {
     "start": "node scripts/start.js",
     "build": "node scripts/build.js",
-    "test": "node scripts/test.js --env=jsdom"
+    "test": "node scripts/test.js --env=jsdom",
+    "tauri": "tauri"
   },
   "dependencies": {
     "@blueprintjs/core": "^3.23.0",
@@ -30,6 +31,7 @@
     "@material-ui/core": "^4.8.3",
     "@material-ui/icons": "^4.5.1",
     "@material-ui/lab": "^4.0.0-alpha.39",
+    "@tauri-apps/api": "^1.0.0-beta.4",
     "@types/d3": "6",
     "@types/plotly.js": "^1.50.12",
     "@types/react-tabs": "^2.3.2",
@@ -83,6 +85,7 @@
   "devDependencies": {
     "@babel/core": "7.1.6",
     "@babel/plugin-proposal-optional-chaining": "^7.7.5",
+    "@tauri-apps/cli": "^1.0.0-beta.3",
     "@types/chroma-js": "^2.0.0",
     "@types/file-saver": "^2.0.1",
     "@types/lodash": "4.14.149",
