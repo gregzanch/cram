@@ -18,7 +18,8 @@
     "start": "node scripts/start.js",
     "build": "node scripts/build.js",
     "test": "node scripts/test.js --env=jsdom",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@blueprintjs/core": "^3.23.0",
@@ -127,11 +128,13 @@
     "jest": "23.6.0",
     "mini-css-extract-plugin": "0.4.3",
     "optimize-css-assets-webpack-plugin": "5.0.1",
+    "patch-package": "^6.4.7",
     "pnp-webpack-plugin": "1.1.0",
     "postcss-flexbugs-fixes": "4.1.0",
     "postcss-loader": "3.0.0",
     "postcss-preset-env": "6.3.1",
     "postcss-safe-parser": "4.0.1",
+    "postinstall-postinstall": "^2.1.0",
     "raw-loader": "^4.0.0",
     "resolve": "1.8.1",
     "style-loader": "^1.0.2",
