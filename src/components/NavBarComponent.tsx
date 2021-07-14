@@ -184,7 +184,7 @@ export function ToolMenu(props: MenuProps) {
     )}
     content={
       <Menu>
-        <MenuItemWithEmitter label="print_room" event="PRINT_ROOM" />
+        <MenuItemWithEmitter label="print_state" event="PRINT_STATE" />
         <MenuItemWithMessenger label="CLF Viewer" message="OPEN_CLF_VIEWER" />
         <MenuItemWithMessenger label="Image Source Test" message="SHOULD_ADD_IMAGE_SOURCE" />
       </Menu>

@@ -5,16 +5,13 @@ import {useContainer} from './container-store';
 
 declare global {
   interface EventTypes {
-    PRINT_ROOM: undefined;
+    PRINT_STATE: undefined;
   }
 }
 
 export default function registerObjectEvents(){
-  on("PRINT_ROOM", () => {
-    const rooms = useContainer.getState().getRooms();
-    if(rooms.length > 0){
-      invoke('print_room', { room: rooms[0].save() } );
-    }
+  on("PRINT_STATE", () => {
+    invoke('print_state');
   })
 }
 

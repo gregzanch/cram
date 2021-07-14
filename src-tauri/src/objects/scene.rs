@@ -55,22 +55,22 @@ pub struct Data {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Attributes {
     #[serde(rename = "position")]
-    pub position: Normal,
+    pub position: BufferAttribute,
 
     #[serde(rename = "normal")]
-    pub normal: Normal,
+    pub normal: BufferAttribute,
 
     #[serde(rename = "uv")]
-    pub uv: Normal,
+    pub uv: BufferAttribute,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Normal {
+pub struct BufferAttribute {
     #[serde(rename = "itemSize")]
     pub item_size: i64,
 
     #[serde(rename = "type")]
-    pub normal_type: NormalType,
+    pub attribute_type: AttributeType,
 
     #[serde(rename = "array")]
     pub array: Vec<f64>,
@@ -175,7 +175,7 @@ pub struct Object3D {
     pub uuid: String,
 
     #[serde(rename = "type")]
-    pub object_type: String,
+    pub object_type: ObjectType,
 
     #[serde(rename = "name")]
     pub name: String,
@@ -235,9 +235,52 @@ pub struct GlTf2ExportSettings {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum NormalType {
+pub enum ObjectType {
+    #[serde(rename = "Mesh")]
+    Mesh,
+    
+    #[serde(rename = "Group")]
+    Group,
+
+    #[serde(rename = "Scene")]
+    Scene,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum AttributeType {
+    #[serde(rename = "Int8Array")]
+    Int8Array,
+
+    #[serde(rename = "Uint8Array")]
+    Uint8Array,
+
+    #[serde(rename = "Uint8ClampedArray")]
+    Uint8ClampedArray,
+
+    #[serde(rename = "Int16Array")]
+    Int16Array,
+
+    #[serde(rename = "Uint16Array")]
+    Uint16Array,
+
+    #[serde(rename = "Int32Array")]
+    Int32Array,
+
+    #[serde(rename = "Uint32Array")]
+    Uint32Array,
+
     #[serde(rename = "Float32Array")]
     Float32Array,
+
+    #[serde(rename = "Float64Array")]
+    Float64Array,
+
+    #[serde(rename = "BigInt64Array")]
+    BigInt64Array,
+
+    #[serde(rename = "BigUint64Array")]
+    BigUint64Array,
+
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -256,10 +299,4 @@ pub enum GeometryType {
 pub enum MaterialType {
     #[serde(rename = "MeshStandardMaterial")]
     MeshStandardMaterial,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum ChildType {
-    #[serde(rename = "Mesh")]
-    Mesh,
 }
