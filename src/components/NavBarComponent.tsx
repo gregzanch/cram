@@ -143,6 +143,7 @@ export function AddMenu(props: MenuProps) {
       <MenuItemWithEmitter label="2D-FDTD" event="ADD_FDTD_2D" />
       <MenuItemWithMessenger label="Statistical RT" message="SHOULD_ADD_RT60" />
       <MenuItemWithMessenger label="Energy Decay" message="SHOULD_ADD_ENERGYDECAY"/>
+      <MenuItemWithEmitter label="Acoustic Radiance Transfer" event="ADD_ART"/>
     </Menu>
     }
     placement="bottom-start"

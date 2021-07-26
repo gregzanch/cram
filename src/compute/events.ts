@@ -3,13 +3,15 @@ import { omit } from "../common/helpers";
 import { useSolver, getSolverKeys, setSolverProperty, removeSolver, addSolver } from "../store";
 import RayTracer, { RayTracerSaveObject } from "./raytracer";
 import RT60, { RT60SaveObject } from "./rt";
+
 import Solver from "./solver";
 import ImageSourceSolver, { ImageSourceSaveObject } from "./raytracer/image-source";
 import registerFDTDEvents from './2d-fdtd/events';
+import ART, { ARTSaveObject } from "./radiance/art";
 
 declare global {
   interface EventTypes {
-    RESTORE_SOLVERS: (RayTracerSaveObject | RT60SaveObject | ImageSourceSaveObject)[];
+    RESTORE_SOLVERS: (RayTracerSaveObject | RT60SaveObject | ImageSourceSaveObject | ARTSaveObject)[];
     REMOVE_SOLVERS: string|string[];
     LOG_SOLVER: string;
   }
@@ -36,7 +38,7 @@ export default function registerSolverEvents(){
     constructor: new (args: any) => SolverType,
     saveObject: any
   ) => {
-    return new constructor(saveObject).restore(saveObject);
+    return new constructor(saveObject).restore(saveObject) as SolverType;
   }
   
   on("RESTORE_SOLVERS", solvers => {
@@ -51,8 +53,11 @@ export default function registerSolverEvents(){
         case "rt60":
           emit("ADD_RT60", restore(RT60, solver));
           break;
+        case "art":
+          emit("ADD_ART", restore(ART, solver));
+          break;
         case "image-source":
-          const s = new ImageSourceSolver(solver).restore(solver);
+          const s = new ImageSourceSolver(solver as ImageSourceSaveObject).restore(solver);
           useSolver.getState().set(draft=>{
             draft.solvers[s!.uuid] = s;
           });

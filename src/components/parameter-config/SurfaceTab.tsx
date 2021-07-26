@@ -21,6 +21,19 @@ const General = ({ uuid }: { uuid: string }) => {
   );
 };
 
+const TessellationCheckbox = ({ uuid }: { uuid: string }) => {
+  const [isTessellated, _] = useContainerProperty<Surface, "isTessellated">(uuid, "isTessellated", "SURFACE_SET_PROPERTY");
+  if(!isTessellated) return null;
+  return (
+    <PropertyCheckboxInput
+      uuid={uuid}
+      label="Tessellation"
+      property="tessellatedMeshVisible"
+      tooltip="Shows/hides the tessellation of this surface"
+    /> 
+  )
+}
+
 const Visual = ({ uuid }: { uuid: string }) => {
   const [open, toggle] = useToggle(true);
   return (
@@ -37,6 +50,9 @@ const Visual = ({ uuid }: { uuid: string }) => {
         property="wireframeVisible"
         tooltip="Shows/hides the wireframe of this surface"
       /> 
+
+      <TessellationCheckbox uuid={uuid} />
+
       <PropertyCheckboxInput
         uuid={uuid}
         label="Vertex Normals"

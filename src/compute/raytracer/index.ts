@@ -18,19 +18,18 @@ import * as ac from "../acoustics";
 import { lerp } from "../../common/lerp";
 import { movingAverage } from "../../common/moving-average";
 import linearRegression, { LinearRegressionResult } from "../../common/linear-regression";
-import { BVHBuilderAsync, BVHVector3, BVHNode } from "./bvh";
 import { BVH } from "./bvh/BVH";
 import { renderer } from "../../render/renderer";
-import { reverseTraverse } from "../../common/reverse-traverse";
 import { addSolver, callSolverMethod, removeSolver, setSolverProperty, useContainer, useSolver } from "../../store";
 import {cramangle2threejsangle} from "../../common/dir-angle-conversions";
 import { audioEngine } from "../../audio-engine/audio-engine";
 import observe, { Observable } from "../../common/observable";
-import { coefs, compute_bandpass_biquad_coefficients, filter } from "../../audio-engine/filter";
 import {probability} from '../../common/probability';
 import { filterSignals } from "../../audio-engine/envelope";
 
 import {ImageSourceSolver, ImageSourceSolverParams} from "./image-source/index"; 
+
+const FilterWorker = require("worker-loader!../../audio-engine/filter.worker.ts").default;
 
 const {floor, random, abs, asin} = Math;
 const coinFlip = () => random() > 0.5;
@@ -483,21 +482,18 @@ class RayTracer extends Solver {
   }
 
   mapIntersectableObjects() {
-    function mapSurfaces(container: Container, surfaces: THREE.Mesh[] = [] as THREE.Mesh[]) {
-      if (container instanceof Surface) {
-        surfaces.push(container.mesh);
-      } else {
-        container.children.forEach((x: Container) => {
-          mapSurfaces(x, surfaces);
-        });
+    const surfaces = [] as THREE.Mesh[];
+
+    this.room.surfaces.traverse((container)=>{
+      if(container["kind"] && container["kind"] === "surface"){
+        surfaces.push((container as Surface).mesh);
       }
-      return surfaces;
-    }
+    });
 
     if (this.runningWithoutReceivers) {
-      this.intersectableObjects = mapSurfaces(this.room.surfaces);
+      this.intersectableObjects = surfaces;
     } else {
-      this.intersectableObjects = mapSurfaces(this.room.surfaces).concat(this.receivers);
+      this.intersectableObjects = surfaces.concat(this.receivers);
     }
   }
 
@@ -986,8 +982,8 @@ class RayTracer extends Solver {
   }
   clearRays() {
     if (this.room) {
-      for (let i = 0; i < this.room._surfaces.length; i++) {
-        (this.room._surfaces[i] as Surface).resetHits();
+      for (let i = 0; i < this.room.allSurfaces.length; i++) {
+        (this.room.allSurfaces[i] as Surface).resetHits();
       }
     }
     this.validRayCount = 0;
@@ -1004,10 +1000,6 @@ class RayTracer extends Solver {
     this.paths = {} as KVP<RayPath[]>;
     this.mapIntersectableObjects();
     renderer.needsToRender = true;
-  }
-
-  calculateResponse(frequencies: number[] = this.reflectionLossFrequencies) {
-    this.paths;
   }
 
   calculateWithDiffuse(frequencies: number[] = this.reflectionLossFrequencies) {
@@ -1547,7 +1539,7 @@ class RayTracer extends Solver {
     //             sources[nofSources++] = newSource
     //             if (maxOrder > 0)
     //                 computeImageSources(newSource, surface, maxOrder - 1)
-    for(const surface of this.room._surfaces){
+    for(const surface of this.room.allSurfaces){
       if(surface.uuid !== previousReflector.uuid){
         
       }
@@ -1707,7 +1699,7 @@ class RayTracer extends Solver {
     // convert back to pressure
     return ac.Lp2P(arrivalLp) as number[]; 
   }
-  async calculateImpulseResponse(initialSPL = 100, frequencies = ac.Octave(63, 16000), sampleRate = audioEngine.sampleRate) {
+  async calculateImpulseResponse(initialSPL = 100, frequencies = ac.Octave(63, 16000), sampleRate = audioEngine.sampleRate): Promise<AudioBuffer> {
     if(this.receiverIDs.length == 0) throw Error("No receivers have been assigned to the raytracer");
     if(this.sourceIDs.length == 0) throw Error("No sources have been assigned to the raytracer");
     if(this.paths[this.receiverIDs[0]].length == 0) throw Error("No rays have been traced yet");
@@ -1776,33 +1768,45 @@ class RayTracer extends Solver {
     }
     
     //@ts-ignore
-    samples = filterSignals(samples);
+    // samples = filterSignals(samples);
 
-    // make the new signal's length half as long, we dont need the reversed part
-    const signal = new Float32Array(samples[0].length >> 1);
 
-    let max = 0;
-    for(let i = 0; i<samples.length; i++){
-      for(let j = 0; j<signal.length; j++){
-        signal[j] += samples[i][j];
-        if(abs(signal[j])>max){
-          max = abs(signal[j]);
+    const worker = new FilterWorker();
+
+    return new Promise((resolve, reject)=>{
+
+      worker.postMessage({ samples });
+      worker.onmessage = (event) => {
+        const filteredSamples = event.data.samples as Float32Array[];
+
+        // make the new signal's length half as long, we dont need the reversed part
+        const signal = new Float32Array(filteredSamples[0].length >> 1);
+    
+        let max = 0;
+        for(let i = 0; i<filteredSamples.length; i++){
+          for(let j = 0; j<signal.length; j++){
+            signal[j] += filteredSamples[i][j];
+            if(abs(signal[j])>max){
+              max = abs(signal[j]);
+            }
+          }
         }
-      }
-    }
+    
+    
+    
+        const offlineContext = audioEngine.createOfflineContext(1, signal.length, sampleRate);
+    
+        const source = audioEngine.createBufferSource(normalize(signal), offlineContext)
+    
+        source.connect(offlineContext.destination);
+        source.start();
+    
+    
+        audioEngine.renderContextAsync(offlineContext).then(impulseResponse=>resolve(impulseResponse)).catch(reject).finally(()=>worker.terminate());
+      };
+    
+    })
 
-
-
-    const offlineContext = audioEngine.createOfflineContext(1, signal.length, sampleRate);
-
-    const source = audioEngine.createBufferSource(normalize(signal), offlineContext)
-
-    source.connect(offlineContext.destination);
-    source.start();
-
-
-    this.impulseResponse = await audioEngine.renderContextAsync(offlineContext);
-    return this.impulseResponse;
   }
 
   impulseResponse!: AudioBuffer;
@@ -1810,7 +1814,11 @@ class RayTracer extends Solver {
   
   async playImpulseResponse(){
     if(!this.impulseResponse){
-      await this.calculateImpulseResponse().catch(console.error);
+      try{
+      this.impulseResponse = await this.calculateImpulseResponse();
+      } catch(err){
+        throw err
+      }
     }
     if (audioEngine.context.state === 'suspended') {
       audioEngine.context.resume();
@@ -1864,7 +1872,11 @@ class RayTracer extends Solver {
   }
   async downloadImpulseResponse(filename: string, sampleRate = audioEngine.sampleRate){
     if(!this.impulseResponse){
-      await this.calculateImpulseResponse().catch(console.error);
+      try{
+        this.impulseResponse = await this.calculateImpulseResponse();
+        } catch(err){
+          throw err
+        }
     }
     const blob = ac.wavAsBlob([normalize(this.impulseResponse.getChannelData(0))], { sampleRate, bitDepth: 32 });
     const extension = !filename.endsWith(".wav") ? ".wav" : "";

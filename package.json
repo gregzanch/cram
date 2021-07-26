@@ -78,6 +78,7 @@
     "three.meshline": "^1.3.0",
     "uplot": "^1.0.8",
     "uuidv4": "6.0.0",
+    "worker-loader": "^3.0.8",
     "zustand": "^3.3.1"
   },
   "devDependencies": {

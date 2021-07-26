@@ -2,12 +2,8 @@ import { normalize, wavAsBlob } from '../compute/acoustics';
 import {saveAs} from 'file-saver';
 import {Flower, Fupper} from '../compute/acoustics';
 import { filterSignals } from './envelope';
+import{throwif} from '../common/throwif';
 
-
-
-const throwif = (condition: boolean, message: string) => {
-  if(!condition) throw Error(message);
-}
 
 type BiquadFilterType = "bandpass"|"lowpass"|"highpass"| "lowshelf"|"highshelf"|"peaking"|"notch"|"allpass";
 

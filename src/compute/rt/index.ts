@@ -129,7 +129,7 @@ export class RT60 extends Solver{
     const response = [] as number[];
     this.frequencies.forEach((frequency) => {
       let sum = 0;
-      room._surfaces.forEach((surface: Surface) => {
+      room.allSurfaces.forEach((surface: Surface) => {
         sum += surface.getArea() * surface.absorptionFunction(frequency);
       });
       let airabsterm = 4*airAbs20c40rh(frequency)*v; 
@@ -147,7 +147,7 @@ export class RT60 extends Solver{
     this.frequencies.forEach((frequency) => {
       let sum = 0; 
       let totalSurfaceArea = 0; 
-      room._surfaces.forEach((surface: Surface) => {
+      room.allSurfaces.forEach((surface: Surface) => {
         totalSurfaceArea += surface.getArea(); 
         sum += surface.getArea() * surface.absorptionFunction(frequency);
       });
@@ -195,7 +195,7 @@ export class RT60 extends Solver{
     // [Px, Py, Pz].map
     const planes = [Px, Py, Pz];
 
-    const surfaces = room._surfaces as Surface[];
+    const surfaces = room.allSurfaces as Surface[];
     const projectedSurfaces = surfaces.map(surface => {
       const area = surface.triangles.reduce((acc,tri) => {
         const projectedVectors = planes.map(P=>tri.map(pt => new Vector3().fromArray(pt).applyMatrix4(P)));

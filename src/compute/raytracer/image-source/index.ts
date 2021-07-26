@@ -2,29 +2,21 @@ import Solver from "../../solver";
 import { renderer } from "../../../render/renderer";
 import {uuid} from "uuidv4";
 import * as THREE from "three";
-import { MeshLine, MeshLineMaterial, MeshLineRaycast } from 'three.meshline';
+import { MeshLine, MeshLineMaterial } from 'three.meshline';
 import * as ac from "../../acoustics";
 import Room, { getRooms } from "../../../objects/room";
-import Messenger, { emit, messenger, on } from "../../../messenger";
-import { KVP } from "../../../common/key-value-pair";
-import Container from "../../../objects/container";
-import Renderer from "../../../render/renderer";
+import { emit, messenger, on } from "../../../messenger";
 import Source from "../../../objects/source";
 import Receiver from "../../../objects/receiver";
 import { Vector3 } from "three";
 import Surface from "../../../objects/surface";
 import _, { intersection } from "lodash";
 import { addSolver, removeSolver, Result, ResultKind, ResultTypes, setSolverProperty, useResult, useSolver } from "../../../store";
-import {Line2} from 'three/examples/jsm/lines/Line2';
-import {LineGeometry} from 'three/examples/jsm/lines/LineGeometry';
-import {LineMaterial} from 'three/examples/jsm/lines/LineMaterial';
 import {useContainer} from '../../../store';
 import { pickProps } from "../../../common/helpers";
 import { normalize } from "../../acoustics";
-import FileSaver, {saveAs} from 'file-saver';
+import FileSaver from 'file-saver';
 import { audioEngine } from "../../../audio-engine/audio-engine";
-import observe, { Observable } from "../../../common/observable";
-import { coefs, filter } from "../../../audio-engine/filter";
 
 function createLine(){
   let points = [];
@@ -481,7 +473,7 @@ export class ImageSourceSolver extends Solver {
 
         // get valid paths
         for(let i = 0; i<paths?.length; i++){
-          if(paths[i].isvalid(this.room._surfaces as Surface[])){
+          if(paths[i].isvalid(this.room.allSurfaces as Surface[])){
             valid_paths.push(paths[i]); 
           }
         }
@@ -598,7 +590,7 @@ export class ImageSourceSolver extends Solver {
 
           let validCount = 0; 
           for(let i = 0; i<paths.length; i++){
-            if(paths[i].isvalid(this.room._surfaces as Surface[])){
+            if(paths[i].isvalid(this.room.allSurfaces as Surface[])){
               paths[i].markup(); 
               console.log(paths[i]);
               console.log(paths[i].totalLength)
@@ -923,7 +915,7 @@ export default ImageSourceSolver;
 
 function computeImageSources(is: ImageSource, maxOrder: number): ImageSource | null {
 
-  let surfaces: any[] = is.room._surfaces; 
+  let surfaces: any[] = is.room.allSurfaces; 
     
   // end recursion
   if(maxOrder==0){

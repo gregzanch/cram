@@ -13,6 +13,7 @@ import FDTD_2D from "../../compute/2d-fdtd"
 import {AllowedNames } from '../../common/helpers';
 import { ImageSourceSolver } from "../../compute/raytracer/image-source";
 import RT60 from "../../compute/rt";
+import ART from "../../compute/radiance/art";
 import EnergyDecay from "../../compute/energy-decay";
 
 type SetPropertyEventTypes =
@@ -21,8 +22,9 @@ type SetPropertyEventTypes =
   | AllowedNames<EventTypes, SetPropertyPayload<ImageSourceSolver>>
   | AllowedNames<EventTypes, SetPropertyPayload<RT60>>
   | AllowedNames<EventTypes, SetPropertyPayload<EnergyDecay>>
+  | AllowedNames<EventTypes, SetPropertyPayload<ART>>
 
-export function useSolverProperty<T extends RayTracer | FDTD_2D|ImageSourceSolver|RT60|EnergyDecay, K extends keyof T>(
+export function useSolverProperty<T extends RayTracer | FDTD_2D|ImageSourceSolver|RT60|EnergyDecay|ART, K extends keyof T>(
   uuid: string,
   property: K,
   event: SetPropertyEventTypes
@@ -44,7 +46,7 @@ export function useSolverProperty<T extends RayTracer | FDTD_2D|ImageSourceSolve
 }
 
 type PropertyRowInputElement = ({ value, onChange }) => JSX.Element;
-type Props<T extends RayTracer | FDTD_2D|ImageSourceSolver|RT60|EnergyDecay, K extends keyof T> = {
+type Props<T extends RayTracer | FDTD_2D|ImageSourceSolver|RT60|EnergyDecay|ART, K extends keyof T> = {
   uuid: string;
   property: K;
   label: string;
@@ -54,7 +56,7 @@ type Props<T extends RayTracer | FDTD_2D|ImageSourceSolver|RT60|EnergyDecay, K e
   }
 };
 
-export const createPropertyInput = <T extends RayTracer | FDTD_2D|ImageSourceSolver|RT60|EnergyDecay>(
+export const createPropertyInput = <T extends RayTracer | FDTD_2D|ImageSourceSolver|RT60|EnergyDecay|ART>(
   event: SetPropertyEventTypes,
   Element: PropertyRowInputElement
 ) => <K extends keyof T>({ uuid, property, label, tooltip, elementProps }: Props<T, K>) => {
@@ -67,7 +69,7 @@ export const createPropertyInput = <T extends RayTracer | FDTD_2D|ImageSourceSol
   );
 };
 
-export const createPropertyInputs = <T extends RayTracer|FDTD_2D|ImageSourceSolver|RT60|EnergyDecay>(event: SetPropertyEventTypes) => ({
+export const createPropertyInputs = <T extends RayTracer|FDTD_2D|ImageSourceSolver|RT60|EnergyDecay|ART>(event: SetPropertyEventTypes) => ({
   PropertyTextInput: createPropertyInput<T>(event, PropertyRowTextInput),
   PropertyNumberInput: createPropertyInput<T>(event, PropertyRowNumberInput),
   PropertyCheckboxInput: createPropertyInput<T>(event, PropertyRowCheckbox),
