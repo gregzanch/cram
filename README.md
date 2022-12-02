@@ -20,7 +20,7 @@ cram (computational room acoustic module) is an application that allows users to
 ### Solvers
 - Statistical Reverberation time using Sabine, Eyring, and Arau-Puchades methods
 - Stochastic Ray Tracing to produce an impulse response
-    - Example result: [hosted](https://cram.vercel.app/auditorium-40krays.wav) / [download](https://github.com/gregzanch/cram/raw/master/public/auditorium-40krays.wav)![image](https://user-images.githubusercontent.com/35944230/205399015-1018f8ff-42a1-463b-8219-066596d08f1a.gif)
+    - Example result: [hosted](https://cram.vercel.app/auditorium-40krays.wav) / [download](https://github.com/gregzanch/cram/raw/master/public/auditorium-40krays.wav)
 
 - Image Source Method for early reflection analysis
 - Finite Difference Time Domain (2D) for modal analysis 
