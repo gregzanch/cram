@@ -3,6 +3,16 @@
   display: inline-block;
 }
 
+.tooltip:hover .tooltiptext,
+.tooltip:focus .tooltiptext {
+  opacity: 1;
+}
+
+.navigation-tooltip .tooltiptext {
+  top: auto;
+  bottom: 150%;
+}
+
 .tooltip .tooltiptext {
   opacity: 0;
   background-color: #F4F6F7;
